@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+from matplotlib.testing.compare import crop_to_same
+from pandas.core.computation.parsing import tokenize_string
 from streamlit_tags import st_tags
 
 # Load data
@@ -13,8 +15,14 @@ st.title("Fanta Dashboard")
 # Helper functions
 def format_name(name):
     tokens = name.split()
-    parole_da_verificare = ['di', 'de', 'del']
-    if len(tokens) > 1 and tokens[0].lower() in parole_da_verificare:
+    print(tokens)
+
+    if "'" in tokens[0]:
+        tokens = tokens[0].split("'",1)
+        print('ciao')
+        print(tokens)
+        return f"{tokens[0].capitalize()}'{tokens[1].capitalize()}"
+    if len(tokens) > 1 :
         return f"{tokens[0].capitalize()} {tokens[1].capitalize()}"
     return tokens[0].capitalize() if tokens else "N/A"
 
@@ -81,16 +89,23 @@ for k in keywords:
 # Team builder
 st.header("Costruisci la tua squadra")
 col1, col2 = st.columns(2)
+squadra_input=[]
 with col1:
     squadra_input = st_tags(label="Seleziona giocatori", text='Press enter to add more', suggestions=df.index.tolist())
+    #squadra_input = st.text_input(label="Seleziona giocatori")
+
+
 with col2:
     crediti_input = st_tags(label="Crediti spesi", text='Press enter to add more')
+
+
 
 # Build team DataFrame
 rosa = [format_name(p) for p in squadra_input]
 totale_cred = 0
 team_data = []
 for i, gioc in enumerate(rosa):
+
     costo = int(crediti_input[i]) if i < len(crediti_input) else 0
     rimasti = 500 - totale_cred - costo
     team_data.append({
