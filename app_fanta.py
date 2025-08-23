@@ -1,281 +1,102 @@
 import streamlit as st
 import pandas as pd
 from streamlit_tags import st_tags
-url= "https://raw.githubusercontent.com/Blazerss/Applicazione-fantacalcio/main/fanta.csv"
+
+# Load data
+url = "https://raw.githubusercontent.com/Blazerss/Applicazione-fantacalcio/main/fanta.csv"
 df = pd.read_csv(url)
-st.title('Fanta')
-keywords = st_tags(label='# Inserisci giocatore:', text='Press enter to add more', value="", suggestions=df["Nome"].tolist())
+df.set_index("Nome", inplace=True)
+
+st.title("Fanta Dashboard")
+
+# Tags input
+keywords = st_tags(
+    label='# Inserisci giocatore:',
+    text='Press enter to add more',
+    value="",
+    suggestions=df.index.tolist()
+)
 
 statistiche = ["Pv", "Mv", "Fm", "Gf", "Gs", "Rp", "Rc", "R+", "R-", "Ass", "Amm", "Esp", "Au"]
-gioc = " ".join(keywords)
-print(gioc)
-df.set_index("Nome",inplace=True)
-col1,col2,col3,col4,col5=st.columns(5,gap="medium")
-with col1:
-   if gioc:
-      st.write("**Generali**")
-   if len(gioc.split()) == 1:
-       st.write(f"Squadra: {df.loc[gioc.capitalize(),"Squadra"]}")
-       if df.loc[gioc.capitalize(), "Diff."] >= 0:
-           st.write("Status: Hyped")
-       else:
-           st.write("Status: No hype")
-       st.write(f"Attributi: {df.loc[gioc.capitalize(), "attributi"]}")
-       st.write(f"Resistenza Infortuni: {df.loc[gioc.capitalize(), "Res. Inf."]}")
 
-   elif len(gioc.split())>1:
-       y = [u.capitalize() for u in gioc.split()]
-       x = " ".join(y)
+# Helper functions
+def format_name(name):
+    tokens = name.split()
+    parole_da_verificare = ['di', 'de', 'del']
+    if len(tokens) > 1 and tokens[0].lower() in parole_da_verificare:
+        return f"{tokens[0].capitalize()} {tokens[1].capitalize()}"
+    return tokens[0].capitalize() if tokens else "N/A"
 
-       st.write(f"Squadra: {df.loc[x,"Squadra"]}")
-       if df.loc[x, "Diff."] >= 0:
-           st.write("Status: Hyped")
-       else:
-           st.write("Status: No hype")
+def display_player_stats(player_name, season_suffix):
+    """Display statistics for a player for a given season."""
+    col_data = df.loc[player_name]
+    st.write(f"**{player_name} ({season_suffix.replace('_','-')})**")
+    stats_cols = [f"{s} {season_suffix}" for s in statistiche]
 
-       st.write(f"Attributi: {df.loc[x, "attributi"]}")
-       st.write(f"Resistenza Infortuni: {df.loc[x, "Res. Inf."]}")
-
-
-with col2:
-    if gioc:
-        st.write("**Stagione 24-25**")
-    if len(gioc.split()) == 1:
-        if not all(df.loc[gioc.capitalize(), [u + " 24_25" for u in statistiche]]):
-            st.write(f" Partite Giocate: {int(df.loc[gioc.capitalize(), [u + " 24_25" for u in statistiche]][0])}")
-            st.write(f" Media Voto: {df.loc[gioc.capitalize(), [u + " 24_25" for u in statistiche]][1]}")
-            st.write(f" Fanta Media : {df.loc[gioc.capitalize(), [u + " 24_25" for u in statistiche]][2]}")
-            if df.loc[gioc.capitalize(), "R"] != "P":
-                st.write(f" Goal Fatti: {int(df.loc[gioc.capitalize(), [u + " 24_25" for u in statistiche]][3])}")
-            if df.loc[gioc.capitalize(), "R"] == "P":
-                st.write(f" Goal Subiti: {int(df.loc[gioc.capitalize(), [u + " 24_25" for u in statistiche]][4])}")
-            if df.loc[gioc.capitalize(), "R"] == "P":
-                st.write(f" Rigori Parati: {int(df.loc[gioc.capitalize(), [u + " 24_25" for u in statistiche]][5])}")
-            if df.loc[gioc.capitalize(), "R"] != "P":
-                st.write(f" Rigori Calciati: {int(df.loc[gioc.capitalize(), [u + " 24_25" for u in statistiche]][6])}")
-            if df.loc[gioc.capitalize(), "R"] != "P":
-                st.write(f" Rigori Segnati: {int(df.loc[gioc.capitalize(), [u + " 24_25" for u in statistiche]][7])}")
-            if df.loc[gioc.capitalize(), "R"] != "P":
-                st.write(f" Rigori Sbagliati: {int(df.loc[gioc.capitalize(), [u + " 24_25" for u in statistiche]][8])}")
-            if df.loc[gioc.capitalize(), "R"] != "P":
-                st.write(f" Assist: {int(df.loc[gioc.capitalize(), [u + " 24_25" for u in statistiche]][9])}")
-            st.write(f" Ammunizioni: {int(df.loc[gioc.capitalize(), [u + " 24_25" for u in statistiche]][10])}")
-            st.write(f" Espulsioni: {int(df.loc[gioc.capitalize(), [u + " 24_25" for u in statistiche]][11])}")
-            st.write(f" Autogol: {int(df.loc[gioc.capitalize(), [u + " 24_25" for u in statistiche]][12])}")
-    elif len(gioc.split()) > 1:
-            y = [u.capitalize() for u in gioc.split()]
-            x = " ".join(y)
-            if not all(df.loc[x, [u + " 24_25" for u in statistiche]].isna()):
-                st.write(f" Partite Giocate: {int(df.loc[x, [u + " 24_25" for u in statistiche]][0])}")
-                st.write(f" Media Voto: {df.loc[x, [u + " 24_25" for u in statistiche]][1]}")
-                st.write(f" Fanta Media : {df.loc[x, [u + " 24_25" for u in statistiche]][2]}")
-                if df.loc[x, "R"] != "P":
-                    st.write(f" Goal Fatti: {int(df.loc[x, [u + " 24_25" for u in statistiche]][3])}")
-                if df.loc[x, "R"] == "P":
-                    st.write(f" Goal Subiti: {int(df.loc[x, [u + " 24_25" for u in statistiche]][4])}")
-                if df.loc[x, "R"] == "P":
-                    st.write(f" Rigori Parati: {int(df.loc[x, [u + " 24_25" for u in statistiche]][5])}")
-                if df.loc[x, "R"] != "P":
-                    st.write(f" Rigori Calciati: {int(df.loc[x, [u + " 24_25" for u in statistiche]][6])}")
-                if df.loc[x, "R"] != "P":
-                    st.write(f" Rigori Segnati: {int(df.loc[x, [u + " 24_25" for u in statistiche]][7])}")
-                if df.loc[x, "R"] != "P":
-                    st.write(f" Rigori Sbagliati: {int(df.loc[x, [u + " 24_25" for u in statistiche]][8])}")
-                if df.loc[x, "R"] != "P":
-                    st.write(f" Assist: {int(df.loc[x, [u + " 24_25" for u in statistiche]][9])}")
-                st.write(f" Ammunizioni: {int(df.loc[x, [u + " 24_25" for u in statistiche]][10])}")
-                st.write(f" Espulsioni: {int(df.loc[x, [u + " 24_25" for u in statistiche]][11])}")
-                st.write(f" Autogol: {int(df.loc[x, [u + " 24_25" for u in statistiche]][12])}")
-
-
-
-with col3:
-    if gioc:
-       st.write("**Stagione 23-24**")
-    if len(gioc.split()) == 1:
-        if not all(df.loc[gioc.capitalize(), [u + " 23_24" for u in statistiche]]):
-            st.write(f" Partite Giocate: {int(df.loc[gioc.capitalize(), [u + " 23_24" for u in statistiche]][0])}")
-            st.write(f" Media Voto: {df.loc[gioc.capitalize(), [u + " 23_24" for u in statistiche]][1]}")
-            st.write(f" Fanta Media : {df.loc[gioc.capitalize(), [u + " 23_24" for u in statistiche]][2]}")
-            if df.loc[gioc.capitalize(), "R"] != "P":
-                st.write(f" Goal Fatti: {int(df.loc[gioc.capitalize(), [u + " 23_24" for u in statistiche]][3])}")
-            if df.loc[gioc.capitalize(), "R"] == "P":
-                st.write(f" Goal Subiti: {int(df.loc[gioc.capitalize(), [u + " 23_24" for u in statistiche]][4])}")
-            if df.loc[gioc.capitalize(), "R"] == "P":
-                st.write(f" Rigori Parati: {int(df.loc[gioc.capitalize(), [u + " 23_24" for u in statistiche]][5])}")
-            if df.loc[gioc.capitalize(), "R"] != "P":
-                st.write(f" Rigori Calciati: {int(df.loc[gioc.capitalize(), [u + " 23_24" for u in statistiche]][6])}")
-            if df.loc[gioc.capitalize(), "R"] != "P":
-                st.write(f" Rigori Segnati: {int(df.loc[gioc.capitalize(), [u + " 23_24" for u in statistiche]][7])}")
-            if df.loc[gioc.capitalize(), "R"] != "P":
-                st.write(f" Rigori Sbagliati: {int(df.loc[gioc.capitalize(), [u + " 23_24" for u in statistiche]][8])}")
-            if df.loc[gioc.capitalize(), "R"] != "P":
-                st.write(f" Assist: {int(df.loc[gioc.capitalize(), [u + " 23_24" for u in statistiche]][9])}")
-            st.write(f" Ammunizioni: {int(df.loc[gioc.capitalize(), [u + " 23_24" for u in statistiche]][10])}")
-            st.write(f" Espulsioni: {int(df.loc[gioc.capitalize(), [u + " 23_24" for u in statistiche]][11])}")
-            st.write(f" Autogol: {int(df.loc[gioc.capitalize(), [u + " 23_24" for u in statistiche]][12])}")
-
-    elif len(gioc.split()) > 1:
-        y = [u.capitalize() for u in gioc.split()]
-        x = " ".join(y)
-        if not all(df.loc[x, [u + " 23_24" for u in statistiche]].isna()):
-            st.write(f" Partite Giocate: {int(df.loc[x, [u + " 23_24" for u in statistiche]][0])}")
-            st.write(f" Media Voto: {df.loc[x, [u + " 23_24" for u in statistiche]][1]}")
-            st.write(f" Fanta Media : {df.loc[x, [u + " 23_24" for u in statistiche]][2]}")
-            if df.loc[x, "R"] != "P":
-                st.write(f" Goal Fatti: {int(df.loc[x, [u + " 23_24" for u in statistiche]][3])}")
-            if df.loc[x, "R"] == "P":
-                st.write(f" Goal Subiti: {int(df.loc[x, [u + " 23_24" for u in statistiche]][4])}")
-            if df.loc[x, "R"] == "P":
-                st.write(f" Rigori Parati: {int(df.loc[x, [u + " 23_24" for u in statistiche]][5])}")
-            if df.loc[x, "R"] != "P":
-                st.write(f" Rigori Calciati: {int(df.loc[x, [u + " 23_24" for u in statistiche]][6])}")
-            if df.loc[x, "R"] != "P":
-                st.write(f" Rigori Segnati: {int(df.loc[x, [u + " 23_24" for u in statistiche]][7])}")
-            if df.loc[x, "R"] != "P":
-                st.write(f" Rigori Sbagliati: {int(df.loc[x, [u + " 23_24" for u in statistiche]][8])}")
-            if df.loc[x, "R"] != "P":
-                st.write(f" Assist: {int(df.loc[x, [u + " 23_24" for u in statistiche]][9])}")
-            st.write(f" Ammunizioni: {int(df.loc[x, [u + " 23_24" for u in statistiche]][10])}")
-            st.write(f" Espulsioni: {int(df.loc[x, [u + " 23_24" for u in statistiche]][11])}")
-            st.write(f" Autogol: {int(df.loc[x, [u + " 23_24" for u in statistiche]][12])}")
-
-with col4:
-    if gioc:
-        st.write("**Stagione 22-23**")
-    if len(gioc.split()) == 1:
-
-        if not all(df.loc[gioc.capitalize(), [u + " 22_23" for u in statistiche]]):
-            st.write(f" Partite Giocate: {int(df.loc[gioc.capitalize(), [u + " 22_23" for u in statistiche]][0])}")
-            st.write(f" Media Voto: {df.loc[gioc.capitalize(), [u + " 22_23" for u in statistiche]][1]}")
-            st.write(f" Fanta Media : {df.loc[gioc.capitalize(), [u + " 22_23" for u in statistiche]][2]}")
-            if df.loc[gioc.capitalize(), "R"] != "P":
-                st.write(f" Goal Fatti: {int(df.loc[gioc.capitalize(), [u + " 22_23" for u in statistiche]][3])}")
-            if df.loc[gioc.capitalize(), "R"] == "P":
-                st.write(f" Goal Subiti: {int(df.loc[gioc.capitalize(), [u + " 22_23" for u in statistiche]][4])}")
-            if df.loc[gioc.capitalize(), "R"] == "P":
-                st.write(f" Rigori Parati: {int(df.loc[gioc.capitalize(), [u + " 22_23" for u in statistiche]][5])}")
-            if df.loc[gioc.capitalize(), "R"] != "P":
-                st.write(f" Rigori Calciati: {int(df.loc[gioc.capitalize(), [u + " 22_23" for u in statistiche]][6])}")
-            if df.loc[gioc.capitalize(), "R"] != "P":
-                st.write(f" Rigori Segnati: {int(df.loc[gioc.capitalize(), [u + " 22_23" for u in statistiche]][7])}")
-            if df.loc[gioc.capitalize(), "R"] != "P":
-                st.write(f" Rigori Sbagliati: {int(df.loc[gioc.capitalize(), [u + " 22_23" for u in statistiche]][8])}")
-            if df.loc[gioc.capitalize(), "R"] != "P":
-                st.write(f" Assist: {int(df.loc[gioc.capitalize(), [u + " 22_23" for u in statistiche]][9])}")
-            st.write(f" Ammunizioni: {int(df.loc[gioc.capitalize(), [u + " 22_23" for u in statistiche]][10])}")
-            st.write(f" Espulsioni: {int(df.loc[gioc.capitalize(), [u + " 22_23" for u in statistiche]][11])}")
-            st.write(f" Autogol: {int(df.loc[gioc.capitalize(), [u + " 22_23" for u in statistiche]][12])}")
-
-    elif len(gioc.split()) > 1:
-        y = [u.capitalize() for u in gioc.split()]
-        x = " ".join(y)
-
-        if not all(df.loc[x, [u + " 22_23" for u in statistiche]].isna()):
-            st.write(f" Partite Giocate: {int(df.loc[x, [u + " 22_23" for u in statistiche]][0])}")
-            st.write(f" Media Voto: {df.loc[x, [u + " 22_23" for u in statistiche]][1]}")
-            st.write(f" Fanta Media : {df.loc[x, [u + " 22_23" for u in statistiche]][2]}")
-            if df.loc[x,"R"] != "P":
-               st.write(f" Goal Fatti: {int(df.loc[x, [u + " 22_23" for u in statistiche]][3])}")
-
-
-               st.write(f" Rigori Calciati: {int(df.loc[x, [u + " 22_23" for u in statistiche]][6])}")
-
-               st.write(f" Rigori Segnati: {int(df.loc[x, [u + " 22_23" for u in statistiche]][7])}")
-
-               st.write(f" Rigori Sbagliati: {int(df.loc[x, [u + " 22_23" for u in statistiche]][8])}")
-
-               st.write(f" Assist: {int(df.loc[x, [u + " 22_23" for u in statistiche]][9])}")
-            if df.loc[x,"R"] == "P":
-               st.write(f" Goal Subiti: {int(df.loc[x, [u + " 22_23" for u in statistiche]][4])}")
-
-               st.write(f" Rigori Parati: {int(df.loc[x, [u + " 22_23" for u in statistiche]][5])}")
-
-            st.write(f" Ammunizioni: {int(df.loc[x, [u + " 22_23" for u in statistiche]][10])}")
-            st.write(f" Espulsioni: {int(df.loc[x, [u + " 22_23" for u in statistiche]][11])}")
-            st.write(f" Autogol: {int(df.loc[x, [u + " 22_23" for u in statistiche]][12])}")
-
-
-with col5:
-    if gioc:
-       st.write("**Stagione 21-22**")
-    if len(gioc.split()) == 1:
-
-        if not all(df.loc[gioc.capitalize(), statistiche]):
-            st.write(f" Partite Giocate: {int(df.loc[gioc.capitalize(), statistiche][0])}")
-            st.write(f" Media Voto: {df.loc[gioc.capitalize(),  statistiche][1]}")
-            st.write(f" Fanta Media : {df.loc[gioc.capitalize(),  statistiche][2]}")
-            if df.loc[gioc.capitalize(), "R"] != "P":
-                st.write(f" Goal Fatti: {int(df.loc[gioc.capitalize(), statistiche][3])}")
-            if df.loc[gioc.capitalize(), "R"] == "P":
-                st.write(f" Goal Subiti: {int(df.loc[gioc.capitalize(),  statistiche][4])}")
-            if df.loc[gioc.capitalize(), "R"] == "P":
-                st.write(f" Rigori Parati: {int(df.loc[gioc.capitalize(),  statistiche][5])}")
-            if df.loc[gioc.capitalize(), "R"] != "P":
-                st.write(f" Rigori Calciati: {int(df.loc[gioc.capitalize(),  statistiche][6])}")
-            if df.loc[gioc.capitalize(), "R"] != "P":
-                st.write(f" Rigori Segnati: {int(df.loc[gioc.capitalize(),  statistiche][7])}")
-            if df.loc[gioc.capitalize(), "R"] != "P":
-                st.write(f" Rigori Sbagliati: {int(df.loc[gioc.capitalize(),  statistiche][8])}")
-            if df.loc[gioc.capitalize(), "R"] != "P":
-                st.write(f" Assist: {int(df.loc[gioc.capitalize(),  statistiche][9])}")
-            st.write(f" Ammunizioni: {int(df.loc[gioc.capitalize(),  statistiche][10])}")
-            st.write(f" Espulsioni: {int(df.loc[gioc.capitalize(), statistiche][11])}")
-            st.write(f" Autogol: {int(df.loc[gioc.capitalize(), statistiche][12])}")
-
-    elif len(gioc.split()) > 1:
-        y = [u.capitalize() for u in gioc.split()]
-        x = " ".join(y)
-
-        if not all(df.loc[x, statistiche].isna()):
-            st.write(f" Partite Giocate: {int(df.loc[x, statistiche][0])}")
-            st.write(f" Media Voto: {df.loc[x, statistiche][1]}")
-            st.write(f" Fanta Media : {df.loc[x,  statistiche][2]}")
-            if df.loc[x, "R"] != "P":
-                st.write(f" Goal Fatti: {int(df.loc[x, statistiche][3])}")
-            if df.loc[x, "R"] == "P":
-                st.write(f" Goal Subiti: {int(df.loc[x, statistiche][4])}")
-            if df.loc[x, "R"] == "P":
-                st.write(f" Rigori Parati: {int(df.loc[x, statistiche][5])}")
-            if df.loc[x, "R"] != "P":
-                st.write(f" Rigori Calciati: {int(df.loc[x, statistiche][6])}")
-            if df.loc[x, "R"] != "P":
-                st.write(f" Rigori Segnati: {int(df.loc[x, statistiche][7])}")
-            if df.loc[x, "R"] != "P":
-                st.write(f" Rigori Sbagliati: {int(df.loc[x, statistiche][8])}")
-            if df.loc[x, "R"] != "P":
-                st.write(f" Assist: {int(df.loc[x, statistiche][9])}")
-            st.write(f" Ammunizioni: {int(df.loc[x, statistiche][10])}")
-            st.write(f" Espulsioni: {int(df.loc[x, statistiche][11])}")
-            st.write(f" Autogol: {int(df.loc[x, statistiche][12])}")
-
-
-col1,col2=st.columns(2)
-
-with col1:
-
-   squadra = st_tags(label="Squadra", text='Press enter to add more', suggestions=df.index.tolist())
-with col2:
-    crediti = st_tags(label="Crediti", text='Press enter to add more')
-
-x=0
-df1 = pd.DataFrame(columns=["Rosa","Squadra","Costo","Crediti Rimasti"])
-rosa=[]
-for i in squadra:
-    if len(i.split()) == 1:
-        rosa.append( i.capitalize())
+    if not col_data[stats_cols].isna().all():
+        st.write(f"Partite Giocate: {int(col_data[stats_cols][0])}")
+        st.write(f"Media Voto: {col_data[stats_cols][1]}")
+        st.write(f"Fanta Media: {col_data[stats_cols][2]}")
+        role = col_data["R"]
+        if role != "P":
+            st.write(f"Goal Fatti: {int(col_data[stats_cols][3])}")
+            st.write(f"Rigori Calciati: {int(col_data[stats_cols][6])}")
+            st.write(f"Rigori Segnati: {int(col_data[stats_cols][7])}")
+            st.write(f"Rigori Sbagliati: {int(col_data[stats_cols][8])}")
+            st.write(f"Assist: {int(col_data[stats_cols][9])}")
+        else:
+            st.write(f"Goal Subiti: {int(col_data[stats_cols][4])}")
+            st.write(f"Rigori Parati: {int(col_data[stats_cols][5])}")
+        st.write(f"Ammunizioni: {int(col_data[stats_cols][10])}")
+        st.write(f"Espulsioni: {int(col_data[stats_cols][11])}")
+        st.write(f"Autogol: {int(col_data[stats_cols][12])}")
     else:
-        y = [u.capitalize() for u in i.split()]
-        rosa.append( " ".join(y))
+        st.write("Statistiche non disponibili.")
 
+def display_general_info(player_name):
+    """Display general info for a player."""
+    col_data = df.loc[player_name]
+    st.write(f"Squadra: {col_data['Squadra']}")
+    status = "Hyped" if col_data["Diff."] >= 0 else "No hype"
+    st.write(f"Status: {status}")
+    st.write(f"Attributi: {col_data['attributi']}")
+    st.write(f"Resistenza Infortuni: {col_data['Res. Inf.']}")
 
-for i in range(len(rosa)):
-    d = {"Rosa":rosa[i],"Squadra":df.loc[rosa[i],"Squadra"],"Costo":int(crediti[i]),"Crediti Rimasti" : 500 - x - int(crediti[i])}
+# Display info in columns
+cols = st.columns(5, gap="medium")
+seasons = ["24_25", "23_24", "22_23", "21_22"]
 
-    df1 = df1._append(d,ignore_index=True)
-    x += int(crediti[i])
-df1.set_index("Rosa",inplace=True)
+for idx, col in enumerate(cols):
+    with col:
+        if keywords:
+            season = seasons[idx] if idx < len(seasons) else None
+            st.write(f"**Stagione {season.replace('_','-')}**")
+            for k in keywords:
+                name = format_name(k)
+                display_general_info(name) if idx == 0 else display_player_stats(name, season)
+
+# Build team table
+col1, col2 = st.columns(2)
+with col1:
+    squadra_input = st_tags(label="Squadra", text='Press enter to add more', suggestions=df.index.tolist())
+with col2:
+    crediti_input = st_tags(label="Crediti", text='Press enter to add more')
+
+rosa = [format_name(p) for p in squadra_input]
+df1 = pd.DataFrame(columns=["Rosa", "Squadra", "Costo", "Crediti Rimasti"])
+totale_cred = 0
+
+for i, gioc in enumerate(rosa):
+    costo = int(crediti_input[i]) if i < len(crediti_input) else 0
+    rimasti = 500 - totale_cred - costo
+    df1 = pd.concat([df1, pd.DataFrame([{
+        "Rosa": gioc,
+        "Squadra": df.loc[gioc, "Squadra"],
+        "Costo": costo,
+        "Crediti Rimasti": rimasti
+    }])], ignore_index=True)
+    totale_cred += costo
+
 if not df1.empty:
-   table= st.table(df1)
-
-
+    df1.set_index("Rosa", inplace=True)
+    st.table(df1)
