@@ -1,0 +1,566 @@
+Nome,ALG FTP,FM 23-24,FM 22-23,FM 21-22,attributi,Res. Inf.
+PONGRACIC,67/100,5.73,5.79,5.89,['Titolare'],40%
+ORDONEZ,52/100,nd,nd,nd,"['Panchinaro', 'Buona Media', 'Assistman', 'Giovane talento']",60%
+HOLM,57/100,6.13,6.16,6.17,"['Outsider', 'Titolare', 'Buona Media', 'Falloso']",60%
+HERMOSO,51/100,4.88,nd,nd,"['Panchinaro', 'Buona Media', 'Falloso']",60%
+BERTOLA,54/100,nd,nd,nd,"['Titolare', 'Giovane talento']",60%
+FOLORUNSHO,59/100,5.79,6.44,nd,"['Titolare', 'Goleador', 'Falloso']",40%
+CARNESECCHI,94/100,5.38,5.36,4.63,['Titolare'],60%
+ROSSI,34/100,nd,nd,6.00,['Panchinaro'],80%
+CIAMMAGLICHELLA,53/100,nd,nd,nd,"['Panchinaro', 'Giovane talento']",40%
+BONFANTI,55/100,nd,nd,nd,"['Panchinaro', 'Giovane talento']",60%
+UBANI,45/100,nd,nd,nd,"['Panchinaro', 'Giovane talento']",80%
+BIRAGHI,79/100,5.90,6.02,6.19,"['Titolare', 'Assistman', 'Rigorista', 'Piazzati']",60%
+NAVEROS,54/100,nd,nd,nd,"['Panchinaro', 'Giovane talento']",60%
+CHARLYS,45/100,nd,nd,nd,"['Panchinaro', 'Falloso', 'Giovane talento']",60%
+ESTUPINAN,74/100,nd,nd,nd,"['Outsider', 'Titolare', 'Assistman']",60%
+BRESCIANINI,74/100,6.43,6.47,nd,"['Outsider', 'Panchinaro', 'Goleador', 'Piazzati']",60%
+BUCHANAN,57/100,5.83,nd,nd,['Panchinaro'],40%
+ROMAGNA,44/100,nd,nd,5.50,['Panchinaro'],60%
+EHIZIBUE,68/100,5.82,5.86,5.93,"['Outsider', 'Titolare', 'Assistman']",60%
+RAVAGLIA,38/100,nd,nd,3.56,['Panchinaro'],20%
+AZON,64/100,nd,nd,nd,['Panchinaro'],60%
+Di Gregorio,93/100,5.11,5.45,5.13,"['Fuoriclasse', 'Titolare']",60%
+GONZALEZ,57/100,nd,nd,nd,"['Panchinaro', 'Falloso', 'Giovane talento']",40%
+MORO,59/100,nd,nd,nd,"['Outsider', 'Panchinaro', 'Giovane talento']",80%
+VASQUEZ,75/100,4.57,nd,nd,['Panchinaro'],60%
+NJIE,59/100,6.27,nd,nd,"['Outsider', 'Panchinaro', 'Giovane talento']",60%
+Di Gennaro,49/100,nd,nd,nd,['Panchinaro'],60%
+LUCUMI',70/100,5.71,6.09,5.68,['Titolare'],60%
+SATALINO,50/100,nd,nd,nd,"['Outsider', 'Panchinaro', 'Buona Media']",80%
+MORENTE,60/100,6.16,nd,nd,['Panchinaro'],60%
+DJIMSITI,74/100,5.89,5.88,5.89,"['Panchinaro', 'Buona Media']",60%
+KOUASSI,51/100,nd,nd,nd,"['Outsider', 'Panchinaro', 'Buona Media', 'Falloso', 'Giovane talento']",80%
+BISSECK,76/100,6.46,7.06,nd,"['Outsider', 'Panchinaro']",60%
+MANDAS,63/100,5.50,5.75,nd,['Panchinaro'],60%
+DALLINGA,72/100,6.41,nd,nd,['Panchinaro'],60%
+ADDO,55/100,nd,nd,nd,"['Outsider', 'Panchinaro', 'Giovane talento']",80%
+KILICSOY,58/100,nd,nd,nd,"['Titolare', 'Giovane talento']",80%
+PAYERO,59/100,6.00,6.06,nd,"['Titolare', 'Goleador', 'Piazzati']",40%
+IDZES,66/100,5.97,nd,nd,"['Titolare', 'Goleador']",40%
+PASALIC,88/100,6.14,6.82,6.41,"['Titolare', 'Buona Media', 'Goleador', 'Rigorista']",60%
+THURAM,75/100,7.72,7.95,nd,"['Fuoriclasse', 'Titolare', 'Buona Media', 'Goleador', 'Assistman']",60%
+ROUHI,65/100,nd,nd,nd,"['Outsider', 'Panchinaro', 'Giovane talento']",80%
+PALACIOS,55/100,5.08,nd,nd,"['Outsider', 'Panchinaro', 'Falloso']",60%
+MAIGNAN,94/100,5.13,4.86,5.34,"['Fuoriclasse', 'Titolare', 'Buona Media']",60%
+BORRELLI,49/100,nd,6.00,nd,"['Panchinaro', 'Falloso']",60%
+IMMOBILE,81/100,nd,6.63,7.48,"['Titolare', 'Goleador', 'Rigorista']",40%
+BIANCO,69/100,5.85,nd,nd,"['Panchinaro', 'Goleador', 'Falloso', 'Giovane talento']",60%
+MANDRAGORA,79/100,6.73,6.31,6.25,"['Titolare', 'Buona Media', 'Goleador', 'Piazzati']",40%
+OBERT,56/100,6.05,5.29,nd,['Titolare'],80%
+ODENTHAL,53/100,nd,nd,nd,"['Titolare', 'Buona Media', 'Falloso']",80%
+PICKEL,59/100,nd,nd,5.64,"['Titolare', 'Falloso']",60%
+DA,85/100,6.38,nd,nd,"['Titolare', 'Buona Media', 'Piazzati']",60%
+MONTIPÒ,77/100,4.43,5.03,4.79,"['Titolare', 'Buona Media']",60%
+CIRCATI,45/100,5.75,nd,nd,"['Outsider', 'Titolare', 'Falloso', 'Giovane talento']",60%
+GASPAR,65/100,6.13,nd,nd,"['Titolare', 'Falloso', 'Giovane talento']",60%
+N/A,N/A,N/A,N/A,N/A,[],N/A
+ARTHUR,68/100,nd,6.23,nd,['Panchinaro'],40%
+TOURE,50/100,5.35,nd,nd,"['Panchinaro', 'Giovane talento']",60%
+Di Pardo,46/100,nd,5.81,nd,['Panchinaro'],60%
+DJURIC,57/100,6.48,6.71,6.06,"['Outsider', 'Panchinaro']",60%
+CORVI,39/100,nd,nd,nd,['Panchinaro'],60%
+RUS,46/100,nd,nd,nd,['Panchinaro'],60%
+ISRAEL,65/100,nd,nd,nd,"['Outsider', 'Titolare']",80%
+WALUKIEWICZ,63/100,5.58,5.62,5.89,"['Titolare', 'Falloso']",40%
+SKORUPSKI,68/100,4.90,5.31,4.97,"['Titolare', 'Buona Media', 'Rigorista']",60%
+BASTONI,80/100,6.59,6.41,6.14,"['Titolare', 'Buona Media']",60%
+MARTINELLI,46/100,nd,nd,nd,"['Panchinaro', 'Giovane talento']",60%
+MCTOMINAY,95/100,7.70,nd,nd,"['Fuoriclasse', 'Titolare', 'Goleador', 'Piazzati']",60%
+VLASIC,77/100,6.67,6.19,6.82,"['Titolare', 'Buona Media', 'Assistman']",60%
+SANCHEZ,52/100,5.83,6.81,nd,"['Titolare', 'Buona Media', 'Assistman', 'Rigorista']",40%
+SANABRIA,62/100,5.83,6.27,7.52,"['Titolare', 'Rigorista']",60%
+TORRIANI,45/100,nd,nd,nd,['Panchinaro'],60%
+LOVRIC,75/100,6.15,6.13,6.71,"['Titolare', 'Buona Media', 'Goleador']",60%
+DOIG,61/100,nd,5.76,6.52,"['Titolare', 'Buona Media', 'Falloso', 'Giovane talento']",60%
+MARIPAN,63/100,5.91,nd,nd,"['Titolare', 'Buona Media']",20%
+KEAN,89/100,8.07,5.92,6.52,"['Fuoriclasse', 'Titolare', 'Buona Media', 'Goleador', 'Rigorista', 'Falloso']",80%
+MORATA,81/100,6.79,nd,nd,"['Outsider', 'Titolare', 'Buona Media', 'Goleador', 'Rigorista']",60%
+DAVIS,63/100,6.40,5.88,nd,"['Panchinaro', 'Rigorista']",60%
+SOHM,78/100,6.27,nd,nd,"['Outsider', 'Titolare', 'Buona Media', 'Assistman']",60%
+SMOLCIC,49/100,5.75,nd,nd,['Panchinaro'],60%
+BONDO,51/100,5.77,5.78,5.50,['Titolare'],60%
+PINSOGLIO,47/100,nd,nd,nd,"['Outsider', 'Panchinaro']",60%
+BARTESAGHI,59/100,nd,nd,nd,"['Panchinaro', 'Giovane talento']",80%
+EL,64/100,6.65,6.41,7.15,"['Panchinaro', 'Buona Media', 'Assistman']",60%
+MILINKOVIC,98/100,5.51,5.21,4.89,"['Titolare', 'Rigorista']",60%
+RICCI,75/100,6.03,5.89,6.30,"['Outsider', 'Titolare', 'Buona Media', 'Giovane talento']",60%
+BEUKEMA,78/100,5.94,6.04,nd,"['Titolare', 'Goleador']",60%
+HYSAJ,62/100,6.13,5.66,6.05,['Panchinaro'],60%
+RUSSO,28/100,nd,nd,2.00,['Panchinaro'],60%
+De Bruyne,78/100,nd,nd,nd,"['Fuoriclasse', 'Titolare', 'Goleador', 'Assistman', 'Rigorista', 'Piazzati']",40%
+HEGGEM,51/100,nd,nd,nd,['Panchinaro'],80%
+BELTRAN,74/100,6.43,6.70,nd,"['Panchinaro', 'Rigorista']",60%
+KEBASELE,57/100,6.37,5.80,nd,['Titolare'],60%
+TRESSOLDI,43/100,nd,5.13,5.21,"['Panchinaro', 'Falloso']",60%
+RANIERI,74/100,5.82,5.93,6.19,"['Titolare', 'Buona Media']",80%
+CARBONI,70/100,nd,6.39,nd,"['Outsider', 'Titolare', 'Goleador', 'Piazzati', 'Giovane talento']",60%
+BRADARIC,74/100,5.72,5.74,5.77,['Panchinaro'],60%
+DARMIAN,72/100,6.42,6.21,6.19,"['Titolare', 'Buona Media', 'Assistman']",60%
+DOMINGUEZ,57/100,6.83,nd,nd,"['Outsider', 'Panchinaro', 'Giovane talento']",60%
+KELLY,63/100,5.63,nd,nd,"['Titolare', 'Buona Media']",40%
+BUTEZ,76/100,5.18,nd,nd,['Titolare'],60%
+LAZZARI,72/100,5.86,5.91,5.77,"['Titolare', 'Buona Media', 'Assistman']",80%
+MANCINI,82/100,6.26,6.21,6.16,"['Titolare', 'Buona Media', 'Falloso']",80%
+GOLLINI,47/100,3.58,4.86,5.21,['Panchinaro'],80%
+BERISHA,52/100,nd,nd,nd,"['Outsider', 'Panchinaro']",60%
+RENSCH,52/100,6.19,nd,nd,"['Panchinaro', 'Assistman', 'Falloso', 'Giovane talento']",40%
+PEZZELLA,64/100,6.02,5.50,5.71,['Panchinaro'],60%
+MARCHWINSKI,56/100,nd,nd,nd,"['Panchinaro', 'Giovane talento']",40%
+SOMMER,74/100,5.35,5.65,nd,"['Titolare', 'Buona Media']",40%
+AUDERO,56/100,3.64,5.67,4.88,['Titolare'],60%
+TURATI,65/100,4.78,4.43,nd,"['Titolare', 'Buona Media']",80%
+FRATTESI,74/100,6.83,7.00,6.79,"['Panchinaro', 'Buona Media', 'Goleador']",60%
+FABBIAN,65/100,6.50,6.73,nd,"['Panchinaro', 'Goleador', 'Falloso', 'Giovane talento']",60%
+GUENDOUZI,79/100,6.10,6.21,nd,"['Outsider', 'Titolare', 'Goleador', 'Assistman', 'Falloso']",60%
+PIERINI,63/100,5.75,nd,nd,"['Outsider', 'Panchinaro', 'Buona Media', 'Goleador', 'Rigorista', 'Piazzati']",60%
+DAVID,81/100,nd,nd,nd,"['Titolare', 'Buona Media', 'Goleador', 'Rigorista']",80%
+COLLOCOLO,63/100,nd,nd,nd,"['Outsider', 'Titolare', 'Goleador', 'Falloso']",60%
+LAURIENTE',64/100,nd,6.51,7.18,"['Outsider', 'Titolare']",40%
+De Luca,52/100,nd,nd,5.50,"['Panchinaro', 'Giovane talento']",60%
+TAMEZE,57/100,5.81,5.76,5.77,"['Titolare', 'Falloso']",80%
+NERES,71/100,6.75,nd,nd,"['Outsider', 'Titolare', 'Assistman', 'Piazzati']",60%
+BALDANZI,66/100,5.95,6.28,6.58,"['Outsider', 'Panchinaro', 'Buona Media', 'Goleador', 'Giovane talento']",60%
+De Ketelaere,82/100,7.02,7.39,5.74,"['Fuoriclasse', 'Panchinaro', 'Goleador', 'Assistman', 'Piazzati', 'Falloso', 'Giovane talento']",60%
+FRIGAN,67/100,nd,nd,nd,"['Outsider', 'Panchinaro', 'Goleador', 'Falloso', 'Giovane talento']",60%
+DOVBYK,83/100,7.10,nd,nd,"['Outsider', 'Titolare', 'Buona Media', 'Goleador', 'Rigorista']",60%
+CASTELLANOS,87/100,7.07,6.12,nd,"['Titolare', 'Goleador', 'Rigorista', 'Falloso']",60%
+CAMBIAGHI,71/100,6.50,6.20,6.90,"['Outsider', 'Titolare', 'Buona Media', 'Giovane talento']",60%
+PROVSTGAARD,53/100,6.50,nd,nd,['Panchinaro'],60%
+RODRIGUEZ,67/100,nd,nd,nd,"['Panchinaro', 'Goleador', 'Giovane talento']",60%
+IDRISSI,60/100,nd,nd,nd,"['Titolare', 'Giovane talento']",60%
+MCKENNIE,77/100,6.22,6.33,5.97,"['Panchinaro', 'Buona Media', 'Falloso']",60%
+PIEROTTI,59/100,6.12,6.25,nd,"['Outsider', 'Titolare', 'Buona Media', 'Giovane talento']",60%
+SUZUKI,77/100,4.79,nd,nd,['Titolare'],60%
+N/A,N/A,N/A,N/A,N/A,[],N/A
+DIAO,67/100,8.07,nd,nd,"['Titolare', 'Goleador', 'Rigorista', 'Giovane talento']",80%
+ANGELINO,88/100,6.33,5.82,nd,"['Outsider', 'Titolare', 'Buona Media', 'Assistman']",60%
+BALOGH,58/100,5.69,nd,nd,"['Titolare', 'Falloso', 'Giovane talento']",60%
+Del Prato,77/100,6.21,nd,nd,"['Outsider', 'Titolare', 'Assistman']",60%
+OTOA,41/100,4.67,nd,nd,"['Panchinaro', 'Giovane talento']",60%
+RICHARDSON,70/100,5.83,nd,nd,"['Panchinaro', 'Giovane talento']",60%
+SANTANA,68/100,nd,nd,nd,"['Outsider', 'Titolare', 'Rigorista', 'Giovane talento']",80%
+TOMORI,75/100,5.79,6.37,6.09,"['Titolare', 'Buona Media']",60%
+MOSQUERA,65/100,5.97,nd,nd,"['Titolare', 'Rigorista']",60%
+PALESTRA,55/100,nd,nd,nd,"['Panchinaro', 'Giovane talento']",60%
+PAVARD,67/100,6.05,6.28,nd,"['Titolare', 'Buona Media']",60%
+JASHARI,71/100,nd,nd,nd,"['Outsider', 'Titolare', 'Buona Media', 'Assistman']",100%
+FREULER,86/100,6.17,6.08,nd,['Titolare'],40%
+GINEITIS,61/100,6.22,6.20,nd,"['Panchinaro', 'Giovane talento']",60%
+BERNABE,66/100,6.47,nd,nd,"['Outsider', 'Titolare', 'Buona Media', 'Goleador', 'Assistman', 'Rigorista', 'Piazzati', 'Giovane talento']",60%
+ADOPO,66/100,5.91,6.00,5.75,['Titolare'],60%
+SULEMANA,76/100,nd,nd,nd,"['Titolare', 'Assistman', 'Piazzati']",40%
+MOREO,56/100,nd,nd,nd,['Panchinaro'],80%
+POPA,50/100,nd,nd,nd,"['Panchinaro', 'Buona Media']",60%
+KRISTENSEN,58/100,5.65,5.73,nd,"['Panchinaro', 'Giovane talento']",40%
+JIMENEZ,66/100,5.83,nd,nd,"['Panchinaro', 'Giovane talento']",60%
+CAMARA,46/100,5.92,nd,nd,"['Panchinaro', 'Falloso', 'Giovane talento']",40%
+AUGUSTO,89/100,6.67,6.21,6.76,"['Panchinaro', 'Buona Media', 'Piazzati']",60%
+LAZARO,65/100,5.97,6.07,6.05,"['Outsider', 'Panchinaro']",60%
+RAFIA,57/100,5.74,5.87,nd,"['Panchinaro', 'Piazzati']",40%
+CORAZZA,45/100,nd,6.00,nd,"['Panchinaro', 'Giovane talento']",60%
+FAZZINI,79/100,7.03,5.98,5.80,"['Outsider', 'Panchinaro', 'Buona Media', 'Goleador', 'Piazzati']",80%
+MASINA,74/100,6.14,5.81,6.36,"['Titolare', 'Falloso']",60%
+MULLEN,55/100,nd,nd,nd,"['Panchinaro', 'Giovane talento']",60%
+COCO,67/100,5.81,nd,nd,"['Outsider', 'Titolare', 'Buona Media', 'Falloso']",60%
+ATTA,61/100,5.89,nd,nd,"['Panchinaro', 'Goleador', 'Giovane talento']",60%
+LUVUMBO,72/100,6.30,6.76,nd,"['Titolare', 'Giovane talento']",60%
+KARLSTROM,68/100,5.79,nd,nd,"['Titolare', 'Buona Media']",60%
+MALINOVSKYI,71/100,6.50,6.50,6.38,"['Titolare', 'Buona Media', 'Goleador', 'Assistman', 'Rigorista', 'Piazzati']",80%
+CYPRIEN,49/100,5.75,nd,nd,['Panchinaro'],60%
+MISSORI,48/100,nd,5.60,nd,"['Titolare', 'Buona Media', 'Giovane talento']",60%
+MODRIC,78/100,nd,nd,nd,"['Fuoriclasse', 'Titolare', 'Assistman', 'Rigorista', 'Piazzati']",60%
+VIGORITO,41/100,nd,nd,nd,['Panchinaro'],80%
+BARELLA,91/100,6.65,6.59,6.86,"['Fuoriclasse', 'Titolare', 'Buona Media']",80%
+BIANCHETTI,55/100,nd,nd,5.60,['Titolare'],60%
+SCUFFET,54/100,4.23,4.28,nd,['Titolare'],60%
+ILKHAN,56/100,nd,nd,5.75,"['Panchinaro', 'Goleador', 'Assistman', 'Piazzati', 'Giovane talento']",60%
+ZALEWSKI,76/100,6.22,5.76,6.16,"['Panchinaro', 'Assistman', 'Falloso', 'Giovane talento']",60%
+GORTER,48/100,nd,nd,nd,"['Panchinaro', 'Giovane talento']",80%
+ZAPPACOSTA,73/100,6.27,6.07,6.64,"['Panchinaro', 'Buona Media', 'Assistman']",60%
+ROMAGNOLI,76/100,5.90,5.83,6.29,"['Titolare', 'Buona Media']",60%
+POLITANO,83/100,6.47,6.96,6.54,"['Titolare', 'Buona Media', 'Goleador', 'Piazzati']",80%
+N/A,N/A,N/A,N/A,N/A,[],N/A
+ESTEVEZ,49/100,5.71,nd,nd,"['Panchinaro', 'Falloso']",60%
+ESPOSITO,63/100,6.69,nd,nd,"['Outsider', 'Titolare', 'Buona Media', 'Goleador']",80%
+ADAMS,78/100,6.70,nd,nd,"['Outsider', 'Titolare', 'Goleador', 'Rigorista', 'Piazzati']",60%
+CELIK,78/100,5.75,5.80,5.71,"['Titolare', 'Buona Media', 'Falloso']",60%
+SERNICOLA,58/100,nd,nd,5.95,['Titolare'],20%
+LEAO,91/100,7.16,7.39,7.90,"['Fuoriclasse', 'Titolare', 'Buona Media', 'Goleador', 'Assistman']",60%
+LIND,53/100,nd,nd,nd,['Panchinaro'],80%
+DIA,89/100,6.91,6.53,7.82,"['Outsider', 'Panchinaro', 'Buona Media', 'Goleador', 'Rigorista']",40%
+BOLOCA,62/100,nd,5.81,nd,"['Outsider', 'Titolare', 'Falloso']",60%
+CASSA,53/100,nd,nd,nd,"['Panchinaro', 'Giovane talento']",20%
+KARLSSON,61/100,6.09,5.90,nd,['Panchinaro'],40%
+MKHITARYAN,80/100,6.34,6.70,6.39,"['Fuoriclasse', 'Titolare', 'Buona Media', 'Assistman']",40%
+MASINI,54/100,nd,nd,nd,"['Titolare', 'Buona Media']",60%
+FLORIANI,54/100,nd,nd,nd,"['Outsider', 'Panchinaro', 'Falloso', 'Giovane talento']",60%
+ESPOSITO,74/100,nd,nd,nd,"['Outsider', 'Panchinaro', 'Buona Media', 'Giovane talento']",80%
+SAZONOV,45/100,5.00,5.69,nd,"['Panchinaro', 'Falloso', 'Giovane talento']",60%
+TOURE,61/100,nd,6.71,nd,"['Panchinaro', 'Giovane talento']",40%
+VALENTINI,53/100,5.43,nd,nd,['Titolare'],60%
+FALCONE,84/100,4.85,4.79,5.09,"['Titolare', 'Buona Media']",80%
+CHUKWUEZE,70/100,6.87,6.05,nd,['Panchinaro'],60%
+GALLO,73/100,5.62,6.00,5.65,"['Titolare', 'Buona Media']",40%
+HARROUI,54/100,6.40,6.84,6.24,['Titolare'],60%
+DOUVIKAS,64/100,6.75,nd,nd,"['Outsider', 'Titolare', 'Goleador']",60%
+PAVLOVIC,72/100,6.11,nd,nd,"['Outsider', 'Titolare', 'Buona Media', 'Falloso']",40%
+TRAORE,52/100,nd,10.00,nd,"['Panchinaro', 'Giovane talento']",60%
+LEALI,60/100,5.10,5.50,nd,['Titolare'],60%
+DEMBELÉ,56/100,5.89,nd,nd,"['Panchinaro', 'Giovane talento']",60%
+VECINO,71/100,6.44,6.85,6.05,"['Panchinaro', 'Buona Media']",60%
+MARTIN,76/100,6.34,5.84,nd,"['Outsider', 'Titolare', 'Goleador', 'Assistman']",60%
+FOFANA,79/100,6.24,nd,nd,"['Titolare', 'Buona Media', 'Assistman']",60%
+DIMARCO,95/100,6.83,7.25,6.70,"['Fuoriclasse', 'Titolare', 'Buona Media', 'Goleador', 'Assistman', 'Piazzati']",60%
+VANDEPUTTE,57/100,nd,nd,nd,['Panchinaro'],60%
+KRSTOVIC,91/100,6.90,6.32,nd,"['Titolare', 'Buona Media', 'Goleador', 'Rigorista']",60%
+NZOLA,78/100,nd,6.13,7.39,"['Titolare', 'Buona Media', 'Goleador', 'Rigorista']",60%
+SARO,39/100,nd,nd,nd,['Panchinaro'],20%
+ILIC,58/100,5.93,6.41,6.34,['Titolare'],60%
+TAREMI,65/100,6.21,nd,nd,"['Panchinaro', 'Buona Media', 'Assistman']",40%
+PAVOLETTI,44/100,6.61,7.04,nd,['Panchinaro'],60%
+ROBERTO,54/100,5.77,nd,nd,"['Titolare', 'Buona Media', 'Assistman']",20%
+DUMFRIES,80/100,7.02,6.57,6.00,"['Outsider', 'Titolare', 'Buona Media', 'Assistman']",60%
+N/A,N/A,N/A,N/A,N/A,[],N/A
+SERDAR,62/100,6.05,5.95,nd,"['Titolare', 'Piazzati', 'Falloso']",60%
+HERNANI,69/100,6.46,nd,nd,"['Panchinaro', 'Buona Media']",60%
+PIOTROWSKI,59/100,nd,nd,nd,"['Outsider', 'Titolare']",60%
+PAZ,80/100,6.89,nd,nd,"['Fuoriclasse', 'Titolare', 'Buona Media', 'Goleador', 'Assistman', 'Rigorista', 'Piazzati', 'Giovane talento']",60%
+SALAH-EDDINE,52/100,6.00,nd,nd,['Panchinaro'],60%
+PELLEGRINI,78/100,5.89,6.91,6.33,"['Titolare', 'Buona Media', 'Assistman', 'Piazzati']",60%
+ZEMURA,59/100,6.00,6.00,nd,['Panchinaro'],60%
+BENNACER,65/100,5.50,6.56,6.46,['Panchinaro'],40%
+MARUSIC,81/100,6.17,5.74,5.92,"['Titolare', 'Assistman']",60%
+RADUNOVIC,45/100,nd,4.00,nd,['Panchinaro'],60%
+AEBISCHER,59/100,5.67,5.90,5.90,"['Titolare', 'Buona Media', 'Falloso']",40%
+KASTANOS,59/100,5.75,6.33,6.20,"['Titolare', 'Falloso']",60%
+PERRONE,71/100,5.94,nd,nd,"['Titolare', 'Falloso']",60%
+CASADEI,63/100,6.27,nd,nd,"['Outsider', 'Titolare', 'Buona Media', 'Assistman']",80%
+SARR,58/100,6.29,nd,nd,['Titolare'],60%
+THURAM,79/100,6.75,nd,nd,"['Titolare', 'Buona Media', 'Falloso']",80%
+KALULU,74/100,6.04,5.83,5.78,"['Outsider', 'Titolare']",60%
+NOSLIN,58/100,6.42,6.97,nd,['Titolare'],60%
+TROILO,59/100,nd,nd,nd,"['Outsider', 'Titolare', 'Buona Media', 'Piazzati', 'Falloso', 'Giovane talento']",80%
+ALMQVIST,61/100,5.67,6.16,nd,['Titolare'],60%
+VITINHA,64/100,6.29,7.00,nd,"['Titolare', 'Buona Media', 'Assistman', 'Piazzati']",40%
+PRATI,50/100,5.80,5.94,nd,"['Titolare', 'Piazzati', 'Giovane talento']",60%
+VOJVODA,73/100,6.04,5.92,5.98,"['Panchinaro', 'Buona Media']",60%
+NIASSE,49/100,5.32,nd,nd,"['Titolare', 'Falloso']",60%
+RUGANI,56/100,nd,6.46,6.00,"['Panchinaro', 'Buona Media']",80%
+MARIANUCCI,58/100,nd,nd,nd,"['Panchinaro', 'Buona Media']",60%
+MAZZITELLI,56/100,6.50,6.54,nd,"['Panchinaro', 'Assistman', 'Falloso']",40%
+SAMOOJA,43/100,nd,nd,nd,"['Outsider', 'Panchinaro']",80%
+N/A,N/A,N/A,N/A,N/A,[],N/A
+PARISI,75/100,6.22,5.64,6.14,"['Panchinaro', 'Buona Media', 'Assistman']",60%
+BAILEY,73/100,nd,nd,nd,"['Outsider', 'Titolare', 'Buona Media']",80%
+SULEMANA,69/100,7.08,6.13,5.77,"['Panchinaro', 'Giovane talento']",80%
+LIVRAMENTO,61/100,5.90,nd,nd,"['Titolare', 'Giovane talento']",60%
+LANG,80/100,nd,nd,nd,"['Titolare', 'Goleador', 'Assistman']",60%
+NELSSON,50/100,6.00,nd,nd,['Titolare'],60%
+BERARDI,83/100,nd,8.06,8.10,"['Fuoriclasse', 'Titolare', 'Goleador', 'Assistman', 'Rigorista', 'Piazzati']",40%
+PEDRO,78/100,7.33,6.00,6.53,"['Panchinaro', 'Goleador', 'Rigorista']",40%
+CASTAGNETTI,45/100,nd,nd,5.88,['Panchinaro'],60%
+SIMEONE,62/100,6.11,5.83,7.33,"['Outsider', 'Titolare', 'Goleador']",60%
+NGONGE,55/100,5.67,6.87,6.73,"['Outsider', 'Titolare', 'Buona Media', 'Goleador']",80%
+KOSTIC,77/100,nd,6.00,6.60,"['Panchinaro', 'Assistman', 'Falloso']",40%
+TAVARES,67/100,6.52,nd,nd,"['Titolare', 'Assistman']",40%
+LEZZERINI,47/100,nd,nd,nd,['Panchinaro'],60%
+PERIN,57/100,5.50,5.50,6.05,"['Panchinaro', 'Buona Media']",60%
+ROVELLA,75/100,6.02,6.08,6.16,"['Panchinaro', 'Buona Media', 'Piazzati', 'Giovane talento']",60%
+GABBIA,75/100,6.04,6.30,5.39,['Panchinaro'],60%
+VASQUEZ,73/100,6.22,6.17,5.76,"['Titolare', 'Buona Media', 'Falloso']",80%
+BERNEDE,54/100,5.96,nd,nd,"['Titolare', 'Buona Media']",40%
+MIRANDA,70/100,6.16,nd,nd,"['Outsider', 'Titolare', 'Buona Media', 'Falloso']",60%
+SAELEMAEKERS,83/100,7.36,6.54,6.17,"['Outsider', 'Titolare', 'Buona Media', 'Goleador', 'Assistman']",80%
+CANDÈ,59/100,5.84,nd,nd,"['Panchinaro', 'Falloso']",60%
+LUKAKU,93/100,7.64,7.26,7.66,"['Fuoriclasse', 'Titolare', 'Goleador', 'Rigorista']",40%
+OKEREKE,69/100,nd,5.75,6.52,"['Titolare', 'Goleador', 'Rigorista']",60%
+De Roon,84/100,6.60,5.97,6.26,"['Titolare', 'Buona Media']",80%
+CIOCCI,39/100,6.00,nd,nd,"['Panchinaro', 'Giovane talento']",60%
+MAZZOCCHI,66/100,5.65,5.64,6.46,"['Panchinaro', 'Assistman', 'Falloso']",60%
+HELGASON,63/100,6.25,nd,5.79,"['Titolare', 'Piazzati']",40%
+HASA,57/100,nd,nd,nd,"['Panchinaro', 'Assistman', 'Falloso', 'Giovane talento']",60%
+IKONÈ,70/100,6.20,6.13,6.43,['Panchinaro'],60%
+SOTTIL,56/100,6.12,6.44,6.06,"['Titolare', 'Assistman', 'Falloso']",40%
+GATTI,68/100,6.22,6.11,5.81,['Titolare'],40%
+FRUCHTL,42/100,nd,nd,nd,['Panchinaro'],60%
+CONCEICAO,74/100,6.50,nd,nd,"['Outsider', 'Titolare', 'Piazzati', 'Falloso', 'Giovane talento']",60%
+ANJORIN,70/100,6.57,nd,nd,"['Outsider', 'Titolare', 'Assistman']",60%
+CHARPENTIER,53/100,6.67,nd,nd,['Panchinaro'],60%
+STANCIU,58/100,nd,nd,nd,"['Titolare', 'Buona Media']",60%
+ROG,45/100,nd,nd,nd,"['Panchinaro', 'Falloso']",20%
+VAN,59/100,5.94,nd,nd,"['Panchinaro', 'Assistman', 'Giovane talento']",40%
+OKOYE,64/100,4.46,4.82,nd,"['Outsider', 'Titolare']",40%
+MARI',76/100,5.77,5.85,5.97,['Titolare'],60%
+FOLINO,54/100,nd,nd,nd,"['Panchinaro', 'Goleador', 'Giovane talento']",60%
+HOJHOLT,47/100,nd,nd,nd,['Panchinaro'],80%
+ZIELINSKI,74/100,6.34,6.33,6.72,"['Outsider', 'Titolare', 'Buona Media', 'Goleador']",60%
+LERIS,57/100,nd,nd,5.80,['Panchinaro'],60%
+PERILLI,38/100,nd,nd,nd,['Panchinaro'],80%
+N/A,N/A,N/A,N/A,N/A,[],N/A
+ZARRAGA,59/100,5.94,6.93,nd,"['Panchinaro', 'Buona Media']",60%
+KOLASINAC,67/100,6.09,6.07,nd,['Titolare'],40%
+CABAL,56/100,6.25,5.71,5.72,"['Outsider', 'Panchinaro', 'Falloso', 'Giovane talento']",60%
+LOCATELLI,87/100,6.27,5.96,6.08,"['Titolare', 'Buona Media', 'Goleador']",60%
+BRENNER,61/100,7.00,5.83,nd,['Panchinaro'],40%
+ZERBIN,67/100,6.11,5.93,5.63,"['Panchinaro', 'Goleador', 'Giovane talento']",60%
+TERRACCIANO,56/100,5.57,5.89,6.12,"['Panchinaro', 'Buona Media', 'Giovane talento']",60%
+OYEGOKE,43/100,5.67,nd,nd,"['Panchinaro', 'Giovane talento']",60%
+GAETANO,75/100,6.42,6.88,6.88,"['Outsider', 'Titolare', 'Buona Media', 'Goleador', 'Assistman']",60%
+BREMER,70/100,6.30,6.37,6.35,"['Titolare', 'Buona Media']",40%
+BUONGIORNO,70/100,6.45,6.57,6.15,"['Outsider', 'Titolare']",60%
+NUNEZ,52/100,nd,nd,nd,['Titolare'],60%
+SOULE',75/100,7.04,7.12,6.57,"['Outsider', 'Titolare', 'Buona Media', 'Goleador', 'Assistman', 'Giovane talento']",40%
+SPINAZZOLA,72/100,6.25,6.30,6.25,"['Outsider', 'Panchinaro', 'Buona Media', 'Assistman']",20%
+KOOPMEINERS,82/100,6.41,7.63,7.14,"['Titolare', 'Buona Media', 'Piazzati', 'Falloso']",60%
+PEREZ,43/100,nd,nd,nd,['Panchinaro'],60%
+SANTIAGO,61/100,nd,nd,nd,['Titolare'],80%
+EBOSSE,48/100,5.25,nd,5.54,['Titolare'],60%
+ZANOLI,70/100,5.98,5.75,6.33,"['Panchinaro', 'Assistman']",80%
+MUHAREMOVIć,62/100,nd,nd,nd,"['Titolare', 'Buona Media', 'Giovane talento']",60%
+RAUTI,63/100,nd,nd,nd,['Panchinaro'],60%
+VEIGA,51/100,5.73,nd,nd,"['Titolare', 'Giovane talento']",60%
+EL,75/100,nd,nd,nd,"['Outsider', 'Titolare', 'Buona Media', 'Goleador']",80%
+GOLDANIGA,66/100,5.72,5.54,nd,"['Panchinaro', 'Falloso']",60%
+CUADRADO,50/100,6.13,6.22,5.92,"['Outsider', 'Titolare', 'Buona Media']",20%
+ZAPATA,78/100,7.33,7.31,6.27,"['Titolare', 'Goleador', 'Rigorista']",40%
+INFANTINO,47/100,nd,5.50,nd,['Panchinaro'],60%
+BELAHYANE,75/100,5.58,6.00,nd,"['Titolare', 'Buona Media', 'Giovane talento']",60%
+CALIGARA,51/100,nd,nd,nd,['Panchinaro'],60%
+CASTRO,61/100,6.68,7.33,nd,"['Outsider', 'Titolare', 'Buona Media', 'Goleador', 'Giovane talento']",60%
+FRESE,53/100,5.92,nd,nd,"['Titolare', 'Buona Media', 'Assistman']",60%
+PIERAGNOLO,59/100,nd,nd,nd,"['Outsider', 'Panchinaro', 'Buona Media']",80%
+LUCCA,90/100,7.18,6.75,nd,"['Panchinaro', 'Goleador', 'Rigorista', 'Giovane talento']",60%
+ADZIC,47/100,6.00,nd,nd,"['Panchinaro', 'Giovane talento']",60%
+COMUZZO,66/100,5.96,nd,nd,"['Titolare', 'Giovane talento']",60%
+PEDERSEN,59/100,5.54,5.73,nd,"['Titolare', 'Buona Media', 'Assistman']",60%
+ORSOLINI,94/100,8.19,7.19,7.09,"['Fuoriclasse', 'Titolare', 'Buona Media', 'Goleador', 'Rigorista', 'Piazzati']",40%
+YILDIZ,78/100,7.02,6.09,nd,"['Outsider', 'Titolare', 'Giovane talento']",60%
+SEMPER,41/100,nd,nd,nd,['Panchinaro'],60%
+CRISTANTE,79/100,6.63,6.37,5.89,"['Titolare', 'Buona Media']",60%
+De Silvestri,52/100,6.10,6.77,5.96,['Panchinaro'],80%
+MOHAMED,47/100,6.05,nd,nd,"['Panchinaro', 'Piazzati', 'Giovane talento']",60%
+CALABRESI,50/100,nd,nd,nd,['Panchinaro'],60%
+BONNY,78/100,6.56,nd,nd,"['Titolare', 'Buona Media', 'Assistman', 'Giovane talento']",80%
+MURIC,55/100,nd,nd,nd,['Titolare'],60%
+TCHAOUNA,56/100,5.79,6.52,nd,"['Panchinaro', 'Assistman', 'Giovane talento']",60%
+CANCELLIERI,62/100,6.15,6.15,5.83,"['Panchinaro', 'Falloso', 'Giovane talento']",80%
+ADLI,76/100,7.00,6.35,nd,"['Outsider', 'Panchinaro', 'Buona Media']",60%
+MILIK,73/100,nd,6.48,6.74,"['Panchinaro', 'Buona Media', 'Piazzati']",40%
+MBAMBI,43/100,nd,nd,nd,"['Panchinaro', 'Giovane talento']",80%
+CALHANOGLU,87/100,7.02,7.83,6.74,"['Titolare', 'Buona Media', 'Goleador', 'Assistman', 'Rigorista', 'Piazzati']",80%
+MULATTIERI,54/100,nd,5.91,nd,['Panchinaro'],40%
+SLOTSAGER,44/100,nd,nd,nd,"['Panchinaro', 'Giovane talento']",60%
+ALVAREZ,60/100,nd,nd,6.35,"['Panchinaro', 'Giovane talento']",80%
+N'DRI,48/100,5.86,nd,nd,"['Panchinaro', 'Assistman', 'Piazzati']",40%
+LYKOGIANNIS,59/100,6.04,6.38,6.21,"['Panchinaro', 'Buona Media', 'Assistman', 'Piazzati']",60%
+ANKEYE,44/100,6.00,5.75,nd,['Panchinaro'],60%
+N/A,N/A,N/A,N/A,N/A,[],N/A
+SOMMARIVA,42/100,6.00,nd,nd,['Panchinaro'],60%
+GUILBERT,64/100,5.80,nd,nd,"['Titolare', 'Buona Media', 'Falloso']",60%
+JOHNSEN,63/100,nd,nd,nd,"['Titolare', 'Goleador', 'Falloso']",60%
+PELLEGRINO,62/100,6.86,nd,nd,"['Outsider', 'Titolare', 'Goleador', 'Rigorista']",60%
+LUPERTO,71/100,6.10,6.07,6.01,"['Titolare', 'Buona Media']",60%
+BELGHALI,58/100,nd,nd,nd,"['Titolare', 'Giovane talento']",80%
+KOUAME',74/100,5.93,6.32,6.63,"['Panchinaro', 'Buona Media']",40%
+BARAK,69/100,5.50,6.71,5.96,"['Panchinaro', 'Goleador', 'Assistman']",40%
+PALMA,0/100,nd,nd,nd,['Panchinaro'],60%
+BURNETE,50/100,5.50,nd,nd,"['Panchinaro', 'Giovane talento']",60%
+MESSIAS,60/100,6.03,6.38,6.62,"['Panchinaro', 'Assistman', 'Rigorista', 'Piazzati']",60%
+De Winter,71/100,6.23,5.73,5.62,"['Titolare', 'Buona Media', 'Giovane talento']",60%
+OLIVERA,82/100,6.05,5.90,6.27,"['Titolare', 'Assistman']",60%
+VIGNATO,57/100,nd,6.10,6.35,"['Panchinaro', 'Assistman']",60%
+PIERRET,63/100,5.73,nd,nd,"['Titolare', 'Falloso']",60%
+CUTRONE,73/100,6.73,nd,nd,"['Titolare', 'Buona Media', 'Goleador']",80%
+ANGUISSA,87/100,7.05,5.85,6.60,"['Titolare', 'Buona Media']",60%
+FADERA,52/100,6.02,nd,nd,"['Outsider', 'Panchinaro', 'Assistman', 'Giovane talento']",60%
+PAZ,58/100,nd,nd,nd,"['Outsider', 'Panchinaro', 'Falloso', 'Giovane talento']",80%
+CECCHERINI,50/100,nd,nd,5.90,"['Titolare', 'Falloso']",60%
+SORENSEN,58/100,nd,nd,nd,"['Outsider', 'Titolare']",60%
+LAMBOURDE,53/100,nd,nd,nd,"['Panchinaro', 'Giovane talento']",80%
+N/A,N/A,N/A,N/A,N/A,[],N/A
+De Gea,85/100,5.38,nd,nd,"['Fuoriclasse', 'Titolare']",60%
+PALEARI,38/100,3.50,nd,nd,"['Panchinaro', 'Buona Media']",80%
+BAYEYE,63/100,nd,nd,nd,['Panchinaro'],60%
+PATRIC,56/100,5.93,6.29,6.09,['Titolare'],60%
+PAPADOPOULOS,50/100,nd,nd,nd,"['Panchinaro', 'Giovane talento']",60%
+GOSENS,76/100,6.65,nd,6.30,"['Outsider', 'Titolare', 'Goleador', 'Assistman']",60%
+COUBIS,53/100,nd,nd,nd,"['Panchinaro', 'Falloso', 'Giovane talento']",80%
+VOGLIACCO,55/100,5.55,5.93,nd,"['Panchinaro', 'Falloso']",60%
+MIRETTI,66/100,6.42,5.92,6.02,"['Panchinaro', 'Giovane talento']",60%
+JESUS,55/100,5.92,5.48,6.25,['Panchinaro'],60%
+BARBIERI,62/100,nd,nd,nd,"['Outsider', 'Titolare', 'Assistman', 'Giovane talento']",60%
+LIMA,75/100,nd,nd,nd,"['Outsider', 'Titolare', 'Buona Media', 'Assistman', 'Giovane talento']",80%
+GRONBAEK,58/100,nd,nd,nd,"['Outsider', 'Panchinaro']",60%
+NDIAYE,63/100,nd,nd,nd,"['Outsider', 'Titolare', 'Goleador', 'Giovane talento']",60%
+LOVIK,48/100,5.75,nd,nd,"['Outsider', 'Panchinaro', 'Goleador', 'Giovane talento']",60%
+HIEN,72/100,5.78,5.85,5.80,"['Outsider', 'Titolare', 'Buona Media', 'Falloso']",60%
+POBEGA,65/100,6.25,5.93,6.25,"['Panchinaro', 'Buona Media', 'Falloso']",60%
+ANGORI,64/100,nd,nd,nd,"['Titolare', 'Assistman', 'Giovane talento']",60%
+N/A,N/A,N/A,N/A,N/A,[],N/A
+ELLERTSSON,60/100,6.20,nd,5.70,"['Titolare', 'Piazzati', 'Giovane talento']",60%
+MOREIRA,57/100,nd,nd,nd,"['Panchinaro', 'Giovane talento']",60%
+KONÈ,55/100,nd,nd,nd,['Titolare'],60%
+TRAORE,51/100,nd,nd,nd,"['Titolare', 'Falloso']",80%
+SOLET,62/100,6.29,nd,nd,"['Outsider', 'Titolare', 'Buona Media']",80%
+ATHEKAME,64/100,nd,nd,nd,"['Titolare', 'Assistman', 'Giovane talento']",60%
+TRAMONI,69/100,nd,nd,nd,"['Outsider', 'Titolare', 'Buona Media']",60%
+AHANOR,66/100,nd,nd,nd,"['Outsider', 'Panchinaro', 'Goleador', 'Giovane talento']",80%
+CAPRILE,66/100,5.12,5.21,nd,"['Titolare', 'Buona Media']",60%
+LOBOTKA,79/100,6.09,5.92,6.34,"['Fuoriclasse', 'Titolare', 'Buona Media']",60%
+N/A,N/A,N/A,N/A,N/A,[],N/A
+GHILARDI,68/100,5.54,nd,nd,"['Titolare', 'Falloso', 'Giovane talento']",60%
+SIEBERT,47/100,nd,nd,nd,"['Titolare', 'Falloso']",60%
+VOLPATO,59/100,nd,6.03,6.67,"['Panchinaro', 'Buona Media', 'Assistman', 'Piazzati', 'Giovane talento']",80%
+GHION,49/100,nd,nd,nd,['Panchinaro'],60%
+PICCININI,47/100,nd,nd,nd,['Panchinaro'],60%
+FAGIOLI,73/100,6.04,6.00,6.59,"['Titolare', 'Buona Media', 'Assistman', 'Piazzati']",60%
+SCALVINI,61/100,5.25,6.08,6.03,"['Titolare', 'Giovane talento']",80%
+SCAMACCA,81/100,nd,7.85,nd,"['Outsider', 'Titolare', 'Goleador', 'Falloso']",40%
+GRASSI,64/100,5.80,5.77,5.85,['Panchinaro'],40%
+MALEH,54/100,5.74,5.64,5.76,"['Panchinaro', 'Buona Media', 'Falloso']",60%
+ALLI,59/100,3.50,nd,nd,"['Panchinaro', 'Goleador']",40%
+BANDA,47/100,5.79,6.33,6.17,"['Titolare', 'Buona Media']",40%
+AKINSANMIRO,49/100,nd,nd,nd,['Titolare'],80%
+DENOON,44/100,nd,nd,nd,"['Panchinaro', 'Giovane talento']",80%
+THORSBY,62/100,5.62,6.30,nd,['Titolare'],60%
+EDERSON,83/100,6.53,6.59,6.00,"['Outsider', 'Titolare', 'Buona Media', 'Goleador', 'Assistman']",80%
+DJALO,62/100,nd,nd,nd,"['Panchinaro', 'Goleador', 'Falloso']",60%
+MARTINEZ,71/100,5.70,4.94,nd,['Panchinaro'],60%
+N/A,N/A,N/A,N/A,N/A,[],N/A
+RRAHMANI,85/100,6.19,6.14,6.36,['Titolare'],60%
+MODESTO,63/100,6.04,nd,nd,"['Outsider', 'Titolare', 'Assistman']",60%
+BAKKER,58/100,6.00,6.00,nd,"['Panchinaro', 'Falloso']",60%
+BERNARDESCHI,65/100,nd,nd,nd,['Panchinaro'],60%
+GOGLICHIDZE,59/100,5.69,nd,nd,"['Panchinaro', 'Giovane talento']",60%
+COLOMBO,66/100,6.32,6.39,6.37,"['Titolare', 'Goleador', 'Rigorista', 'Falloso', 'Giovane talento']",60%
+CANESTRELLI,50/100,nd,nd,nd,['Titolare'],60%
+FERGUSON,75/100,nd,nd,nd,"['Outsider', 'Panchinaro', 'Giovane talento']",80%
+SAVONA,68/100,6.00,nd,nd,"['Outsider', 'Panchinaro', 'Buona Media', 'Goleador', 'Giovane talento']",60%
+RINALDI,39/100,nd,nd,nd,['Panchinaro'],60%
+N/A,N/A,N/A,N/A,N/A,[],N/A
+KUHN,73/100,nd,nd,nd,"['Titolare', 'Goleador']",60%
+DOSSENA,69/100,5.84,5.94,nd,"['Outsider', 'Titolare', 'Goleador', 'Falloso']",60%
+MINA,64/100,6.05,6.39,nd,"['Titolare', 'Buona Media', 'Falloso']",40%
+ASLLANI,72/100,6.63,6.53,5.85,"['Outsider', 'Panchinaro', 'Assistman', 'Giovane talento']",60%
+VALENTI,53/100,5.85,nd,nd,"['Panchinaro', 'Falloso']",20%
+HENRIQUE,79/100,nd,nd,nd,"['Outsider', 'Titolare', 'Buona Media', 'Assistman']",80%
+VITI,73/100,6.05,5.63,nd,"['Outsider', 'Panchinaro', 'Buona Media', 'Giovane talento']",60%
+De Vrij,77/100,6.60,6.41,5.98,"['Panchinaro', 'Buona Media']",60%
+MORENO,67/100,5.90,nd,nd,"['Titolare', 'Assistman', 'Falloso', 'Giovane talento']",60%
+MARCANDALLI,48/100,5.75,nd,nd,"['Panchinaro', 'Giovane talento']",60%
+ONDREJKA,60/100,7.85,nd,nd,"['Panchinaro', 'Goleador', 'Assistman']",20%
+DELE-BASHIRU,55/100,6.63,nd,nd,"['Outsider', 'Panchinaro', 'Goleador', 'Giovane talento']",60%
+N/A,N/A,N/A,N/A,N/A,[],N/A
+Consigli,N/A,N/A,N/A,N/A,[],N/A
+NDOUR,49/100,5.64,nd,nd,"['Outsider', 'Panchinaro', 'Goleador', 'Giovane talento']",60%
+SAVVA,58/100,nd,nd,nd,"['Panchinaro', 'Giovane talento']",40%
+GUTIERREZ,62/100,nd,nd,nd,"['Titolare', 'Assistman', 'Falloso']",80%
+FELICI,52/100,5.97,nd,nd,"['Outsider', 'Titolare', 'Goleador']",60%
+MARTINEZ,84/100,7.61,8.81,8.16,"['Fuoriclasse', 'Titolare', 'Buona Media', 'Goleador', 'Rigorista']",80%
+DYBALA,80/100,7.34,8.29,8.24,"['Fuoriclasse', 'Titolare', 'Buona Media', 'Goleador', 'Assistman', 'Rigorista', 'Piazzati']",40%
+KAMARA,71/100,6.05,6.12,nd,"['Titolare', 'Assistman']",60%
+VLAHOVIC,84/100,7.48,7.60,7.16,"['Panchinaro', 'Buona Media', 'Goleador', 'Rigorista', 'Piazzati']",60%
+CONTINI,42/100,nd,6.00,nd,['Panchinaro'],60%
+JEAN,47/100,5.75,nd,nd,['Titolare'],60%
+GILMOUR,67/100,6.06,nd,nd,"['Panchinaro', 'Buona Media', 'Falloso']",60%
+GILA,70/100,5.82,5.93,5.50,['Panchinaro'],60%
+ISMAJLI,72/100,6.11,5.67,5.86,"['Titolare', 'Buona Media']",60%
+KEITA,63/100,5.66,nd,nd,"['Titolare', 'Falloso', 'Giovane talento']",60%
+MEISTER,53/100,nd,nd,nd,['Panchinaro'],80%
+IBRAHIMOVIC,59/100,nd,6.00,nd,"['Panchinaro', 'Giovane talento']",60%
+NDICKA,80/100,6.03,5.92,nd,"['Titolare', 'Buona Media', 'Falloso']",60%
+KEMPF,69/100,5.73,nd,nd,"['Outsider', 'Titolare', 'Goleador']",60%
+RAMADANI,66/100,5.92,5.73,nd,"['Titolare', 'Falloso']",60%
+VALLE,59/100,5.73,nd,nd,"['Titolare', 'Giovane talento']",60%
+VALERI,76/100,6.26,5.62,6.31,"['Titolare', 'Assistman']",60%
+PINAMONTI,74/100,6.73,6.75,6.06,"['Titolare', 'Buona Media', 'Goleador', 'Rigorista']",60%
+PADELLI,24/100,6.50,nd,nd,['Panchinaro'],80%
+SAVA,44/100,4.67,nd,nd,['Panchinaro'],60%
+MARIO,69/100,nd,nd,nd,"['Outsider', 'Titolare', 'Buona Media', 'Giovane talento']",80%
+EKHATOR,54/100,nd,nd,nd,"['Panchinaro', 'Giovane talento']",60%
+CAMBIASO,88/100,6.20,6.12,6.03,"['Titolare', 'Buona Media']",40%
+TSADJOUT,53/100,nd,nd,6.44,['Panchinaro'],60%
+DODO',83/100,6.17,5.80,5.98,"['Titolare', 'Buona Media']",40%
+CAMARDA,68/100,nd,nd,nd,"['Outsider', 'Panchinaro', 'Rigorista', 'Giovane talento']",80%
+FORTINI,57/100,nd,nd,nd,"['Outsider', 'Panchinaro', 'Giovane talento']",60%
+VALOTI,54/100,5.50,nd,5.71,['Panchinaro'],60%
+CUENCA,50/100,nd,nd,nd,"['Panchinaro', 'Giovane talento']",40%
+BASCHIROTTO,73/100,6.00,5.69,6.23,"['Titolare', 'Goleador']",60%
+SUSIC,65/100,nd,nd,nd,"['Panchinaro', 'Buona Media', 'Giovane talento']",80%
+GIMENEZ,79/100,6.77,nd,nd,"['Outsider', 'Titolare', 'Goleador', 'Rigorista']",60%
+DEIOLA,67/100,6.17,5.40,nd,['Panchinaro'],40%
+OSTIGARD,58/100,nd,5.97,5.92,"['Outsider', 'Titolare', 'Falloso']",80%
+LUSUARDI,46/100,nd,nd,nd,"['Titolare', 'Falloso', 'Giovane talento']",80%
+N/A,N/A,N/A,N/A,N/A,[],N/A
+BENEDYCZAK,43/100,5.67,nd,nd,"['Panchinaro', 'Giovane talento']",60%
+BONAZZOLI,72/100,nd,6.30,6.36,"['Titolare', 'Goleador', 'Rigorista', 'Giovane talento']",60%
+ISAKSEN,74/100,6.37,6.46,nd,"['Panchinaro', 'Goleador']",60%
+SABELLI,69/100,5.93,5.87,nd,"['Titolare', 'Buona Media', 'Falloso']",60%
+KABA,56/100,5.83,5.73,nd,"['Panchinaro', 'Falloso', 'Giovane talento']",60%
+GUDMUNDSSON,80/100,6.65,7.70,nd,"['Outsider', 'Titolare', 'Buona Media', 'Goleador', 'Assistman', 'Rigorista', 'Falloso']",80%
+N/A,N/A,N/A,N/A,N/A,[],N/A
+MUSAH,59/100,5.60,5.85,nd,"['Panchinaro', 'Buona Media', 'Falloso', 'Giovane talento']",60%
+Di Lorenzo,89/100,6.41,6.24,6.58,"['Fuoriclasse', 'Titolare', 'Buona Media', 'Goleador']",80%
+SCHUURS,61/100,nd,6.33,6.19,"['Titolare', 'Buona Media']",40%
+BONIFAZI,49/100,5.25,5.75,5.65,['Panchinaro'],40%
+ILIC,55/100,nd,nd,nd,"['Panchinaro', 'Giovane talento']",60%
+PINTUS,45/100,nd,nd,nd,"['Panchinaro', 'Giovane talento']",60%
+EKUBAN,53/100,6.35,6.68,nd,"['Titolare', 'Buona Media']",40%
+SVILAR,84/100,5.32,5.38,4.83,"['Titolare', 'Buona Media']",60%
+MORO,57/100,6.03,6.22,6.30,['Titolare'],40%
+BASIC,55/100,nd,5.35,6.18,"['Panchinaro', 'Falloso']",80%
+GABRIEL,42/100,6.25,nd,nd,"['Panchinaro', 'Giovane talento']",60%
+ODGAARD,72/100,nd,nd,nd,"['Outsider', 'Titolare', 'Goleador']",60%
+BELLANOVA,79/100,6.27,6.38,6.00,"['Outsider', 'Titolare']",80%
+N/A,N/A,N/A,N/A,N/A,[],N/A
+KOVAC,50/100,nd,nd,nd,"['Panchinaro', 'Buona Media', 'Giovane talento']",60%
+ABOUKHLAL,77/100,nd,nd,nd,"['Outsider', 'Titolare', 'Goleador', 'Piazzati']",60%
+COULIBALY,76/100,6.03,5.66,6.23,"['Panchinaro', 'Buona Media']",60%
+EKKELENKAMP,67/100,6.31,nd,nd,['Panchinaro'],60%
+FINI,57/100,nd,nd,nd,"['Panchinaro', 'Giovane talento']",60%
+MARIN,51/100,nd,nd,nd,"['Titolare', 'Falloso']",80%
+CASALE,62/100,5.50,5.56,6.03,['Titolare'],80%
+PULISIC,94/100,7.47,7.44,nd,"['Fuoriclasse', 'Titolare', 'Goleador', 'Rigorista', 'Piazzati']",60%
+PICCOLI,77/100,6.81,6.45,6.22,"['Outsider', 'Titolare', 'Goleador', 'Falloso']",60%
+ACERBI,66/100,6.18,6.56,5.97,"['Titolare', 'Buona Media']",60%
+FERGUSON,66/100,6.39,6.97,6.85,"['Titolare', 'Falloso']",20%
+LOFTUS-CHEEK,71/100,5.76,6.73,nd,"['Panchinaro', 'Buona Media']",60%
+THORSTVEDT,69/100,nd,6.41,6.20,"['Titolare', 'Buona Media', 'Goleador']",40%
+BATURINA,72/100,nd,nd,nd,"['Titolare', 'Goleador', 'Assistman', 'Piazzati', 'Falloso', 'Giovane talento']",60%
+SUSLOV,59/100,5.75,6.30,nd,"['Outsider', 'Titolare', 'Assistman', 'Falloso', 'Giovane talento']",60%
+FRENDRUP,71/100,6.03,6.41,nd,"['Titolare', 'Buona Media', 'Falloso']",60%
+FURLANETTO,47/100,nd,nd,nd,['Panchinaro'],60%
+BIANAY,50/100,nd,nd,nd,"['Panchinaro', 'Giovane talento']",60%
+NORTON-CUFFY,58/100,5.70,nd,nd,"['Titolare', 'Giovane talento']",60%
+FRANCO,60/100,nd,nd,nd,"['Panchinaro', 'Goleador', 'Assistman', 'Piazzati']",40%
+TERRACCIANO,47/100,5.17,5.28,4.78,['Panchinaro'],60%
+SKJELLERUP,52/100,nd,nd,nd,"['Panchinaro', 'Giovane talento']",60%
+DZEKO,81/100,nd,nd,7.25,"['Fuoriclasse', 'Titolare', 'Buona Media', 'Goleador', 'Assistman', 'Rigorista', 'Piazzati']",60%
+PERCIUN,59/100,nd,nd,nd,"['Outsider', 'Panchinaro', 'Giovane talento']",60%
+MALDINI,77/100,6.66,6.73,6.43,"['Outsider', 'Panchinaro']",60%
+ALESSANDRO,59/100,nd,nd,nd,"['Panchinaro', 'Giovane talento']",80%
+PISILLI,59/100,6.13,nd,nd,"['Panchinaro', 'Giovane talento']",60%
+CARACCIOLO,45/100,nd,nd,nd,['Titolare'],60%
+MILLER,59/100,nd,nd,nd,"['Titolare', 'Buona Media', 'Assistman', 'Piazzati', 'Falloso', 'Giovane talento']",80%
+DO,50/100,nd,nd,nd,"['Panchinaro', 'Giovane talento']",60%
+SAMARDZIC,69/100,6.28,6.77,6.59,"['Outsider', 'Titolare', 'Buona Media', 'Goleador', 'Assistman', 'Piazzati', 'Giovane talento']",60%
+ZACCAGNI,91/100,6.95,6.54,7.44,"['Fuoriclasse', 'Titolare', 'Buona Media', 'Goleador', 'Assistman', 'Rigorista']",80%
+BOHINEN,50/100,5.00,5.82,5.82,['Panchinaro'],80%
+PELLEGRINI,76/100,6.11,5.77,5.83,"['Panchinaro', 'Buona Media']",60%
+LIPANI,54/100,nd,5.92,nd,"['Outsider', 'Titolare', 'Giovane talento']",60%
+GONZALEZ,84/100,6.41,7.20,6.86,"['Panchinaro', 'Piazzati', 'Falloso']",40%
+ZAPPA,75/100,5.88,5.90,nd,"['Titolare', 'Buona Media', 'Falloso']",60%
+ZORTEA,84/100,6.63,6.62,6.10,"['Titolare', 'Buona Media', 'Assistman']",60%
+POSCH,60/100,5.77,6.15,6.68,"['Outsider', 'Titolare', 'Assistman']",60%
+SPORTIELLO,55/100,5.00,4.57,4.73,"['Panchinaro', 'Buona Media']",80%
+GIGOT,58/100,6.70,nd,nd,"['Panchinaro', 'Goleador']",40%
+CAQUERET,73/100,6.82,nd,nd,"['Titolare', 'Assistman']",60%
+PROVEDEL,72/100,4.67,5.14,5.46,"['Titolare', 'Buona Media']",60%
+ENGELHARDT,59/100,6.07,nd,nd,"['Titolare', 'Buona Media', 'Giovane talento']",60%
+LOOKMAN,98/100,7.90,7.41,7.92,"['Fuoriclasse', 'Titolare', 'Buona Media', 'Goleador', 'Rigorista']",40%
+VITIK,58/100,nd,nd,nd,"['Titolare', 'Buona Media', 'Falloso', 'Giovane talento']",60%
+KONE,77/100,6.38,nd,nd,"['Titolare', 'Buona Media']",40%
+MERET,94/100,5.78,4.90,5.56,"['Titolare', 'Buona Media']",60%
+IANNONI,56/100,nd,nd,nd,"['Panchinaro', 'Buona Media']",80%
+SABIRI,61/100,nd,nd,5.81,"['Panchinaro', 'Piazzati', 'Falloso']",60%
