@@ -55,6 +55,16 @@ PARTICLES = {
     "di", "de", "da", "del", "della", "dei", "degli", "delle", "van", "der",
 }
 
+FILLERS = {
+    "offro", "offre", "vendo", "vende", "vendomi", "prendo", "prende",
+    "prendi", "vince", "vincono", "vada", "vai", "va", "per", "al", "alla",
+    "perché", "perche", "quindi", "allora", "adesso", "ora", "che", "con",
+    "mai", "più", "piu", "la", "le", "lo", "gli", "un", "una", "te", "ti",
+    "mi", "ci", "si", "vi", "lei", "lui", "noi", "voi", "ma",
+}
+
+GIO_ALIASES = {"gio", "giò"}
+
 NUM_WORDS = {
     "uno": 1, "una": 1, "due": 2, "tre": 3, "quattro": 4, "cinque": 5,
     "sei": 6, "sette": 7, "otto": 8, "nove": 9, "dieci": 10, "undici": 11,
@@ -112,6 +122,14 @@ def _words_to_number(text):
     return total if found else None
 
 
+def _fm_key(p):
+    try:
+        fm = float(p.get("FM"))
+        return fm if fm == fm else 0.0
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def extract_bid(text, players_df):
     result = {"player": None, "price": None, "candidates": []}
     if not text:
@@ -125,52 +143,84 @@ def extract_bid(text, players_df):
         result["price"] = word_number
 
     clean = re.sub(r"[^\w\s'àèéìòù]", " ", text.lower())
+    teams = {normalize_name(t) for t in players_df["Squadra"].dropna().unique()}
     q = [w for w in clean.split() if len(w) > 1 and not w.isdigit()
-         and w not in PARTICLES]
+         and w not in PARTICLES and w not in FILLERS and w not in teams]
     q_single = [w for w in clean.split() if len(w) == 1 and w.isalpha()]
     if not q:
         return result
     q_joined = "".join(clean.split())
+    text_tokens = [w for w in clean.split() if not w.isdigit()]
+    joins = set()
+    for i in range(len(text_tokens)):
+        acc = ""
+        for j in range(i, len(text_tokens)):
+            acc += text_tokens[j]
+            joins.add(acc)
 
     scored = []
     for _, p in players_df.iterrows():
         raw_tokens = normalize_name(p["Nome"]).split()
+        gaz_tokens = normalize_name(p.get("NomeGaz", "")).split()
         tokens = [t for t in raw_tokens if t not in PARTICLES]
         if not tokens:
             continue
-        alias = "".join(raw_tokens)
-        strong = len(alias) >= 5 and alias in q_joined
+        aliases = {"".join(raw_tokens)}
+        if len(raw_tokens) > 1:
+            aliases.add("".join(raw_tokens[:-1]))
+        if gaz_tokens:
+            aliases.add("".join(gaz_tokens))
+            if len(gaz_tokens) > 1:
+                aliases.add("".join(gaz_tokens[:-1]))
+        strong = any(len(a) >= 5 and a in joins for a in aliases)
+        common = set(q) & set(tokens)
+        best_ratio = 0.0
         if strong:
             score = 0.7
-            tokens = [t for t in tokens if t in q]
+            best_ratio = 1.0
             if tokens and all(t in q for t in tokens):
                 score += 0.2
+        elif common:
+            score = 0.0
+            if tokens[0] in q:
+                score += 0.5
+                best_ratio = 1.0
+            if len(tokens) > 1 and tokens[-1] in q:
+                score += 0.3
+                best_ratio = max(best_ratio, 0.95)
+            score += 0.15 * max(0, len(common) - 1)
+            if all(t in q for t in tokens):
+                score += 0.2
         else:
-            common = set(q) & set(tokens)
-            if not common:
-                ratio = difflib.SequenceMatcher(
-                    None, " ".join(q), " ".join(tokens)
-                ).ratio()
-                if ratio < 0.6:
-                    continue
-                score = ratio * 0.6
-            else:
-                score = 0.0
-                if tokens[0] in q:
-                    score += 0.5
-                if len(tokens) > 1 and tokens[-1] in q:
-                    score += 0.3
-                score += 0.15 * max(0, len(common) - 1)
-                if all(t in q for t in tokens):
-                    score += 0.2
-                if q_single and any(
-                    tok.startswith(c) for tok in tokens[1:] for c in q_single
-                ):
-                    score += 0.15
-        scored.append((score, p))
+            fuzzy_q = [t for t in q if t not in common]
+            best = 0.0
+            for a in fuzzy_q:
+                for b in tokens:
+                    ratio = difflib.SequenceMatcher(None, a, b).ratio()
+                    shorter = min(a, b, key=len)
+                    if len(shorter) >= 4 and (a in b or b in a) \
+                            and abs(len(a) - len(b)) > 1:
+                        ratio *= 0.5
+                    best = max(best, ratio)
+            if best < 0.6:
+                continue
+            score = 0.3
+            best_ratio = best
+            if best >= 0.85:
+                score += 0.05
+        disamb = [c for c in q_single if c not in "aeiou"] + [
+            t for t in q if len(t) <= 3
+            and t not in FILLERS and t not in PARTICLES
+        ]
+        if disamb and any(
+            tok.startswith(c) or (c in GIO_ALIASES and tok.startswith("jo"))
+            for tok in tokens[1:] for c in disamb
+        ):
+            score += 0.3
+        scored.append((score, best_ratio, p))
 
-    scored.sort(key=lambda x: (x[0], x[1].get("FM", 0) or 0), reverse=True)
-    top = [p for _, p in scored[:5] if _ >= 0.3]
+    scored.sort(key=lambda x: (x[0], x[1], _fm_key(x[2])), reverse=True)
+    top = [p for _, _, p in scored[:5] if _ >= 0.3]
     result["candidates"] = top
     if top:
         result["player"] = top[0]["Nome"]
