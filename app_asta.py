@@ -17,10 +17,18 @@ SAMPLE_RATE = 16000
 class BidRecorder(AudioProcessorBase):
     def __init__(self):
         self.frames = []
+        self.rate = 48000
 
     def recv(self, frame):
         self.frames.append(frame.to_ndarray().copy())
+        self.rate = frame.sample_rate
         return frame
+
+    async def recv_queued(self, frames):
+        for frame in frames:
+            self.frames.append(frame.to_ndarray().copy())
+            self.rate = frame.sample_rate
+        return frames
 
 
 def recorder_factory():
@@ -195,33 +203,59 @@ def render_recorder():
             mode=WebRtcMode.SENDONLY,
             audio_processor_factory=recorder_factory,
             audio_receiver_size=1024,
+            async_processing=True,
             media_stream_constraints={"audio": True, "video": False},
         )
     except Exception:
         ctx = None
+
+    playing = ctx is not None and ctx.state.playing
     proc = st.session_state.get("rec_proc")
-    if ctx is not None and not ctx.state.playing and proc is not None \
-            and proc.frames:
-        rate = getattr(proc, "sample_rate", 48000) or 48000
-        audio = frames_to_float32(proc.frames, rate)
+
+    if playing:
+        st.session_state["rec_was_playing"] = True
+        n = len(proc.frames) if proc else 0
+        st.markdown(
+            f'<div style="background:#7a1f1f;color:white;padding:10px 14px;'
+            f'border-radius:8px;font-weight:bold">🔴 REC — sto ascoltando '
+            f'({n} frame) — parla chiaro, poi premi **Stop**</div>',
+            unsafe_allow_html=True,
+        )
+
+    if not playing and proc is not None and proc.frames:
+        audio = frames_to_float32(proc.frames, proc.rate)
         proc.frames.clear()
-        if audio is not None:
+        st.session_state["rec_was_playing"] = False
+        if audio is not None and len(audio) > 0:
             st.session_state["recorded_audio"] = audio
-    st.caption("Avvia la registrazione, poi fermala: l'audio viene trascritto "
-               "in locale dal modello Whisper.")
+
+    if st.session_state.pop("rec_was_playing", False):
+        st.warning("Il microfono non ha ricevuto audio — controlla che il "
+                   "browser abbia il permesso (icona 🔒 nella barra degli "
+                   "indirizzi) e riprova.")
 
     if st.session_state.get("recorded_audio") is not None:
-        if st.button("Trascrivi audio registrato"):
-            with st.spinner("Trascrivendo..."):
-                model = get_whisper(st.session_state.get("whisper_model", "base"))
-                segments, _ = model.transcribe(
-                    st.session_state["recorded_audio"],
-                    language="it", vad_filter=True, beam_size=5,
-                )
-                text = " ".join(s.get_text() for s in segments)
+        with st.spinner("Trascrivendo audio..."):
+            model = get_whisper(st.session_state.get("whisper_model", "base"))
+            segments, _ = model.transcribe(
+                st.session_state["recorded_audio"],
+                language="it", vad_filter=True, beam_size=5,
+            )
+            text = " ".join(s.text.strip() for s in segments)
+        st.session_state["recorded_audio"] = None
+        if text.strip():
             st.session_state["transcript_area"] = text
-            st.session_state["recorded_audio"] = None
-            st.rerun()
+        else:
+            st.session_state["rec_empty_warn"] = True
+        st.rerun()
+
+    if st.session_state.pop("rec_empty_warn", False):
+        st.warning("Audio registrato ma nessuna frase riconosciuta — riprova "
+                   "parlando più vicino al microfono e più lentamente, "
+                   "oppure usa l'upload qui sotto.")
+
+    st.caption("Premi Start → parla → premi Stop: la frase viene trascritta "
+               "e può essere estratta automaticamente.")
 
     uploaded = st.file_uploader(
         "oppure carica un file audio", type=["wav", "mp3", "m4a", "aac",

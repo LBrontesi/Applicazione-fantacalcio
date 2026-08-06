@@ -13,9 +13,12 @@ def frames_to_float32(frames, sample_rate):
     if not frames:
         return None
     arr = np.concatenate(frames, axis=1)
+    is_int = np.issubdtype(arr.dtype, np.integer)
     if arr.ndim > 1:
         arr = arr.mean(axis=0)
-    mono = arr.astype(np.float32) / 32768.0
+    mono = arr.astype(np.float32)
+    if is_int:
+        mono = mono / 32768.0
     if sample_rate and sample_rate != TARGET_RATE:
         idx = np.round(
             np.linspace(0, len(mono) - 1,
