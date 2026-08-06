@@ -121,8 +121,10 @@ def render_setup():
     st.markdown("**Nuova sessione**")
     league = st.text_input("Nome lega", value="Asta 26-27")
     teams_input = st.text_area(
-        "Squadre (una per riga)", height=120,
-        placeholder="Andrea\nMarco\nGiulia\n...",
+        "Squadre (una per riga)",
+        value="Bro\nLolo\nGiorgio\nRochira\nPistacchio\nBugani\nRiolo\nBabbo\n"
+              "Piermattei\nFrancesco",
+        height=140,
     )
     budget = st.number_input("Budget iniziale", min_value=10, max_value=5000,
                              value=500, step=10)
@@ -151,8 +153,8 @@ def render_setup():
 
     if st.button("Crea sessione", type="primary"):
         teams = [t.strip() for t in teams_input.splitlines() if t.strip()]
-        if len(teams) < 2:
-            st.error("Inserisci almeno 2 squadre")
+        if len(teams) != 10:
+            st.error(f"La lega è a 10 squadre — ora ne hai inserite {len(teams)}")
         else:
             session = asta_core.new_session(
                 league, teams, budget=int(budget), slots=slots, fair=fair
