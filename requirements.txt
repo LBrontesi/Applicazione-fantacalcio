@@ -8,3 +8,5 @@ numpy
 streamlit-webrtc
 av
 faster-whisper
+soundfile
+sounddevice

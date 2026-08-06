@@ -45,13 +45,15 @@ def decode_audio_upload(data):
         return None
 
 
-def transcribe(audio, model_name="small"):
-    from faster_whisper import WhisperModel
-    model = WhisperModel(model_name, device="cpu", compute_type="int8")
+def transcribe(audio, model):
     segments, _ = model.transcribe(
         audio, language="it", vad_filter=True, beam_size=5
     )
-    return " ".join(seg.text.strip() for seg in segments)
+    return " ".join(s.text.strip() for s in segments)
+
+
+def transcribe_audio(audio, model):
+    return transcribe(audio, model)
 
 
 PARTICLES = {
@@ -110,16 +112,21 @@ def _words_to_number(text):
     low = text.lower().replace("'", " ")
     total = 0
     found = False
+    prev_end = -1
     i = 0
     while i < len(low):
         matched = False
         for word in _NUM_SORTED:
             if low.startswith(word, i):
-                total += NUM_WORDS[word]
-                i += len(word)
-                found = True
-                matched = True
-                break
+                before = low[i - 1] if i > 0 else ""
+                continuation = (i == prev_end)
+                if continuation or not (before.isalpha() and before.islower()):
+                    total += NUM_WORDS[word]
+                    i += len(word)
+                    prev_end = i
+                    found = True
+                    matched = True
+                    break
         if not matched:
             i += 1
     return total if found else None

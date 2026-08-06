@@ -9,12 +9,17 @@ import asta_core
 import data_loader
 import scraper
 from data_loader import ROLE_ORDER, build_players, fair_values_scaled, suggest_player
-from transcriber import decode_audio_upload, extract_bid, frames_to_float32
+from transcriber import (
+    decode_audio_upload, extract_bid, frames_to_float32, transcribe_audio,
+)
 
 st.set_page_config(page_title="Asta Coach", page_icon="⚽", layout="wide")
 
 MAX_REC_SECONDS = 30
 SAMPLE_RATE = 16000
+LIVE_MODEL = "small"
+FINAL_MODEL = "large-v3-turbo"
+LIVE_CHUNK_SECONDS = 2.5
 
 
 class BidRecorder(AudioProcessorBase):
@@ -197,6 +202,41 @@ def session_budget():
     return session["meta"]["budget"] if session else 500
 
 
+@st.fragment(run_every="2s")
+def live_loop():
+    proc = st.session_state.get("rec_proc")
+    if proc is None or not st.session_state.get("rec_on"):
+        return
+    base = st.session_state.get("chunk_base", 0)
+    if len(proc.frames) <= base:
+        return
+    new = proc.frames[base:]
+    st.session_state["chunk_base"] = len(proc.frames)
+    audio = frames_to_float32(new, proc.rate)
+    if audio is None:
+        return
+    model = get_whisper(LIVE_MODEL)
+    text = transcribe_audio(audio, model).strip()
+    if text:
+        st.session_state["live_text"] = (
+            st.session_state.get("live_text", "") + " " + text
+        ).strip()
+    live_text = st.session_state.get("live_text", "")
+    placeholder = "… in attesa di parole …"
+    st.markdown(
+        f'<div style="background:#1f2a44;color:#cfe3ff;padding:10px 14px;'
+        f'border-radius:8px;min-height:44px">'
+        f'{live_text or placeholder}</div>',
+        unsafe_allow_html=True,
+    )
+    r = extract_bid(live_text, players_df())
+    if r["price"]:
+        who = f" · {r['player']} (probabile)" if r["player"] else ""
+        st.success(f"💰 Prezzo rilevato dal vivo: **{r['price']}**{who}")
+    st.caption("trascrizione live (modello veloce) — alla fine usa quello "
+               "ad alta precisione")
+
+
 def set_prefill(key, value):
     st.session_state[f"{key}_value"] = value
     st.session_state.pop(key, None)
@@ -245,6 +285,7 @@ def render_recorder():
             st.session_state["rec_proc"] = live
 
     if rec_on:
+        live_loop()
         if proc is not None:
             n = len(proc.frames)
             peak = proc.peak
@@ -279,6 +320,8 @@ def render_recorder():
         proc.frames.clear()
         proc.peak = 0.0
         st.session_state["rec_proc"] = None
+        st.session_state["live_text"] = ""
+        st.session_state["chunk_base"] = 0
         if audio is not None and len(audio) > 0 and peak > 0:
             st.session_state["recorded_audio"] = audio
         else:
@@ -290,13 +333,10 @@ def render_recorder():
                    "indirizzi) e riprova, oppure usa l'upload qui sotto.")
 
     if st.session_state.get("recorded_audio") is not None:
-        with st.spinner("Trascrivendo audio..."):
-            model = get_whisper("small")
-            segments, _ = model.transcribe(
-                st.session_state["recorded_audio"],
-                language="it", vad_filter=True, beam_size=5,
+        with st.spinner("Trascrivendo audio (modello ad alta precisione)..."):
+            text = transcribe_audio(
+                st.session_state["recorded_audio"], get_whisper(FINAL_MODEL)
             )
-            text = " ".join(s.text.strip() for s in segments)
         st.session_state["recorded_audio"] = None
         if text.strip():
             st.session_state["transcript_area"] = text
@@ -304,8 +344,8 @@ def render_recorder():
             st.session_state["rec_empty_warn"] = True
         st.rerun()
 
-    st.caption("Inizia → parla → Ferma: la frase viene trascritta e può "
-               "essere estratta automaticamente.")
+    st.caption("Inizia → parla → Ferma: il testo scorre dal vivo e alla fine "
+               "la trascrizione usa il modello ad alta precisione.")
 
     uploaded = st.file_uploader(
         "oppure carica un file audio", type=["wav", "mp3", "m4a", "aac",
