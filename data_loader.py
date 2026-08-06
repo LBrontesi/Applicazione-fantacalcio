@@ -4,7 +4,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from scraper import DATA_DIR, PLAYERS_FCP, QUOTAZIONI, normalize_name
+from scraper import (
+    DATA_DIR, FORMAZIONI, PLAYERS_FCP, QUOTAZIONI, SET_PIECES, normalize_name,
+)
 
 ROLE_ORDER = ["P", "D", "C", "A"]
 CLUSTER_SIZE = 10
@@ -199,3 +201,89 @@ def suggest_player(query, players_df, limit=8):
     if scores and scores[0][0] > 0.35:
         return pd.DataFrame([p for _, p in scores[:limit]])
     return players_df.head(0)
+
+
+def _fuzzy_match(name, candidates):
+    n = normalize_name(name)
+    for c in candidates:
+        if normalize_name(c) == n:
+            return c
+    best = None
+    best_score = 0.0
+    for c in candidates:
+        ratio = difflib.SequenceMatcher(
+            None, n, normalize_name(c)
+        ).ratio()
+        if ratio > best_score:
+            best_score = ratio
+            best = c
+    return best if best_score >= 0.8 else None
+
+
+def load_formazioni():
+    if not FORMAZIONI.exists():
+        return pd.DataFrame()
+    df = pd.read_csv(FORMAZIONI)
+    df["Titolari"] = df["Titolari"].fillna("")
+    return df
+
+
+def load_set_pieces():
+    if not SET_PIECES.exists():
+        return pd.DataFrame()
+    return pd.read_csv(SET_PIECES)
+
+
+def build_lineups(players_df, progress_cb=None):
+    form = load_formazioni()
+    sp = load_set_pieces()
+    if form.empty:
+        return pd.DataFrame()
+
+    sp_map = {}
+    for _, r in sp.iterrows():
+        key = (r["Squadra"], normalize_name(r["Giocatore"]))
+        sp_map.setdefault(key, set()).add(r["Tipo"])
+    gaz_names = players_df["NomeGaz"].dropna().tolist()
+    rows = []
+    for _, f in form.iterrows():
+        team = f["Squadra"]
+        modulo = f["Modulo"]
+        for name in str(f["Titolari"]).split("|"):
+            if not name:
+                continue
+            matched = _fuzzy_match(name, gaz_names)
+            row = {
+                "Squadra": team,
+                "Modulo": modulo,
+                "NomeLineup": name,
+                "Rigorista": False,
+                "Punizioni": False,
+                "Angoli": False,
+            }
+            if matched:
+                p = players_df[players_df["NomeGaz"] == matched].iloc[0]
+                row["Nome"] = p["Nome"]
+                row["Ruolo"] = p["Ruolo"]
+                row["FM"] = p["FM"]
+                row["QA"] = p["QA"]
+            else:
+                row["Nome"] = name
+                row["Ruolo"] = ""
+                row["FM"] = float("nan")
+                row["QA"] = float("nan")
+            flags = set()
+            sp_names = [g for (t, g), _ in sp_map.items() if t == team]
+            if sp_names:
+                hit = _fuzzy_match(name, sp_names)
+                if hit:
+                    flags = sp_map.get((team, hit), set())
+            for tipo in flags:
+                if tipo in ("Rigorista", "Punizioni", "Angoli"):
+                    row[tipo] = True
+            rows.append(row)
+    df = pd.DataFrame(rows)
+    if progress_cb:
+        matched_n = df["Ruolo"].astype(str).str.len().gt(0).sum()
+        progress_cb(f"{len(df)} titolari ({matched_n} abbinati ai giocatori)")
+    return df

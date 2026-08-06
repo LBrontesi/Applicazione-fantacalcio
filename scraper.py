@@ -12,6 +12,8 @@ BASE_DIR = Path(__file__).parent
 DATA_DIR = BASE_DIR / "data"
 PLAYERS_FCP = DATA_DIR / "players_fcp.csv"
 QUOTAZIONI = DATA_DIR / "quotazioni.csv"
+FORMAZIONI = DATA_DIR / "formazioni.csv"
+SET_PIECES = DATA_DIR / "set_pieces.csv"
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -27,6 +29,9 @@ FCP_ROLES = [
 ]
 
 QUOTAZIONI_URL = "https://www.fantacalcio.it/quotazioni-fantacalcio"
+LINEUPS_URL = "https://www.fantacalcio.it/probabili-formazioni-serie-a"
+SET_PIECES_URL = ("https://www.fantacalciopedia.com/articoli-fcp/"
+                  "consigli-fantacalcio/216-rigoristi-e-tiratori-2026-27.html")
 
 TEAM_SLUGS = {
     "atalanta": "Atalanta", "bologna": "Bologna", "cagliari": "Cagliari",
@@ -182,10 +187,116 @@ def scrape_quotazioni(progress_cb=None):
     return df
 
 
+def _formation_display(code):
+    if not code:
+        return "?"
+    return "-".join(list(code))
+
+
+def scrape_lineups(progress_cb=None):
+    DATA_DIR.mkdir(exist_ok=True)
+    html = _get(LINEUPS_URL)
+    html.raise_for_status()
+    soup = bs(html.content, "html.parser")
+
+    rows = []
+    for match in soup.select("li.match-item"):
+        h3s = match.select("div.row.col-sm h3.team-name")
+        uls = match.select("div.pitch ul.team-lineup")
+        for h3, ul in zip(h3s, uls):
+            team = _clean(h3.get_text())
+            modulo = _formation_display(ul.get("data-formation"))
+            players = [
+                _clean(li.select_one("a.player-name span").get_text())
+                for li in ul.select("li.player")
+                if li.select_one("a.player-name span")
+            ]
+            rows.append({"Squadra": team, "Modulo": modulo,
+                         "Titolari": "|".join(players)})
+
+    df = pd.DataFrame(rows)
+    df.to_csv(FORMAZIONI, index=False)
+    if progress_cb:
+        progress_cb(f"{len(df)} formazioni (20 squadre attese)")
+    return df
+
+
+def _split_names(raw):
+    raw = re.sub(r"\.{2,}", " ", raw)
+    parts = re.split(r"[,\n;]+", raw)
+    names = []
+    for p in parts:
+        p = p.strip()
+        p = re.sub(r"\s+", " ", p)
+        p = re.sub(r"\s*-\s*", " ", p)
+        if p:
+            names.append(p)
+    return names
+
+
+def scrape_set_pieces(progress_cb=None):
+    DATA_DIR.mkdir(exist_ok=True)
+    html = _get(SET_PIECES_URL)
+    html.raise_for_status()
+    soup = bs(html.content, "html.parser")
+    text = soup.get_text("\n")
+
+    start = text.find("Tiratori Atalanta")
+    if start < 0:
+        start = text.find("Rigoristi e Tiratori Serie A")
+    body = text[start:] if start >= 0 else text
+    for marker in ["Autore", "Copyrights", "Guida Fantacalcio 2022"]:
+        k = body.find(marker)
+        if k > 0:
+            body = body[:k]
+            break
+
+    team_pattern = re.compile(
+        r"Tiratori\s+([A-Z][A-Za-zÀ-ÿ ']+?)\s+20\d\d/27"
+    )
+    type_pattern = re.compile(
+        r"(Rigoristi in ordine|Calci di punizione|Calci d'angolo):"
+    )
+    tipo_map = {
+        "Rigoristi in ordine": "Rigorista",
+        "Calci di punizione": "Punizioni",
+        "Calci d'angolo": "Angoli",
+    }
+    junk_prefixes = ("da aggiornare", "autore", "bio", "ultimo aggiornamento")
+
+    matches = list(team_pattern.finditer(body))
+    rows = []
+    for idx, m in enumerate(matches):
+        team = m.group(1).strip()
+        block_end = matches[idx + 1].start() if idx + 1 < len(matches) else len(body)
+        block = body[m.end():block_end]
+        types = list(type_pattern.finditer(block))
+        for j, tm in enumerate(types):
+            sec_end = types[j + 1].start() if j + 1 < len(types) else len(block)
+            section = block[tm.end():sec_end]
+            for name in _split_names(section):
+                name = name.rstrip(".")
+                if not name or len(name) > 40 \
+                        or name.lower().startswith(junk_prefixes) \
+                        or any(ch in name for ch in "0123456789:@/()|©"):
+                    continue
+                rows.append({"Squadra": team, "Giocatore": name,
+                             "Tipo": tipo_map[tm.group(1)]})
+
+    df = pd.DataFrame(rows).drop_duplicates()
+    df.to_csv(SET_PIECES, index=False)
+    if progress_cb:
+        progress_cb(f"{len(df)} indicazioni set-pieces "
+                    f"({df['Squadra'].nunique()} squadre)")
+    return df
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--players", action="store_true")
     parser.add_argument("--quotes", action="store_true")
+    parser.add_argument("--lineups", action="store_true")
+    parser.add_argument("--setpieces", action="store_true")
     parser.add_argument("--all", action="store_true")
     parser.add_argument("--limit", type=int, default=None)
     args = parser.parse_args()
@@ -193,6 +304,8 @@ if __name__ == "__main__":
     if args.all:
         args.players = True
         args.quotes = True
+        args.lineups = True
+        args.setpieces = True
 
     if args.players:
         print("scraping fantacalciopedia players...")
@@ -202,3 +315,11 @@ if __name__ == "__main__":
         print("scraping gazzetta quotes...")
         df = scrape_quotazioni(progress_cb=print)
         print(f"saved {len(df)} players to {QUOTAZIONI}")
+    if args.lineups:
+        print("scraping expected lineups...")
+        df = scrape_lineups(progress_cb=print)
+        print(f"saved {len(df)} formazioni to {FORMAZIONI}")
+    if args.setpieces:
+        print("scraping set pieces...")
+        df = scrape_set_pieces(progress_cb=print)
+        print(f"saved {len(df)} to {SET_PIECES}")

@@ -4,7 +4,9 @@ import streamlit as st
 import asta_core
 import data_loader
 import scraper
-from data_loader import ROLE_ORDER, build_players, fair_values_scaled, suggest_player
+from data_loader import (
+    ROLE_ORDER, build_lineups, build_players, fair_values_scaled, suggest_player,
+)
 
 st.set_page_config(page_title="Asta Coach", page_icon="⚽", layout="wide")
 
@@ -12,6 +14,12 @@ st.set_page_config(page_title="Asta Coach", page_icon="⚽", layout="wide")
 @st.cache_data(show_spinner=False)
 def load_players():
     return build_players()
+
+
+@st.cache_data(show_spinner=False)
+def load_lineups():
+    players = build_players()
+    return build_lineups(players)
 
 
 def players_df():
@@ -28,7 +36,7 @@ def get_config():
 def render_setup():
     st.header("⚙️ Setup")
     st.subheader("🔄 Dati")
-    c1, c2 = st.columns(2)
+    c1, c2, c3 = st.columns(3)
     if c1.button("Scarica quotazioni Gazzetta (veloce)"):
         with st.status("Scaricando quotazioni...") as status:
             scraper.scrape_quotazioni(progress_cb=lambda m: status.update(label=m))
@@ -40,6 +48,15 @@ def render_setup():
             scraper.scrape_fantacalciopedia(
                 progress_cb=lambda m: status.update(label=m)
             )
+            st.cache_data.clear()
+            status.update(label="Fatto!", state="complete")
+        st.rerun()
+    if c3.button("Scarica formazioni + tiratori (~30s)"):
+        with st.status("Scaricando formazioni e set-pieces...") as status:
+            scraper.scrape_lineups(
+                progress_cb=lambda m: status.update(label=m))
+            scraper.scrape_set_pieces(
+                progress_cb=lambda m: status.update(label=m))
             st.cache_data.clear()
             status.update(label="Fatto!", state="complete")
         st.rerun()
@@ -174,6 +191,72 @@ def render_players():
             )
 
 
+def render_formazioni():
+    lineups = load_lineups()
+    if lineups.empty:
+        st.warning("Nessuna formazione — premi 'Scarica formazioni + tiratori' "
+                   "nella tab Setup")
+        return
+
+    st.header("📋 Probabili formazioni")
+    c1, c2 = st.columns([3, 1])
+    if c1.button("🔄 Ricomputa formazioni"):
+        with st.status("Ricalcolo...") as status:
+            scraper.scrape_lineups(
+                progress_cb=lambda m: status.update(label=m))
+            scraper.scrape_set_pieces(
+                progress_cb=lambda m: status.update(label=m))
+            st.cache_data.clear()
+            status.update(label="Fatto!", state="complete")
+        st.rerun()
+    c2.caption("Fonte: fantacalcio.it (11 attesi) + fantacalciopedia "
+               "(tiratori)")
+
+    st.markdown(
+        "**Legenda:** "
+        '<span style="background:#c62828;color:white;border-radius:6px;'
+        'padding:1px 8px;font-size:12px">⚽ Rigorista</span> '
+        '<span style="background:#1565c0;color:white;border-radius:6px;'
+        'padding:1px 8px;font-size:12px">🚩 Calci d\'angolo</span> '
+        '<span style="background:#b8860b;color:white;border-radius:6px;'
+        'padding:1px 8px;font-size:12px">🎯 Punizioni</span> — '
+        "giocatori evidenziati = probabili bonus (goal/assist)",
+        unsafe_allow_html=True,
+    )
+
+    teams = sorted(lineups["Squadra"].unique())
+    team = st.selectbox("Squadra", teams, key="form_team")
+    sub = lineups[lineups["Squadra"] == team]
+    modulo = sub.iloc[0]["Modulo"] if len(sub) else "?"
+    st.subheader(f"{team} — modulo {modulo}")
+
+    for i, row in sub.iterrows():
+        flagged = bool(row["Rigorista"] or row["Punizioni"] or row["Angoli"])
+        bg = "#2d4a2d" if flagged else "#2b2b2b"
+        badges = ""
+        if row["Rigorista"]:
+            badges += ('<span style="background:#c62828;color:white;'
+                       'border-radius:6px;padding:1px 8px;font-size:12px">'
+                       '⚽ Rigorista</span> ')
+        if row["Angoli"]:
+            badges += ('<span style="background:#1565c0;color:white;'
+                       'border-radius:6px;padding:1px 8px;font-size:12px">'
+                       '🚩 Angoli</span> ')
+        if row["Punizioni"]:
+            badges += ('<span style="background:#b8860b;color:white;'
+                       'border-radius:6px;padding:1px 8px;font-size:12px">'
+                       '🎯 Punizioni</span> ')
+        ruolo = row["Ruolo"] or "?"
+        fm = f"{row['FM']:.2f}" if pd.notna(row["FM"]) else "-"
+        st.markdown(
+            f'<div style="background:{bg};padding:7px 12px;border-radius:8px;'
+            f'margin:3px 0">'
+            f'<b>{row["Nome"]}</b> <span style="color:#aaa">'
+            f'{ruolo} · FM {fm}</span>  {badges}</div>',
+            unsafe_allow_html=True,
+        )
+
+
 def main():
     st.sidebar.title("⚽ Asta Coach")
     session = st.session_state.get("session")
@@ -186,13 +269,15 @@ def main():
             asta_core.save_session(session)
             st.sidebar.success("Salvata")
 
-    tab_setup, tab_players = st.tabs(
-        ["Setup", "Giocatori"], key="main_tabs"
+    tab_setup, tab_players, tab_form = st.tabs(
+        ["Setup", "Giocatori", "Formazioni"], key="main_tabs"
     )
     with tab_setup:
         render_setup()
     with tab_players:
         render_players()
+    with tab_form:
+        render_formazioni()
 
 
 if __name__ == "__main__":
