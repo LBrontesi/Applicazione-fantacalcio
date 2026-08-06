@@ -15,7 +15,7 @@ from transcriber import (
 
 st.set_page_config(page_title="Asta Coach", page_icon="⚽", layout="wide")
 
-MAX_REC_SECONDS = 30
+MAX_REC_SECONDS = 15
 SAMPLE_RATE = 16000
 LIVE_MODEL = "small"
 FINAL_MODEL = "large-v3-turbo"
@@ -358,6 +358,7 @@ def render_recorder():
         st.session_state["recorded_audio"] = None
         if text.strip():
             st.session_state["transcript_area"] = text
+            st.session_state["last_final"] = text
         else:
             st.session_state["rec_empty_warn"] = True
         st.rerun()
@@ -381,6 +382,9 @@ def render_recorder():
 
     transcript = st.session_state.get("transcript_area", "")
     st.text_area("Trascrizione", key="transcript_area", height=80)
+    last_final = st.session_state.get("last_final", "")
+    if last_final and not transcript:
+        st.caption("(ultima trascrizione)")
     if transcript and st.button("🔍 Estrai bid dalla trascrizione"):
         res = extract_bid(transcript, players_df())
         if res["player"]:
