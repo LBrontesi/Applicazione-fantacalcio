@@ -20,6 +20,15 @@ SAMPLE_RATE = 16000
 LIVE_MODEL = "small"
 FINAL_MODEL = "large-v3-turbo"
 LIVE_CHUNK_SECONDS = 2.5
+DEBUG_LOG = data_loader.DATA_DIR / "webrtc_debug.log"
+
+
+def _debug_log(msg):
+    try:
+        with open(DEBUG_LOG, "a") as f:
+            f.write(f"{time.time():.1f} {msg}\n")
+    except Exception:
+        pass
 
 
 class BidRecorder(AudioProcessorBase):
@@ -27,11 +36,16 @@ class BidRecorder(AudioProcessorBase):
         self.frames = []
         self.rate = 48000
         self.peak = 0.0
+        self._log_once = False
 
     def _collect(self, frame):
         arr = frame.to_ndarray().copy()
         self.frames.append(arr)
         self.rate = frame.sample_rate
+        if not self._log_once:
+            self._log_once = True
+            _debug_log(f"first frame: rate={self.rate} shape={arr.shape} "
+                       f"dtype={arr.dtype}")
         if arr.size:
             self.peak = max(self.peak, float(np.abs(arr).max()))
 
@@ -204,9 +218,38 @@ def session_budget():
 
 @st.fragment(run_every="2s")
 def live_loop():
-    proc = st.session_state.get("rec_proc")
-    if proc is None or not st.session_state.get("rec_on"):
+    if not st.session_state.get("rec_on"):
         return
+    proc = st.session_state.get("rec_proc")
+    if proc is None:
+        st.markdown(
+            '<div style="background:#7a1f1f;color:white;padding:10px 14px;'
+            'border-radius:8px;font-weight:bold">🔴 REC — in attesa del '
+            'microfono…</div>',
+            unsafe_allow_html=True,
+        )
+        return
+    n = len(proc.frames)
+    peak = proc.peak
+    peak_norm = peak / 32768.0 if peak > 1.0 else peak
+    elapsed = int(time.time() - st.session_state.get("rec_start", time.time()))
+    _debug_log(f"live tick: frames={n} peak={peak_norm:.3f} "
+               f"base={st.session_state.get('chunk_base', 0)}")
+    st.markdown(
+        f'<div style="background:#7a1f1f;color:white;padding:10px 14px;'
+        f'border-radius:8px;font-weight:bold">🔴 REC — ascoltando '
+        f'({elapsed}s · {n} frame · livello {peak_norm:.2f}) — parla '
+        f'chiaro e premi **Ferma**</div>',
+        unsafe_allow_html=True,
+    )
+    st.progress(min(max(peak_norm * 3, 0.0), 1.0), text="livello microfono")
+    if elapsed >= 3 and n == 0:
+        st.warning("Nessun audio ricevuto: controlla il permesso del "
+                   "microfono (🔒 nella barra indirizzi) e riprova.")
+    if elapsed >= MAX_REC_SECONDS:
+        st.session_state["rec_on"] = False
+        st.session_state["rec_autostop"] = True
+        st.rerun()
     base = st.session_state.get("chunk_base", 0)
     if len(proc.frames) <= base:
         return
@@ -286,34 +329,9 @@ def render_recorder():
 
     if rec_on:
         live_loop()
-        if proc is not None:
-            n = len(proc.frames)
-            peak = proc.peak
-            peak_norm = peak / 32768.0 if peak > 1.0 else peak
-            elapsed = int(time.time() - st.session_state.get(
-                "rec_start", time.time()))
-            st.markdown(
-                f'<div style="background:#7a1f1f;color:white;padding:10px '
-                f'14px;border-radius:8px;font-weight:bold">🔴 REC — '
-                f'ascoltando ({elapsed}s · {n} frame · livello '
-                f'{peak_norm:.2f}) — parla chiaro e premi **Ferma**</div>',
-                unsafe_allow_html=True,
-            )
-            st.progress(min(max(peak_norm * 3, 0.0), 1.0),
-                        text="livello microfono")
-            if elapsed >= MAX_REC_SECONDS:
-                st.session_state["rec_on"] = False
-                st.rerun()
-            if elapsed >= 3 and n == 0:
-                st.warning("Nessun audio ricevuto: controlla il permesso del "
-                           "microfono (🔒 nella barra indirizzi) e riprova.")
-        else:
-            st.markdown(
-                '<div style="background:#7a1f1f;color:white;padding:10px '
-                '14px;border-radius:8px;font-weight:bold">🔴 REC — in '
-                'attesa del microfono…</div>',
-                unsafe_allow_html=True,
-            )
+        if st.session_state.pop("rec_autostop", False):
+            st.info("Registrazione fermata automaticamente dopo "
+                    f"{MAX_REC_SECONDS}s")
     elif proc is not None and proc.frames:
         audio = frames_to_float32(proc.frames, proc.rate)
         peak = proc.peak
@@ -587,7 +605,7 @@ def main():
             "La tua squadra", teams, index=idx, key="my_team",
             on_change=lambda: (
                 session["meta"].__setitem__(
-                    "my_team", st.session_state["my_team"]),
+                    "my_team", st.session_state.get("my_team", teams[0])),
                 save_session_state(),
             ),
         )

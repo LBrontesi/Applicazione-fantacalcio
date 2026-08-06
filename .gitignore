@@ -3,4 +3,5 @@
 __pycache__/
 data/sessions/
 data/benchmark/
+data/webrtc_debug.log
 *.pyc
