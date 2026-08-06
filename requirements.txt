@@ -1,3 +1,9 @@
 pandas
 streamlit
 streamlit-tags
+requests
+beautifulsoup4
+openpyxl
+numpy
+sounddevice
+faster-whisper
