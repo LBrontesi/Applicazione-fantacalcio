@@ -1,3 +1,6 @@
+import time
+
+import numpy as np
 import pandas as pd
 import streamlit as st
 from streamlit_webrtc import AudioProcessorBase, WebRtcMode, webrtc_streamer
@@ -18,16 +21,22 @@ class BidRecorder(AudioProcessorBase):
     def __init__(self):
         self.frames = []
         self.rate = 48000
+        self.peak = 0.0
+
+    def _collect(self, frame):
+        arr = frame.to_ndarray().copy()
+        self.frames.append(arr)
+        self.rate = frame.sample_rate
+        if arr.size:
+            self.peak = max(self.peak, float(np.abs(arr).max()))
 
     def recv(self, frame):
-        self.frames.append(frame.to_ndarray().copy())
-        self.rate = frame.sample_rate
+        self._collect(frame)
         return frame
 
     async def recv_queued(self, frames):
         for frame in frames:
-            self.frames.append(frame.to_ndarray().copy())
-            self.rate = frame.sample_rate
+            self._collect(frame)
         return frames
 
 
@@ -197,42 +206,85 @@ def sync_widget(key):
 
 def render_recorder():
     st.markdown("**🎙️ Trascrittore**")
+    rec_on = st.session_state.get("rec_on", False)
+
+    b1, b2 = st.columns(2)
+    if not rec_on:
+        if b1.button("🎙️ Inizia registrazione", type="primary"):
+            st.session_state["rec_on"] = True
+            st.session_state["rec_start"] = time.time()
+            st.session_state["rec_empty_warn"] = False
+            st.rerun()
+    else:
+        if b1.button("⏹️ Ferma e trascrivi", type="primary"):
+            st.session_state["rec_on"] = False
+            st.rerun()
+
     try:
         ctx = webrtc_streamer(
             key="bid_rec",
             mode=WebRtcMode.SENDONLY,
+            desired_playing_state=rec_on,
             audio_processor_factory=recorder_factory,
             audio_receiver_size=1024,
             async_processing=True,
+            media_toggle_controls=False,
             media_stream_constraints={"audio": True, "video": False},
         )
     except Exception:
         ctx = None
 
-    playing = ctx is not None and ctx.state.playing
     proc = st.session_state.get("rec_proc")
+    if ctx is not None:
+        live = ctx.audio_processor
+        if live is not None:
+            proc = live
+            st.session_state["rec_proc"] = live
 
-    if playing:
-        st.session_state["rec_was_playing"] = True
-        n = len(proc.frames) if proc else 0
-        st.markdown(
-            f'<div style="background:#7a1f1f;color:white;padding:10px 14px;'
-            f'border-radius:8px;font-weight:bold">🔴 REC — sto ascoltando '
-            f'({n} frame) — parla chiaro, poi premi **Stop**</div>',
-            unsafe_allow_html=True,
-        )
-
-    if not playing and proc is not None and proc.frames:
+    if rec_on:
+        if proc is not None:
+            n = len(proc.frames)
+            peak = proc.peak
+            peak_norm = peak / 32768.0 if peak > 1.0 else peak
+            elapsed = int(time.time() - st.session_state.get(
+                "rec_start", time.time()))
+            st.markdown(
+                f'<div style="background:#7a1f1f;color:white;padding:10px '
+                f'14px;border-radius:8px;font-weight:bold">🔴 REC — '
+                f'ascoltando ({elapsed}s · {n} frame · livello '
+                f'{peak_norm:.2f}) — parla chiaro e premi **Ferma**</div>',
+                unsafe_allow_html=True,
+            )
+            st.progress(min(max(peak_norm * 3, 0.0), 1.0),
+                        text="livello microfono")
+            if elapsed >= MAX_REC_SECONDS:
+                st.session_state["rec_on"] = False
+                st.rerun()
+            if elapsed >= 3 and n == 0:
+                st.warning("Nessun audio ricevuto: controlla il permesso del "
+                           "microfono (🔒 nella barra indirizzi) e riprova.")
+        else:
+            st.markdown(
+                '<div style="background:#7a1f1f;color:white;padding:10px '
+                '14px;border-radius:8px;font-weight:bold">🔴 REC — in '
+                'attesa del microfono…</div>',
+                unsafe_allow_html=True,
+            )
+    elif proc is not None and proc.frames:
         audio = frames_to_float32(proc.frames, proc.rate)
+        peak = proc.peak
         proc.frames.clear()
-        st.session_state["rec_was_playing"] = False
-        if audio is not None and len(audio) > 0:
+        proc.peak = 0.0
+        st.session_state["rec_proc"] = None
+        if audio is not None and len(audio) > 0 and peak > 0:
             st.session_state["recorded_audio"] = audio
+        else:
+            st.session_state["rec_empty_warn"] = True
 
-    if st.session_state.pop("rec_was_playing", False):
-        st.warning("Il microfono non ha ricevuto audio — controlla che il "
+    if st.session_state.pop("rec_empty_warn", False):
+        st.warning("Nessun audio ricevuto dal microfono — controlla che il "
                    "browser abbia il permesso (icona 🔒 nella barra degli "
-                   "indirizzi) e riprova.")
+                   "indirizzi) e riprova, oppure usa l'upload qui sotto.")
 
     if st.session_state.get("recorded_audio") is not None:
         with st.spinner("Trascrivendo audio..."):
@@ -249,13 +301,8 @@ def render_recorder():
             st.session_state["rec_empty_warn"] = True
         st.rerun()
 
-    if st.session_state.pop("rec_empty_warn", False):
-        st.warning("Audio registrato ma nessuna frase riconosciuta — riprova "
-                   "parlando più vicino al microfono e più lentamente, "
-                   "oppure usa l'upload qui sotto.")
-
-    st.caption("Premi Start → parla → premi Stop: la frase viene trascritta "
-               "e può essere estratta automaticamente.")
+    st.caption("Inizia → parla → Ferma: la frase viene trascritta e può "
+               "essere estratta automaticamente.")
 
     uploaded = st.file_uploader(
         "oppure carica un file audio", type=["wav", "mp3", "m4a", "aac",
