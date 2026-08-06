@@ -209,8 +209,8 @@ def render_formazioni():
             st.cache_data.clear()
             status.update(label="Fatto!", state="complete")
         st.rerun()
-    c2.caption("Fonte: fantacalcio.it (11 attesi) + fantacalciopedia "
-               "(tiratori)")
+    c2.caption("Fonte: fantacalcio.it (11 attesi + panchina) + "
+               "fantacalciopedia (tiratori)")
 
     st.markdown(
         "**Legenda:** "
@@ -243,11 +243,28 @@ def render_formazioni():
                        '🎯 Punizioni</span> ')
         ruolo = row["Ruolo"] or "?"
         fm = f"{row['FM']:.2f}" if pd.notna(row["FM"]) else "-"
+        cl = ""
+        if pd.notna(row.get("Cluster")) and row.get("Cluster") != "":
+            cl = (f'<span style="float:right;color:#1b5e20;font-weight:bold;'
+                  f'font-size:11px">Cluster {int(row["Cluster"])}</span>')
+        sub = ""
+        if row.get("Panchina"):
+            pfm = (f"{row['PanchinaFM']:.2f}"
+                   if pd.notna(row.get("PanchinaFM")) else "-")
+            pcl = ""
+            if pd.notna(row.get("PanchinaCluster")) \
+                    and row.get("PanchinaCluster") != "":
+                pcl = f' · Cluster {int(row["PanchinaCluster"])}'
+            sub = (f'<div style="color:#37474f;font-size:11px;'
+                   f'margin-top:3px;border-top:1px dashed #ccc;'
+                   f'padding-top:3px">↪ Sostituto probabile: '
+                   f'<b>{row["Panchina"]}</b> '
+                   f'<span style="color:#888">· FM {pfm}{pcl}</span></div>')
         return (
             f'<div style="background:{bg};border:{border};padding:5px 9px;'
             f'border-radius:7px;margin:2px 0;font-size:13px">'
-            f'<b>{row["Nome"]}</b> <span style="color:#666;font-size:11px">'
-            f'{ruolo} · FM {fm}</span>  {badges}</div>'
+            f'{cl}<b>{row["Nome"]}</b> <span style="color:#666;font-size:11px">'
+            f'{ruolo} · FM {fm}</span>  {badges}{sub}</div>'
         )
 
     teams = sorted(lineups["Squadra"].unique())

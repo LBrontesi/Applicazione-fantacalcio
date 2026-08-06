@@ -193,6 +193,18 @@ def _formation_display(code):
     return "-".join(list(code))
 
 
+def _card_players(card, selector):
+    names, roles = [], []
+    for li in card.select(selector):
+        name_el = li.select_one("a.player-name span")
+        if not name_el:
+            continue
+        names.append(_clean(name_el.get_text()))
+        role_el = li.select_one("span.role")
+        roles.append(role_el.get("data-value", "") if role_el else "")
+    return names, roles
+
+
 def scrape_lineups(progress_cb=None):
     DATA_DIR.mkdir(exist_ok=True)
     html = _get(LINEUPS_URL)
@@ -201,18 +213,48 @@ def scrape_lineups(progress_cb=None):
 
     rows = []
     for match in soup.select("li.match-item"):
-        h3s = match.select("div.row.col-sm h3.team-name")
-        uls = match.select("div.pitch ul.team-lineup")
-        for h3, ul in zip(h3s, uls):
-            team = _clean(h3.get_text())
-            modulo = _formation_display(ul.get("data-formation"))
-            players = [
-                _clean(li.select_one("a.player-name span").get_text())
-                for li in ul.select("li.player")
-                if li.select_one("a.player-name span")
-            ]
-            rows.append({"Squadra": team, "Modulo": modulo,
-                         "Titolari": "|".join(players)})
+        for card in match.select("div.card.team-card"):
+            team_el = card.select_one("header h3.team-name")
+            if not team_el:
+                continue
+            team = _clean(team_el.get_text())
+            modulo_el = card.select_one("header .team-formation")
+            modulo = _clean(modulo_el.get_text()) if modulo_el else "?"
+            starters, s_roles = _card_players(
+                card, "ul.player-list.starters li"
+            )
+            bench, b_roles = _card_players(
+                card, "ul.player-list.reserves li"
+            )
+            rows.append(
+                {
+                    "Squadra": team,
+                    "Modulo": modulo,
+                    "Titolari": "|".join(starters),
+                    "RuoliTitolari": "|".join(s_roles),
+                    "Panchina": "|".join(bench),
+                    "RuoliPanchina": "|".join(b_roles),
+                }
+            )
+
+    if not rows:
+        for match in soup.select("li.match-item"):
+            h3s = match.select("div.row.col-sm h3.team-name")
+            uls = match.select("div.pitch ul.team-lineup")
+            for h3, ul in zip(h3s, uls):
+                team = _clean(h3.get_text())
+                modulo = _formation_display(ul.get("data-formation"))
+                players = [
+                    _clean(li.select_one("a.player-name span").get_text())
+                    for li in ul.select("li.player")
+                    if li.select_one("a.player-name span")
+                ]
+                rows.append(
+                    {"Squadra": team, "Modulo": modulo,
+                     "Titolari": "|".join(players),
+                     "RuoliTitolari": "", "Panchina": "",
+                     "RuoliPanchina": ""}
+                )
 
     df = pd.DataFrame(rows)
     df.to_csv(FORMAZIONI, index=False)

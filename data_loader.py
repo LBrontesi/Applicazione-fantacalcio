@@ -240,6 +240,11 @@ def build_lineups(players_df, progress_cb=None):
     if form.empty:
         return pd.DataFrame()
 
+    for col in ["RuoliTitolari", "Panchina", "RuoliPanchina"]:
+        if col not in form.columns:
+            form[col] = ""
+        form[col] = form[col].fillna("")
+
     sp_map = {}
     for _, r in sp.iterrows():
         key = (r["Squadra"], normalize_name(r["Giocatore"]))
@@ -249,7 +254,32 @@ def build_lineups(players_df, progress_cb=None):
     for _, f in form.iterrows():
         team = f["Squadra"]
         modulo = f["Modulo"]
-        for name in str(f["Titolari"]).split("|"):
+        starters = str(f["Titolari"]).split("|")
+        s_roles = str(f["RuoliTitolari"]).split("|") if f["RuoliTitolari"] else []
+        bench = str(f["Panchina"]).split("|") if f["Panchina"] else []
+        b_roles = str(f["RuoliPanchina"]).split("|") if f["RuoliPanchina"] else []
+
+        bench_info = []
+        for i, bname in enumerate(bench):
+            if not bname:
+                continue
+            role = b_roles[i] if i < len(b_roles) else ""
+            matched = _fuzzy_match(bname, gaz_names)
+            if matched:
+                p = players_df[players_df["NomeGaz"] == matched].iloc[0]
+                bench_info.append(
+                    {
+                        "nome": p["Nome"],
+                        "ruolo": role or p["Ruolo"],
+                        "fm": p["FM"],
+                        "cluster": p["Cluster"],
+                    }
+                )
+            else:
+                bench_info.append({"nome": bname, "ruolo": role,
+                                   "fm": float("nan"), "cluster": ""})
+
+        for i, name in enumerate(starters):
             if not name:
                 continue
             matched = _fuzzy_match(name, gaz_names)
@@ -260,6 +290,10 @@ def build_lineups(players_df, progress_cb=None):
                 "Rigorista": False,
                 "Punizioni": False,
                 "Angoli": False,
+                "Panchina": "",
+                "PanchinaFM": float("nan"),
+                "PanchinaRuolo": "",
+                "PanchinaCluster": "",
             }
             if matched:
                 p = players_df[players_df["NomeGaz"] == matched].iloc[0]
@@ -267,11 +301,22 @@ def build_lineups(players_df, progress_cb=None):
                 row["Ruolo"] = p["Ruolo"]
                 row["FM"] = p["FM"]
                 row["QA"] = p["QA"]
+                row["Cluster"] = p["Cluster"]
             else:
                 row["Nome"] = name
                 row["Ruolo"] = ""
                 row["FM"] = float("nan")
                 row["QA"] = float("nan")
+                row["Cluster"] = ""
+            s_role = s_roles[i] if i < len(s_roles) else ""
+            sub_role = s_role or row["Ruolo"]
+            for b in bench_info:
+                if b["ruolo"] and b["ruolo"] == sub_role:
+                    row["Panchina"] = b["nome"]
+                    row["PanchinaFM"] = b["fm"]
+                    row["PanchinaRuolo"] = b["ruolo"]
+                    row["PanchinaCluster"] = b["cluster"]
+                    break
             flags = set()
             sp_names = [g for (t, g), _ in sp_map.items() if t == team]
             if sp_names:
