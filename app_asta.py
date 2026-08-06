@@ -62,9 +62,9 @@ def render_setup():
     st.divider()
     st.subheader("⚙️ Configurazione cap (fair value per cluster)")
     st.caption(
-        "Ogni ruolo è diviso in cluster da 8 giocatori (per fantamedia). "
-        "Il cap di un giocatore è il fair value del suo cluster: oltre "
-        "quel prezzo conviene lasciar perdere."
+        "Ogni ruolo è diviso in cluster da 10 giocatori (per fantamedia, "
+        "uno per squadra). Il cap di un giocatore è il fair value del suo "
+        "cluster: oltre quel prezzo conviene lasciar perdere."
     )
     budget = st.number_input("Budget iniziale", min_value=10, max_value=5000,
                              value=500, step=10, key="cfg_budget")

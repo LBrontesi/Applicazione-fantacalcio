@@ -7,7 +7,7 @@ import pandas as pd
 from scraper import DATA_DIR, PLAYERS_FCP, QUOTAZIONI, normalize_name
 
 ROLE_ORDER = ["P", "D", "C", "A"]
-CLUSTER_SIZE = 8
+CLUSTER_SIZE = 10
 
 DEFAULT_FAIR = {
     "P": [77, 1, 1],
