@@ -10,7 +10,8 @@ import data_loader
 import scraper
 from data_loader import ROLE_ORDER, build_players, fair_values_scaled, suggest_player
 from transcriber import (
-    decode_audio_upload, extract_bid, frames_to_float32, transcribe_audio,
+    decode_audio_upload, extract_bid, frames_to_float32, normalize_audio,
+    transcribe_audio,
 )
 
 st.set_page_config(page_title="Asta Coach", page_icon="⚽", layout="wide")
@@ -259,7 +260,7 @@ def live_loop():
     if audio is None:
         return
     model = get_whisper(LIVE_MODEL)
-    text = transcribe_audio(audio, model).strip()
+    text = transcribe_audio(normalize_audio(audio), model).strip()
     if text:
         st.session_state["live_text"] = (
             st.session_state.get("live_text", "") + " " + text
@@ -353,7 +354,8 @@ def render_recorder():
     if st.session_state.get("recorded_audio") is not None:
         with st.spinner("Trascrivendo audio (modello ad alta precisione)..."):
             text = transcribe_audio(
-                st.session_state["recorded_audio"], get_whisper(FINAL_MODEL)
+                normalize_audio(st.session_state["recorded_audio"]),
+                get_whisper(FINAL_MODEL),
             )
         st.session_state["recorded_audio"] = None
         if text.strip():
@@ -365,6 +367,8 @@ def render_recorder():
 
     st.caption("Inizia → parla → Ferma: il testo scorre dal vivo e alla fine "
                "la trascrizione usa il modello ad alta precisione.")
+    st.caption("Per i migliori risultati: niente video/musica di sottofondo, "
+               "parla a 20-30cm dal microfono.")
 
     uploaded = st.file_uploader(
         "oppure carica un file audio", type=["wav", "mp3", "m4a", "aac",

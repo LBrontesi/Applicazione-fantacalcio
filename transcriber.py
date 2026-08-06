@@ -9,6 +9,15 @@ from data_loader import normalize_name
 TARGET_RATE = 16000
 
 
+def normalize_audio(audio, target_peak=0.35):
+    peak = float(np.abs(audio).max()) if audio.size else 0.0
+    if peak <= 0:
+        return audio
+    if peak > target_peak * 1.5 or peak < 0.1:
+        return audio * (target_peak / peak)
+    return audio
+
+
 def frames_to_float32(frames, sample_rate):
     if not frames:
         return None
