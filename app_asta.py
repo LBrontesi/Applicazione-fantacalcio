@@ -163,6 +163,7 @@ def render_setup():
             st.session_state["session"] = session
             st.session_state["my_team"] = teams[0]
             asta_core.save_session(session)
+            st.session_state["tab_target"] = "Asta Live"
             st.rerun()
 
 
@@ -290,7 +291,7 @@ def render_recorder():
 
     if st.session_state.get("recorded_audio") is not None:
         with st.spinner("Trascrivendo audio..."):
-            model = get_whisper(st.session_state.get("whisper_model", "base"))
+            model = get_whisper("small")
             segments, _ = model.transcribe(
                 st.session_state["recorded_audio"],
                 language="it", vad_filter=True, beam_size=5,
@@ -534,10 +535,9 @@ def render_summary():
 
 def main():
     st.sidebar.title("⚽ Asta Coach")
-    st.sidebar.selectbox(
-        "Modello Whisper", ["base", "small", "tiny"], index=0,
-        key="whisper_model",
-    )
+    target = st.session_state.pop("tab_target", None)
+    if target:
+        st.session_state["main_tabs"] = target
     session = st.session_state.get("session")
     if session:
         my_team = st.session_state.get("my_team")
@@ -559,7 +559,7 @@ def main():
             st.sidebar.success("Salvata")
 
     tab_setup, tab_asta, tab_summary = st.tabs(
-        ["Setup", "Asta Live", "Riepilogo"]
+        ["Setup", "Asta Live", "Riepilogo"], key="main_tabs"
     )
     with tab_setup:
         render_setup()
