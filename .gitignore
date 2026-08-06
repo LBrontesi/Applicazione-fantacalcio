@@ -1,5 +1,5 @@
 .idea/
 .venv/
 __pycache__/
-data/
+data/sessions/
 *.pyc

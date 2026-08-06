@@ -1,0 +1,496 @@
+NomeGaz,SquadraGaz,SquadraNome,Ruolo,QI,QA,FVM,M_QI,M_QA,M_FVM
+Martinez L.,INTER,Inter,A,35,35,370,35,35,370
+Malen,ROMA,Roma,A,34,34,365,34,34,365
+Dimarco,INTER,Inter,D,32,32,265,30,30,255
+Paz N.,COMO,Como,C,30,30,250,28,28,250
+Thuram,INTER,Inter,A,29,29,280,29,29,280
+McTominay,NAPOLI,Napoli,C,28,28,240,28,28,240
+Hojlund,NAPOLI,Napoli,A,28,28,271,28,28,271
+Calhanoglu,INTER,Inter,C,27,27,230,28,28,260
+Ramos G.,MILAN,Milan,A,27,27,240,27,27,240
+Orsolini,BOLOGNA,Bologna,C,26,26,200,25,25,200
+Kolo Muani,JUVENTUS,Juventus,A,26,26,225,26,26,225
+Kean,FIORENTINA,Fiorentina,A,25,25,212,25,25,212
+Pulisic,MILAN,Milan,C,25,25,180,23,23,174
+Yildiz,JUVENTUS,Juventus,A,23,23,200,24,24,205
+Rabiot,MILAN,Milan,C,22,22,128,22,22,128
+Douvikas,COMO,Como,A,20,20,157,20,20,154
+Scamacca,ATALANTA,Atalanta,A,19,19,128,18,18,125
+Baturina,COMO,Como,C,19,19,102,18,18,100
+Davis K.,UDINESE,Udinese,A,19,19,121,19,19,121
+Krstovic,ATALANTA,Atalanta,A,18,18,100,17,17,97
+Da Cunha,COMO,Como,C,18,18,90,18,18,90
+Leao,MILAN,Milan,A,18,18,120,19,19,123
+Svilar,ROMA,Roma,P,18,18,65,18,18,65
+Berardi,SASSUOLO,Sassuolo,A,18,18,115,19,19,118
+Zaniolo,UDINESE,Udinese,C,18,18,90,17,17,88
+De Ketelaere,ATALANTA,Atalanta,A,17,17,106,18,18,108
+Atta,FIORENTINA,Fiorentina,C,17,17,87,17,17,87
+Martinez Jo.,INTER,Inter,P,17,17,63,17,17,63
+Barella,INTER,Inter,C,17,17,82,17,17,82
+McKennie,JUVENTUS,Juventus,C,17,17,68,17,17,68
+Wesley,ROMA,Roma,D,17,17,90,16,16,88
+Carnesecchi,ATALANTA,Atalanta,P,16,16,52,16,16,52
+Dovbyk,BOLOGNA,Bologna,A,16,16,84,16,16,81
+Butez,COMO,Como,P,16,16,56,16,16,56
+Akanji,INTER,Inter,D,16,16,55,16,16,55
+Esposito F.P.,INTER,Inter,A,16,16,93,16,16,90
+Zaccagni,LAZIO,Lazio,C,16,16,91,15,15,88
+Bremer,JUVENTUS,Juventus,D,15,15,50,15,15,50
+Maignan,MILAN,Milan,P,15,15,50,15,15,50
+De Bruyne,NAPOLI,Napoli,C,15,15,100,14,14,94
+Pellegrino M.,PARMA,Parma,A,15,15,81,15,15,79
+Mancini,ROMA,Roma,D,15,15,49,15,15,49
+Laurientè,SASSUOLO,Sassuolo,A,15,15,88,16,16,91
+Simeone,TORINO,Torino,A,15,15,82,15,15,79
+Bastoni,INTER,Inter,D,14,14,44,14,14,44
+Pavlovic,MILAN,Milan,D,14,14,48,14,14,48
+Rrahmani,NAPOLI,Napoli,D,14,14,47,14,14,47
+Santos A.,NAPOLI,Napoli,A,14,14,60,15,15,63
+Dybala,ROMA,Roma,A,14,14,67,15,15,67
+Castro S.,ROMA,Roma,A,14,14,83,13,13,80
+Vlasic,TORINO,Torino,C,14,14,80,13,13,77
+Raspadori,ATALANTA,Atalanta,A,13,13,62,14,14,64
+Esposito Se.,CAGLIARI,Cagliari,A,13,13,50,14,14,50
+De Gea,FIORENTINA,Fiorentina,P,13,13,45,13,13,45
+Gudmundsson A.,FIORENTINA,Fiorentina,C,13,13,61,12,12,58
+Kalulu,JUVENTUS,Juventus,D,13,13,46,14,14,48
+Taylor K.,LAZIO,Lazio,C,13,13,64,13,13,64
+Nkunku,MILAN,Milan,A,13,13,52,14,14,54
+N'Dicka,ROMA,Roma,D,13,13,44,13,13,44
+Pinamonti,SASSUOLO,Sassuolo,A,13,13,58,12,12,55
+Solet,UDINESE,Udinese,D,13,13,46,13,13,46
+Ederson D.S.,ATALANTA,Atalanta,C,12,12,45,13,13,48
+Samardzic,ATALANTA,Atalanta,C,12,12,42,12,12,42
+Rodriguez Je.,COMO,Como,C,12,12,32,11,11,31
+Stones,INTER,Inter,D,12,12,38,12,12,38
+Alajbegovic,JUVENTUS,Juventus,C,12,12,57,12,12,57
+Conceicao,JUVENTUS,Juventus,C,12,12,60,11,11,57
+Gila,MILAN,Milan,D,12,12,31,12,12,31
+Modric,MILAN,Milan,C,12,12,50,13,13,60
+Di Lorenzo,NAPOLI,Napoli,D,12,12,40,12,12,40
+Soulè,ROMA,Roma,A,12,12,55,13,13,55
+Adams A.,VENEZIA,Venezia,A,12,12,52,11,11,50
+Rowe,BOLOGNA,Bologna,C,11,11,37,11,11,40
+Diao,COMO,Como,A,11,11,50,12,12,52
+Ostigard,GENOA,Genoa,D,11,11,40,11,11,40
+Baldanzi,GENOA,Genoa,C,11,11,30,10,10,27
+Colombo,GENOA,Genoa,A,11,11,63,10,10,60
+Bisseck,INTER,Inter,D,11,11,33,11,11,33
+Meret,NAPOLI,Napoli,P,11,11,45,11,11,45
+Zambo Anguissa,NAPOLI,Napoli,C,11,11,55,11,11,55
+Scalvini,ATALANTA,Atalanta,D,10,10,28,10,10,28
+Skorupski,BOLOGNA,Bologna,P,10,10,37,10,10,37
+Ramon,COMO,Como,D,10,10,32,10,10,32
+Perrone,COMO,Como,C,10,10,38,11,11,41
+Dodò,FIORENTINA,Fiorentina,D,10,10,30,10,10,30
+Zielinski,INTER,Inter,C,10,10,41,10,10,41
+Thuram K.,JUVENTUS,Juventus,C,10,10,41,10,10,41
+Dia,LAZIO,Lazio,A,10,10,31,11,11,33
+Ratkov,LAZIO,Lazio,A,10,10,32,9,9,29
+Saelemaekers,MILAN,Milan,C,10,10,43,11,11,45
+Politano,NAPOLI,Napoli,C,10,10,47,9,9,43
+Lukaku,NAPOLI,Napoli,A,10,10,45,9,9,41
+Hermoso,ROMA,Roma,D,10,10,26,10,10,26
+Konè M.,ROMA,Roma,C,10,10,42,11,11,45
+Thorstvedt,SASSUOLO,Sassuolo,C,10,10,41,10,10,41
+Bowie,SASSUOLO,Sassuolo,A,10,10,39,9,9,36
+Casadei,TORINO,Torino,C,10,10,37,10,10,37
+Ekkelenkamp,UDINESE,Udinese,C,10,10,41,10,10,41
+Pasalic,ATALANTA,Atalanta,C,9,9,32,9,9,32
+Bernardeschi,BOLOGNA,Bologna,C,9,9,21,9,9,21
+Caprile,CAGLIARI,Cagliari,P,9,9,27,9,9,27
+Mandragora,FIORENTINA,Fiorentina,C,9,9,28,9,9,28
+Ghedjemis,FROSINONE,Frosinone,A,9,9,30,10,10,32
+Vasquez,GENOA,Genoa,D,9,9,33,10,10,35
+Di Gregorio,JUVENTUS,Juventus,P,9,9,40,9,9,40
+Cambiaso,JUVENTUS,Juventus,D,9,9,27,10,10,30
+David,JUVENTUS,Juventus,A,9,9,40,8,8,37
+Mandas,LAZIO,Lazio,P,9,9,30,9,9,30
+Cancellieri,LAZIO,Lazio,C,9,9,28,8,8,26
+Isaksen,LAZIO,Lazio,C,9,9,25,8,8,23
+Geubbels,LECCE,Lecce,A,9,9,25,8,8,23
+Cutrone,MONZA,Monza,A,9,9,33,8,8,30
+Konè I.,SASSUOLO,Sassuolo,C,9,9,20,9,9,20
+Adams C.,TORINO,Torino,A,9,9,32,10,10,34
+Okoye,UDINESE,Udinese,P,9,9,29,9,9,29
+Hien,ATALANTA,Atalanta,D,8,8,16,8,8,16
+Zappacosta,ATALANTA,Atalanta,D,8,8,24,8,8,24
+Lucumì,BOLOGNA,Bologna,D,8,8,18,8,8,18
+Miranda J.,BOLOGNA,Bologna,D,8,8,24,8,8,24
+Odgaard,BOLOGNA,Bologna,C,8,8,22,7,7,20
+Cambiaghi,BOLOGNA,Bologna,C,8,8,25,7,7,25
+Dallinga,BOLOGNA,Bologna,A,8,8,23,7,7,20
+Mina,CAGLIARI,Cagliari,D,8,8,20,8,8,20
+Dragusin,FIORENTINA,Fiorentina,D,8,8,27,8,8,27
+Jimenez A.,FIORENTINA,Fiorentina,D,8,8,23,9,9,25
+Fagioli,FIORENTINA,Fiorentina,C,8,8,23,9,9,25
+Ndour,FIORENTINA,Fiorentina,C,8,8,25,8,8,25
+Piccoli,FIORENTINA,Fiorentina,A,8,8,24,7,7,21
+Bijlow,GENOA,Genoa,P,8,8,18,8,8,18
+Norton-Cuffy,GENOA,Genoa,D,8,8,22,8,8,22
+Vitinha O.,GENOA,Genoa,A,8,8,20,8,8,21
+Diouf,INTER,Inter,C,8,8,37,9,9,40
+Sucic P.,INTER,Inter,C,8,8,26,8,8,26
+Celik,JUVENTUS,Juventus,D,8,8,21,9,9,23
+Locatelli,JUVENTUS,Juventus,C,8,8,32,9,9,35
+Falcone,LECCE,Lecce,P,8,8,25,8,8,25
+Bartesaghi,MILAN,Milan,D,8,8,25,8,8,25
+Colpani,MONZA,Monza,C,8,8,25,7,7,22
+Gutierrez,NAPOLI,Napoli,D,8,8,26,8,8,26
+Spinazzola,NAPOLI,Napoli,D,8,8,24,8,8,24
+Vergara,NAPOLI,Napoli,C,8,8,34,8,8,34
+Delprato,PARMA,Parma,D,8,8,21,8,8,24
+Valeri,PARMA,Parma,D,8,8,24,8,8,24
+Koulierakis,ROMA,Roma,D,8,8,20,8,8,20
+Cristante,ROMA,Roma,C,8,8,29,9,9,32
+Vojvoda,UDINESE,Udinese,D,8,8,19,8,8,19
+Yeboah J.,VENEZIA,Venezia,A,8,8,28,8,8,29
+Rrahmani Al.,VENEZIA,Venezia,A,8,8,20,7,7,17
+Djimsiti,ATALANTA,Atalanta,D,7,7,16,7,7,16
+Gaetano,ATALANTA,Atalanta,C,7,7,24,8,8,27
+Ferguson,BOLOGNA,Bologna,C,7,7,18,8,8,21
+Obert,CAGLIARI,Cagliari,D,7,7,14,7,7,16
+Fazzini,CAGLIARI,Cagliari,C,7,7,19,8,8,21
+Kaiki,COMO,Como,D,7,7,23,7,7,23
+Calò,FROSINONE,Frosinone,C,7,7,25,8,8,28
+Raimondo,FROSINONE,Frosinone,A,7,7,24,6,6,21
+Frendrup,GENOA,Genoa,C,7,7,19,8,8,21
+Carlos Augusto,INTER,Inter,D,7,7,27,8,8,30
+Frattesi,INTER,Inter,C,7,7,13,7,7,13
+Bonny,INTER,Inter,A,7,7,21,6,6,18
+Doekhi,LAZIO,Lazio,D,7,7,22,7,7,22
+Romagnoli,LAZIO,Lazio,D,7,7,24,7,7,24
+Tiago Gabriel,LECCE,Lecce,D,7,7,17,7,7,17
+Stulic,LECCE,Lecce,A,7,7,18,6,6,16
+Gabbia,MILAN,Milan,D,7,7,23,7,7,23
+Tomori,MILAN,Milan,D,7,7,20,7,7,20
+Pessina,MONZA,Monza,C,7,7,20,8,8,22
+Buongiorno,NAPOLI,Napoli,D,7,7,18,7,7,18
+Lobotka,NAPOLI,Napoli,C,7,7,20,8,8,22
+Daffara,PARMA,Parma,P,7,7,5,7,7,5
+Suzuki,PARMA,Parma,P,7,7,20,7,7,20
+Bernabè,PARMA,Parma,C,7,7,36,7,7,36
+Muric,SASSUOLO,Sassuolo,P,7,7,15,7,7,15
+Idzes,SASSUOLO,Sassuolo,D,7,7,19,7,7,19
+Volpato,SASSUOLO,Sassuolo,C,7,7,23,7,7,23
+Coco,TORINO,Torino,D,7,7,18,7,7,18
+Ismajli,TORINO,Torino,D,7,7,18,7,7,18
+Oristanio,TORINO,Torino,C,7,7,27,7,7,27
+Zapata D.,TORINO,Torino,A,7,7,18,6,6,16
+Kristensen T.,UDINESE,Udinese,D,7,7,15,8,8,17
+Unai Gomez,UDINESE,Udinese,C,7,7,23,6,6,20
+Ahanor,ATALANTA,Atalanta,D,6,6,16,7,7,18
+Bellanova,ATALANTA,Atalanta,D,6,6,15,6,6,15
+Bernasconi,ATALANTA,Atalanta,D,6,6,17,6,6,17
+Zalewski,ATALANTA,Atalanta,C,6,6,21,5,5,19
+Sulemana K.,ATALANTA,Atalanta,A,6,6,16,6,6,17
+Heggem,BOLOGNA,Bologna,D,6,6,15,7,7,17
+Zortea,BOLOGNA,Bologna,D,6,6,19,6,6,19
+Pobega,BOLOGNA,Bologna,C,6,6,14,7,7,17
+Adopo,CAGLIARI,Cagliari,C,6,6,13,7,7,16
+Winks,CAGLIARI,Cagliari,C,6,6,14,7,7,17
+Mutandwa,CAGLIARI,Cagliari,A,6,6,19,6,6,18
+Valle,COMO,Como,D,6,6,18,6,6,18
+Caqueret,COMO,Como,C,6,6,20,6,6,20
+Liberali,COMO,Como,C,6,6,22,5,5,20
+Valdepenas,FIORENTINA,Fiorentina,D,6,6,18,7,7,20
+Viery,FIORENTINA,Fiorentina,D,6,6,19,7,7,21
+Oulai,FIORENTINA,Fiorentina,C,6,6,20,7,7,22
+Monterisi,FROSINONE,Frosinone,D,6,6,14,6,6,14
+Marcandalli,GENOA,Genoa,D,6,6,13,6,6,13
+Ellertsson,GENOA,Genoa,C,6,6,18,7,7,21
+Pavard,INTER,Inter,D,6,6,18,7,7,20
+Perin,JUVENTUS,Juventus,P,6,6,10,6,6,10
+Zhegrova,JUVENTUS,Juventus,C,6,6,18,5,5,16
+Boga,JUVENTUS,Juventus,A,6,6,25,7,7,28
+Tavares N.,LAZIO,Lazio,D,6,6,17,6,6,17
+Marusic,LAZIO,Lazio,D,6,6,20,6,6,23
+Rovella,LAZIO,Lazio,C,6,6,16,7,7,19
+Noslin,LAZIO,Lazio,A,6,6,17,6,6,17
+Gallo,LECCE,Lecce,D,6,6,13,6,6,13
+Coulibaly L.,LECCE,Lecce,C,6,6,14,7,7,16
+Pierotti,LECCE,Lecce,C,6,6,19,5,5,17
+Chukwueze,MILAN,Milan,C,6,6,11,5,5,9
+Gimenez,MILAN,Milan,A,6,6,14,5,5,13
+Mangas,MONZA,Monza,D,6,6,15,6,6,15
+Akinsanmiro,MONZA,Monza,C,6,6,16,6,6,16
+Beukema,NAPOLI,Napoli,D,6,6,16,6,6,16
+Neres,NAPOLI,Napoli,A,6,6,22,7,7,25
+Circati,PARMA,Parma,D,6,6,18,6,6,18
+Nicolussi Caviglia,PARMA,Parma,C,6,6,18,7,7,20
+Comuzzo,TORINO,Torino,D,6,6,11,6,6,11
+Kamara H.,UDINESE,Udinese,D,6,6,12,6,6,12
+Karlstrom,UDINESE,Udinese,C,6,6,20,7,7,23
+Stankovic F.,VENEZIA,Venezia,P,6,6,14,6,6,14
+Bella-Kotchap,VENEZIA,Venezia,D,6,6,13,6,6,13
+Basic,VENEZIA,Venezia,C,6,6,19,7,7,20
+Kolasinac,ATALANTA,Atalanta,D,5,5,12,6,6,14
+Maldini,ATALANTA,Atalanta,A,5,5,14,6,6,15
+Vitik,BOLOGNA,Bologna,D,5,5,11,5,5,11
+Holm,BOLOGNA,Bologna,D,5,5,13,5,5,13
+Amondarain,BOLOGNA,Bologna,C,5,5,12,6,6,14
+Kofler,CAGLIARI,Cagliari,D,5,5,11,5,5,11
+Zè Pedro,CAGLIARI,Cagliari,D,5,5,11,6,6,13
+Romano,CAGLIARI,Cagliari,C,5,5,12,6,6,15
+Felici,CAGLIARI,Cagliari,C,5,5,10,4,4,8
+Kempf,COMO,Como,D,5,5,13,5,5,13
+Milla,COMO,Como,C,5,5,14,5,5,16
+Addai,COMO,Como,C,5,5,10,4,4,8
+Parisi,FIORENTINA,Fiorentina,D,5,5,12,5,5,12
+Bracaglia,FROSINONE,Frosinone,D,5,5,11,5,5,13
+Oyono A.,FROSINONE,Frosinone,D,5,5,12,5,5,12
+Zerbin,FROSINONE,Frosinone,C,5,5,13,4,4,11
+Martin,GENOA,Genoa,D,5,5,15,5,5,15
+Meichtry,GENOA,Genoa,C,5,5,14,5,5,14
+Traorè Hj.,GENOA,Genoa,C,5,5,11,5,5,11
+Mkhitaryan,INTER,Inter,C,5,5,19,5,5,19
+Kelly L.,JUVENTUS,Juventus,D,5,5,13,6,6,15
+Koopmeiners,JUVENTUS,Juventus,C,5,5,14,5,5,14
+Pedraza,LAZIO,Lazio,D,5,5,15,5,5,15
+Dele-Bashiru,LAZIO,Lazio,C,5,5,13,5,5,13
+Gaspar K.,LECCE,Lecce,D,5,5,12,5,5,12
+Veiga D.,LECCE,Lecce,D,5,5,11,5,5,11
+Berisha M.,LECCE,Lecce,C,5,5,16,5,5,16
+Gandelman,LECCE,Lecce,C,5,5,14,5,5,14
+Fofana Y.,MILAN,Milan,C,5,5,23,6,6,26
+Camarda,MILAN,Milan,A,5,5,18,4,4,17
+Thiam,MONZA,Monza,P,5,5,12,5,5,12
+Mota,MONZA,Monza,A,5,5,18,5,5,18
+Milinkovic-Savic V.,NAPOLI,Napoli,P,5,5,10,5,5,10
+Olivera,NAPOLI,Napoli,D,5,5,13,6,6,15
+Keita M.,PARMA,Parma,C,5,5,15,6,6,17
+Ondrejka,PARMA,Parma,C,5,5,18,4,4,16
+Frigan,PARMA,Parma,A,5,5,13,5,5,13
+Rensch,ROMA,Roma,D,5,5,16,6,6,18
+Pisilli,ROMA,Roma,C,5,5,17,5,5,17
+Matic,SASSUOLO,Sassuolo,C,5,5,15,6,6,17
+Adzic,SASSUOLO,Sassuolo,C,5,5,14,5,5,14
+Bakola,SASSUOLO,Sassuolo,C,5,5,16,5,5,16
+Pedersen,TORINO,Torino,D,5,5,13,5,5,13
+Cacciamani,TORINO,Torino,C,5,5,18,6,6,20
+Gineitis,TORINO,Torino,C,5,5,13,6,6,15
+Piotrowski,UDINESE,Udinese,C,5,5,15,6,6,17
+Moreno M.,VENEZIA,Venezia,D,5,5,11,5,5,11
+Haps,VENEZIA,Venezia,D,5,5,11,5,5,11
+Busio,VENEZIA,Venezia,C,5,5,14,6,6,17
+Sohm,VENEZIA,Venezia,C,5,5,14,5,5,14
+Perez K.,VENEZIA,Venezia,C,5,5,14,5,5,14
+Adorante,VENEZIA,Venezia,A,5,5,14,4,4,12
+De Roon,ATALANTA,Atalanta,C,4,4,12,5,5,14
+Moro N.,BOLOGNA,Bologna,C,4,4,10,4,4,12
+Zappa,CAGLIARI,Cagliari,D,4,4,9,4,4,11
+Prati,CAGLIARI,Cagliari,C,4,4,7,4,4,7
+Borrelli,CAGLIARI,Cagliari,A,4,4,9,3,3,7
+Mendy P.,CAGLIARI,Cagliari,A,4,4,9,3,3,7
+Smolcic I.,COMO,Como,D,4,4,10,4,4,10
+Morata,COMO,Como,A,4,4,10,3,3,8
+Pongracic,FIORENTINA,Fiorentina,D,4,4,8,4,4,8
+Fabbian,FIORENTINA,Fiorentina,C,4,4,8,4,4,8
+Palmisani,FROSINONE,Frosinone,P,4,4,8,4,4,8
+Calvani,FROSINONE,Frosinone,D,4,4,10,4,4,10
+Cichella,FROSINONE,Frosinone,C,4,4,11,4,4,13
+Koutsoupias,FROSINONE,Frosinone,C,4,4,12,4,4,12
+Kvernadze,FROSINONE,Frosinone,A,4,4,15,5,5,16
+Mitaj,GENOA,Genoa,D,4,4,9,4,4,9
+Amorim,GENOA,Genoa,C,4,4,11,5,5,13
+Havel,GENOA,Genoa,A,4,4,9,3,3,7
+Luis Henrique,INTER,Inter,C,4,4,13,5,5,15
+Gatti,JUVENTUS,Juventus,D,4,4,10,4,4,10
+Douglas Luiz,JUVENTUS,Juventus,C,4,4,12,4,4,12
+Cataldi,LAZIO,Lazio,C,4,4,12,5,5,15
+Siebert,LECCE,Lecce,D,4,4,12,4,4,12
+Ngom,LECCE,Lecce,C,4,4,11,5,5,13
+Ricci S.,MILAN,Milan,C,4,4,11,4,4,13
+Jashari,MILAN,Milan,C,4,4,11,4,4,11
+Loftus-Cheek,MILAN,Milan,C,4,4,11,4,4,11
+Delli Carri,MONZA,Monza,D,4,4,11,4,4,11
+Lucchesi,MONZA,Monza,D,4,4,12,4,4,12
+Birindelli,MONZA,Monza,D,4,4,12,5,5,14
+Folorunsho,NAPOLI,Napoli,C,4,4,10,4,4,10
+Giovane,NAPOLI,Napoli,A,4,4,10,4,4,10
+Valenti,PARMA,Parma,D,4,4,10,4,4,10
+Almqvist,PARMA,Parma,C,4,4,14,3,3,12
+Ghilardi,ROMA,Roma,D,4,4,10,4,4,10
+El Aynaoui,ROMA,Roma,C,4,4,18,5,5,20
+Walukiewicz,SASSUOLO,Sassuolo,D,4,4,10,4,4,12
+Doig,SASSUOLO,Sassuolo,D,4,4,13,4,4,13
+Comert,TORINO,Torino,D,4,4,10,4,4,10
+Fitz-Jim,TORINO,Torino,C,4,4,13,5,5,15
+Ilkhan,TORINO,Torino,C,4,4,10,5,5,12
+Njie,TORINO,Torino,C,4,4,12,3,3,19
+Kulenovic,TORINO,Torino,A,4,4,9,3,3,7
+Kabasele,UDINESE,Udinese,D,4,4,9,4,4,9
+Bertola,UDINESE,Udinese,D,4,4,10,6,6,14
+Zanoli,UDINESE,Udinese,D,4,4,10,4,4,10
+Arizala,UDINESE,Udinese,D,4,4,8,4,4,8
+Gueye,UDINESE,Udinese,A,4,4,7,3,3,6
+Halhal,VENEZIA,Venezia,D,4,4,10,4,4,10
+Correia T.,VENEZIA,Venezia,D,4,4,12,4,4,12
+Kossounou,ATALANTA,Atalanta,D,3,3,7,3,3,8
+Sulemana I.,ATALANTA,Atalanta,C,3,3,7,3,3,8
+Casale,BOLOGNA,Bologna,D,3,3,6,3,3,6
+Dominguez B.,BOLOGNA,Bologna,C,3,3,8,2,2,7
+Rodriguez Ju.,CAGLIARI,Cagliari,D,3,3,10,4,4,12
+Idrissi R.,CAGLIARI,Cagliari,D,3,3,7,3,3,7
+Deiola,CAGLIARI,Cagliari,C,3,3,8,3,3,8
+Kuhn,COMO,Como,A,3,3,5,4,4,7
+Ranieri L.,FIORENTINA,Fiorentina,D,3,3,7,3,3,7
+Joao Mario,FIORENTINA,Fiorentina,D,3,3,7,3,3,7
+Brescianini,FIORENTINA,Fiorentina,C,3,3,7,3,3,7
+Akpoguma,FROSINONE,Frosinone,D,3,3,7,3,3,7
+Cittadini,FROSINONE,Frosinone,D,3,3,8,3,3,8
+Gelli F.,FROSINONE,Frosinone,C,3,3,8,3,3,8
+Fini,FROSINONE,Frosinone,C,3,3,9,2,2,8
+Messias,GENOA,Genoa,C,3,3,8,3,3,8
+Stankovic A.,INTER,Inter,C,3,3,10,3,3,11
+Miretti,JUVENTUS,Juventus,C,3,3,11,3,3,11
+Ekhator,JUVENTUS,Juventus,A,3,3,10,3,3,10
+Provstgaard,LAZIO,Lazio,D,3,3,10,3,3,10
+Floriani Mussolini,LAZIO,Lazio,D,3,3,12,3,3,12
+N'Dri,LECCE,Lecce,A,3,3,9,4,4,11
+De Winter,MILAN,Milan,D,3,3,12,4,4,14
+Athekame,MILAN,Milan,D,3,3,8,3,3,8
+Estupinan,MILAN,Milan,D,3,3,9,3,3,9
+Kouadio,MONZA,Monza,D,3,3,9,3,3,10
+Carboni A.,MONZA,Monza,D,3,3,9,4,4,11
+Colombo L.,MONZA,Monza,C,3,3,7,3,3,8
+Varela G.,MONZA,Monza,A,3,3,7,3,3,6
+Gilmour,NAPOLI,Napoli,C,3,3,9,3,3,9
+Lang,NAPOLI,Napoli,A,3,3,10,3,3,10
+Lucca,NAPOLI,Napoli,A,3,3,10,3,3,9
+Troilo,PARMA,Parma,D,3,3,8,3,3,8
+Britschgi,PARMA,Parma,D,3,3,10,4,4,12
+Sorensen O.,PARMA,Parma,C,3,3,12,3,3,12
+Diallo O.,PARMA,Parma,C,3,3,12,2,2,10
+Elphege,PARMA,Parma,A,3,3,11,3,3,10
+Angelino,ROMA,Roma,D,3,3,12,3,3,12
+Candè,SASSUOLO,Sassuolo,D,3,3,12,3,3,14
+Aboukhlal,TORINO,Torino,C,3,3,5,2,2,4
+Miller L.,UDINESE,Udinese,C,3,3,12,3,3,15
+Schingtienne,VENEZIA,Venezia,D,3,3,7,3,3,7
+Sverko,VENEZIA,Venezia,D,3,3,7,3,3,7
+Hainaut,VENEZIA,Venezia,D,3,3,7,3,3,7
+Helgason,VENEZIA,Venezia,C,3,3,7,3,3,7
+Helland,BOLOGNA,Bologna,D,2,2,5,2,2,5
+Alhassane,BOLOGNA,Bologna,D,2,2,6,2,2,6
+El Azzouzi O.,BOLOGNA,Bologna,C,2,2,4,2,2,4
+Van Der Brempt,COMO,Como,D,2,2,5,2,2,5
+Fadera,COMO,Como,C,2,2,3,2,2,3
+Desplanches,FROSINONE,Frosinone,P,2,2,8,2,2,8
+Hasa,FROSINONE,Frosinone,C,2,2,5,2,2,5
+Otoa,GENOA,Genoa,D,2,2,5,2,2,5
+Puczka,GENOA,Genoa,D,2,2,7,2,2,7
+Sabelli,GENOA,Genoa,D,2,2,5,2,2,5
+Masini,GENOA,Genoa,C,2,2,4,2,2,4
+Venturino,GENOA,Genoa,C,2,2,6,2,2,5
+Provedel,INTER,Inter,P,2,2,5,2,2,5
+Lazzari,LAZIO,Lazio,D,2,2,8,2,2,8
+Pellegrini Lu.,LAZIO,Lazio,D,2,2,5,2,2,5
+Jean,LECCE,Lecce,D,2,2,4,2,2,4
+Maleh,LECCE,Lecce,C,2,2,5,2,2,5
+Diawara S.,MILAN,Milan,D,2,2,4,2,2,4
+Musah,MILAN,Milan,C,2,2,6,2,2,6
+Ciurria,MONZA,Monza,C,2,2,6,2,2,6
+Petagna,MONZA,Monza,A,2,2,5,2,2,5
+Marin R.,NAPOLI,Napoli,D,2,2,6,2,2,6
+Ordonez C.,PARMA,Parma,C,2,2,5,2,2,6
+Boloca,SASSUOLO,Sassuolo,C,2,2,5,2,2,5
+Lipani,SASSUOLO,Sassuolo,C,2,2,5,2,2,5
+Biraghi,TORINO,Torino,D,2,2,5,2,2,6
+Palma,UDINESE,Udinese,D,2,2,5,2,2,5
+Ebosse,UDINESE,Udinese,D,2,2,4,2,2,4
+Chakvetadze,UDINESE,Udinese,C,2,2,6,2,2,6
+Buksa,UDINESE,Udinese,A,2,2,4,2,2,4
+Franjic,VENEZIA,Venezia,D,2,2,4,2,2,4
+Sagrado,VENEZIA,Venezia,D,2,2,4,2,2,4
+Duncan,VENEZIA,Venezia,C,2,2,4,2,2,4
+Rossi F.,ATALANTA,Atalanta,P,1,1,1,1,1,1
+Sportiello,ATALANTA,Atalanta,P,1,1,1,1,1,1
+Happonen,BOLOGNA,Bologna,P,1,1,1,1,1,1
+Pessina Mas.,BOLOGNA,Bologna,P,1,1,1,1,1,1
+De Silvestri,BOLOGNA,Bologna,D,1,1,4,1,1,4
+Ciocci,CAGLIARI,Cagliari,P,1,1,1,1,1,1
+Sherri,CAGLIARI,Cagliari,P,1,1,1,1,1,1
+Raterink,CAGLIARI,Cagliari,D,1,1,1,1,1,1
+Liteta,CAGLIARI,Cagliari,C,1,1,1,1,1,1
+Albarracin,CAGLIARI,Cagliari,A,1,1,1,1,1,1
+Trepy,CAGLIARI,Cagliari,A,1,1,2,1,1,2
+Tornqvist,COMO,Como,P,1,1,1,1,1,1
+Vigorito,COMO,Como,P,1,1,1,1,1,1
+Goldaniga,COMO,Como,D,1,1,1,1,1,1
+Cuenca A.,COMO,Como,D,1,1,8,1,1,8
+Lahdo,COMO,Como,C,1,1,1,1,1,1
+Azon,COMO,Como,A,1,1,1,1,1,1
+Christensen O.,FIORENTINA,Fiorentina,P,1,1,1,1,1,1
+Lezzerini,FIORENTINA,Fiorentina,P,1,1,1,1,1,1
+Lolic,FROSINONE,Frosinone,P,1,1,1,1,1,1
+Amey,FROSINONE,Frosinone,D,1,1,1,1,1,1
+Gelli J.,FROSINONE,Frosinone,D,1,1,1,1,1,1
+Oyono J.,FROSINONE,Frosinone,D,1,1,3,1,1,3
+Corrado,FROSINONE,Frosinone,D,1,1,3,1,1,3
+El Azzouzi A.,FROSINONE,Frosinone,C,1,1,3,1,1,3
+Kone B.,FROSINONE,Frosinone,C,1,1,3,1,1,3
+Sommariva,GENOA,Genoa,P,1,1,1,1,1,1
+Stolz,GENOA,Genoa,P,1,1,1,1,1,1
+Vogliacco,GENOA,Genoa,D,1,1,2,1,1,2
+Matturro,GENOA,Genoa,D,1,1,2,1,1,2
+Di Gennaro,INTER,Inter,P,1,1,1,1,1,1
+Pinsoglio,JUVENTUS,Juventus,P,1,1,1,1,1,1
+Rugani,JUVENTUS,Juventus,D,1,1,3,1,1,3
+Cabal,JUVENTUS,Juventus,D,1,1,4,1,1,4
+Motta,LAZIO,Lazio,P,1,1,1,1,1,1
+Renzetti,LAZIO,Lazio,P,1,1,1,1,1,1
+Patric,LAZIO,Lazio,D,1,1,4,1,1,4
+Belahyane,LAZIO,Lazio,C,1,1,5,1,1,5
+Przyborek,LAZIO,Lazio,C,1,1,5,1,1,5
+Fruchtl,LECCE,Lecce,P,1,1,1,1,1,1
+Samooja,LECCE,Lecce,P,1,1,1,1,1,1
+Perez M.,LECCE,Lecce,D,1,1,1,1,1,1
+Ndaba,LECCE,Lecce,D,1,1,4,1,1,4
+Gorter,LECCE,Lecce,C,1,1,3,1,1,3
+Kaba,LECCE,Lecce,C,1,1,2,1,1,2
+Fofana Sa.,LECCE,Lecce,C,1,1,1,1,1,1
+Terracciano,MILAN,Milan,P,1,1,1,1,1,1
+Torriani,MILAN,Milan,P,1,1,1,1,1,1
+Pizzignacco,MONZA,Monza,P,1,1,1,1,1,1
+Strajnar,MONZA,Monza,P,1,1,1,1,1,1
+Antov,MONZA,Monza,D,1,1,2,1,1,2
+Bakoune,MONZA,Monza,D,1,1,4,1,1,4
+Contini,NAPOLI,Napoli,P,1,1,1,1,1,1
+Marianucci,NAPOLI,Napoli,D,1,1,5,1,1,5
+Mazzocchi,NAPOLI,Napoli,D,1,1,3,1,1,3
+Corvi,PARMA,Parma,P,1,1,1,1,1,1
+Ndiaye,PARMA,Parma,D,1,1,4,1,1,4
+Carboni F.,PARMA,Parma,D,1,1,3,1,1,3
+Cremaschi,PARMA,Parma,C,1,1,3,1,1,3
+De Marzi,ROMA,Roma,P,1,1,1,1,1,1
+Gollini,ROMA,Roma,P,1,1,1,1,1,1
+Ziolkowski,ROMA,Roma,D,1,1,2,1,1,2
+Vaz,ROMA,Roma,A,1,1,4,1,1,3
+Russo A.,SASSUOLO,Sassuolo,P,1,1,1,1,1,1
+Turati,SASSUOLO,Sassuolo,P,1,1,3,1,1,3
+Missori,SASSUOLO,Sassuolo,D,1,1,2,1,1,2
+Pieragnolo,SASSUOLO,Sassuolo,D,1,1,1,1,1,1
+Iannoni,SASSUOLO,Sassuolo,C,1,1,1,1,1,1
+Moro L.,SASSUOLO,Sassuolo,A,1,1,1,1,1,1
+Mascardi,TORINO,Torino,P,1,1,1,1,1,1
+Paleari,TORINO,Torino,P,1,1,1,1,1,1
+Siviero,TORINO,Torino,P,1,1,1,1,1,1
+Ilic,TORINO,Torino,C,1,1,4,1,1,4
+Anjorin,TORINO,Torino,C,1,1,4,1,1,4
+Padelli,UDINESE,Udinese,P,1,1,1,1,1,1
+Piana,UDINESE,Udinese,P,1,1,1,1,1,1
+Mlacic,UDINESE,Udinese,D,1,1,3,1,1,3
+Abankwah,UDINESE,Udinese,D,1,1,3,1,1,3
+Camara A.,UDINESE,Udinese,C,1,1,3,1,1,3
+Zarraga,UDINESE,Udinese,C,1,1,4,1,1,4
+Bayo V.,UDINESE,Udinese,A,1,1,3,1,1,3
+Grandi,VENEZIA,Venezia,P,1,1,1,1,1,1
+Pozzi,VENEZIA,Venezia,P,1,1,1,1,1,1
+Gomes,VENEZIA,Venezia,D,1,1,1,1,1,1
+Bjarkason,VENEZIA,Venezia,C,1,1,3,1,1,3
+Dagasso,VENEZIA,Venezia,C,1,1,1,1,1,1
+Lisman,VENEZIA,Venezia,A,1,1,1,1,1,1
+Lauberbach,VENEZIA,Venezia,A,1,1,1,1,1,1
+Vismara,ATALANTA,Atalanta,P,1,1,1,1,1,1

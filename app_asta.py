@@ -1,21 +1,32 @@
-import io
-import threading
-import time
-
-import numpy as np
 import pandas as pd
 import streamlit as st
+from streamlit_webrtc import AudioProcessorBase, WebRtcMode, webrtc_streamer
 
 import asta_core
 import data_loader
 import scraper
 from data_loader import ROLE_ORDER, build_players, fair_values_scaled, suggest_player
-from transcriber import extract_bid
+from transcriber import decode_audio_upload, extract_bid, frames_to_float32
 
 st.set_page_config(page_title="Asta Coach", page_icon="⚽", layout="wide")
 
-MAX_REC_SECONDS = 15
+MAX_REC_SECONDS = 30
 SAMPLE_RATE = 16000
+
+
+class BidRecorder(AudioProcessorBase):
+    def __init__(self):
+        self.frames = []
+
+    def recv(self, frame):
+        self.frames.append(frame.to_ndarray().copy())
+        return frame
+
+
+def recorder_factory():
+    proc = BidRecorder()
+    st.session_state["rec_proc"] = proc
+    return proc
 
 
 @st.cache_resource
@@ -40,23 +51,6 @@ def save_session_state():
     session = st.session_state.get("session")
     if session:
         asta_core.save_session(session)
-
-
-def record_loop():
-    try:
-        import sounddevice as sd
-        start = time.time()
-        chunks = st.session_state["audio_chunks"]
-        with sd.InputStream(samplerate=SAMPLE_RATE, channels=1,
-                            dtype="float32") as stream:
-            while (st.session_state.get("recording")
-                   and time.time() - start < MAX_REC_SECONDS):
-                data, _ = stream.read(int(SAMPLE_RATE * 0.5))
-                chunks.append(data.copy())
-    except Exception as exc:
-        st.session_state["rec_error"] = str(exc)
-    finally:
-        st.session_state["recording"] = False
 
 
 def render_setup():
@@ -194,44 +188,54 @@ def sync_widget(key):
 
 
 def render_recorder():
-    st.markdown("**🎙️ Trascrittore (press-to-talk)**")
-    rec = st.session_state.get("recording", False)
-    if not rec:
-        if st.button("🎤 Inizia registrazione (max 15s)", key="rec_start"):
-            st.session_state["recording"] = True
-            st.session_state["audio_chunks"] = []
-            st.session_state["rec_start_time"] = time.time()
-            st.session_state["rec_error"] = None
-            st.session_state["rec_thread"] = threading.Thread(
-                target=record_loop, daemon=True
-            )
-            st.session_state["rec_thread"].start()
-            st.rerun()
-    else:
-        st.warning("⏺️ Registrazione in corso...")
-        if st.button("⏹️ Stop e trascrivi", key="rec_stop"):
-            st.session_state["recording"] = False
-            st.rerun()
-        elapsed = MAX_REC_SECONDS - int(
-            time.time() - st.session_state.get("rec_start_time", time.time())
+    st.markdown("**🎙️ Trascrittore**")
+    try:
+        ctx = webrtc_streamer(
+            key="bid_rec",
+            mode=WebRtcMode.SENDONLY,
+            audio_processor_factory=recorder_factory,
+            audio_receiver_size=1024,
+            media_stream_constraints={"audio": True, "video": False},
         )
-        st.caption(f"si ferma automaticamente tra ~{max(elapsed, 0)}s")
-    if st.session_state.get("rec_error"):
-        st.error(f"Microfono non disponibile: {st.session_state['rec_error']} — "
-                 f"usa l'inserimento manuale")
+    except Exception:
+        ctx = None
+    proc = st.session_state.get("rec_proc")
+    if ctx is not None and not ctx.state.playing and proc is not None \
+            and proc.frames:
+        rate = getattr(proc, "sample_rate", 48000) or 48000
+        audio = frames_to_float32(proc.frames, rate)
+        proc.frames.clear()
+        if audio is not None:
+            st.session_state["recorded_audio"] = audio
+    st.caption("Avvia la registrazione, poi fermala: l'audio viene trascritto "
+               "in locale dal modello Whisper.")
 
-    if not rec and st.session_state.get("audio_chunks"):
+    if st.session_state.get("recorded_audio") is not None:
         if st.button("Trascrivi audio registrato"):
             with st.spinner("Trascrivendo..."):
-                audio = np.concatenate(st.session_state["audio_chunks"])
-                model = get_whisper(st.session_state.get("whisper_model", "small"))
+                model = get_whisper(st.session_state.get("whisper_model", "base"))
                 segments, _ = model.transcribe(
-                    audio, language="it", vad_filter=True, beam_size=5
+                    st.session_state["recorded_audio"],
+                    language="it", vad_filter=True, beam_size=5,
                 )
                 text = " ".join(s.get_text() for s in segments)
             st.session_state["transcript_area"] = text
-            st.session_state["audio_chunks"] = []
+            st.session_state["recorded_audio"] = None
             st.rerun()
+
+    uploaded = st.file_uploader(
+        "oppure carica un file audio", type=["wav", "mp3", "m4a", "aac",
+                                             "ogg", "flac"],
+    )
+    if uploaded is not None \
+            and st.session_state.get("uploaded_name") != uploaded.name:
+        audio = decode_audio_upload(uploaded.getvalue())
+        if audio is not None:
+            st.session_state["recorded_audio"] = audio
+            st.session_state["uploaded_name"] = uploaded.name
+            st.rerun()
+        else:
+            st.error("File audio non decodificabile")
 
     transcript = st.session_state.get("transcript_area", "")
     st.text_area("Trascrizione", key="transcript_area", height=80)
@@ -437,7 +441,7 @@ def render_summary():
 def main():
     st.sidebar.title("⚽ Asta Coach")
     st.sidebar.selectbox(
-        "Modello Whisper", ["small", "base", "tiny"], index=0,
+        "Modello Whisper", ["base", "small", "tiny"], index=0,
         key="whisper_model",
     )
     session = st.session_state.get("session")
