@@ -22,6 +22,19 @@ def load_lineups():
     return build_lineups(players)
 
 
+def load_excluded():
+    path = scraper.DATA_DIR / "esclusi.csv"
+    if not path.exists():
+        return set()
+    return set(pd.read_csv(path)["Nome"])
+
+
+def save_excluded(names):
+    path = scraper.DATA_DIR / "esclusi.csv"
+    scraper.DATA_DIR.mkdir(exist_ok=True)
+    pd.DataFrame({"Nome": sorted(names)}).to_csv(path, index=False)
+
+
 def players_df():
     return load_players()
 
@@ -151,6 +164,9 @@ def render_players():
         st.warning("Nessun dato giocatori — scarica le quotazioni nella tab Setup")
         return
 
+    excluded = load_excluded()
+    players = players[~players["Nome"].isin(excluded)].copy()
+
     st.header("🔍 Cerca giocatore")
     st.text_input("Cerca giocatore", key="nom_search")
     q = st.session_state.get("nom_search", "")
@@ -172,6 +188,52 @@ def render_players():
         session = {"meta": {"budget": budget, "fair": fair}}
         info = asta_core.coach(session, player)
         player_card(player, info)
+
+    st.divider()
+    st.subheader("🎯 Filtra per ruolo e cluster")
+    c1, c2, c3 = st.columns([1, 1, 2])
+    role = c1.selectbox("Ruolo", ["Tutti"] + ROLE_ORDER, key="filtro_ruolo")
+    sub = players if role == "Tutti" else players[players["Ruolo"] == role]
+    clusters = sorted(
+        int(c) for c in sub["Cluster"].dropna().unique() if pd.notna(c)
+    )
+    cluster = c2.selectbox(
+        "Cluster", ["Tutti"] + clusters, key="filtro_cluster"
+    )
+    c3.caption("Spunta i giocatori già battuti all'asta e rimuovili: "
+               "spariranno da questa tab.")
+    view = sub.copy()
+    if cluster != "Tutti":
+        view = view[view["Cluster"] == cluster]
+    view = view.sort_values(["FM", "QA"], ascending=[False, False],
+                            na_position="last")
+    view = view[["Nome", "Squadra", "Ruolo", "FM", "QA", "Cluster"]].copy()
+    view["Escludi"] = False
+    edited = st.data_editor(
+        view, width="stretch", hide_index=True, key="cluster_editor"
+    )
+    st.caption(f"{len(view)} giocatori nel cluster selezionato")
+    if st.button("🗑️ Rimuovi selezionati (già battuti all'asta)",
+                 type="primary"):
+        to_remove = edited[edited["Escludi"] == True]["Nome"].tolist()
+        if to_remove:
+            excluded |= set(to_remove)
+            save_excluded(excluded)
+            st.success(f"Rimossi {len(to_remove)} giocatori")
+            st.rerun()
+        else:
+            st.warning("Nessun giocatore selezionato")
+
+    with st.expander(f"♻️ Ripristina giocatori rimossi ({len(excluded)})"):
+        if not excluded:
+            st.caption("Nessun giocatore rimosso")
+        for name in sorted(excluded):
+            c1, c2 = st.columns([3, 1])
+            c1.write(name)
+            if c2.button("Ripristina", key=f"rest_{name}"):
+                excluded.discard(name)
+                save_excluded(excluded)
+                st.rerun()
 
     st.divider()
     with st.expander("📋 Massimo per cluster (per ruolo)", expanded=True):
