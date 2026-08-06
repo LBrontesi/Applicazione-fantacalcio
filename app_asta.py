@@ -198,8 +198,8 @@ def render_formazioni():
                    "nella tab Setup")
         return
 
-    st.header("📋 Probabili formazioni")
-    c1, c2 = st.columns([3, 1])
+    st.header("📋 Probabili formazioni — tutte le 20 squadre")
+    c1, c2 = st.columns([2, 3])
     if c1.button("🔄 Ricomputa formazioni"):
         with st.status("Ricalcolo...") as status:
             scraper.scrape_lineups(
@@ -217,44 +217,57 @@ def render_formazioni():
         '<span style="background:#c62828;color:white;border-radius:6px;'
         'padding:1px 8px;font-size:12px">⚽ Rigorista</span> '
         '<span style="background:#1565c0;color:white;border-radius:6px;'
-        'padding:1px 8px;font-size:12px">🚩 Calci d\'angolo</span> '
+        'padding:1px 8px;font-size:12px">🚩 Angoli</span> '
         '<span style="background:#b8860b;color:white;border-radius:6px;'
         'padding:1px 8px;font-size:12px">🎯 Punizioni</span> — '
-        "giocatori evidenziati = probabili bonus (goal/assist)",
+        "sfondo verde = giocatore con probabili bonus",
         unsafe_allow_html=True,
     )
 
-    teams = sorted(lineups["Squadra"].unique())
-    team = st.selectbox("Squadra", teams, key="form_team")
-    sub = lineups[lineups["Squadra"] == team]
-    modulo = sub.iloc[0]["Modulo"] if len(sub) else "?"
-    st.subheader(f"{team} — modulo {modulo}")
-
-    for i, row in sub.iterrows():
+    def player_row(row):
         flagged = bool(row["Rigorista"] or row["Punizioni"] or row["Angoli"])
-        bg = "#2d4a2d" if flagged else "#2b2b2b"
+        bg = "#e8f5e9" if flagged else "#fafafa"
+        border = "1px solid #81c784" if flagged else "1px solid #e0e0e0"
         badges = ""
         if row["Rigorista"]:
             badges += ('<span style="background:#c62828;color:white;'
-                       'border-radius:6px;padding:1px 8px;font-size:12px">'
+                       'border-radius:6px;padding:1px 8px;font-size:11px">'
                        '⚽ Rigorista</span> ')
         if row["Angoli"]:
             badges += ('<span style="background:#1565c0;color:white;'
-                       'border-radius:6px;padding:1px 8px;font-size:12px">'
+                       'border-radius:6px;padding:1px 8px;font-size:11px">'
                        '🚩 Angoli</span> ')
         if row["Punizioni"]:
             badges += ('<span style="background:#b8860b;color:white;'
-                       'border-radius:6px;padding:1px 8px;font-size:12px">'
+                       'border-radius:6px;padding:1px 8px;font-size:11px">'
                        '🎯 Punizioni</span> ')
         ruolo = row["Ruolo"] or "?"
         fm = f"{row['FM']:.2f}" if pd.notna(row["FM"]) else "-"
-        st.markdown(
-            f'<div style="background:{bg};padding:7px 12px;border-radius:8px;'
-            f'margin:3px 0">'
-            f'<b>{row["Nome"]}</b> <span style="color:#aaa">'
-            f'{ruolo} · FM {fm}</span>  {badges}</div>',
-            unsafe_allow_html=True,
+        return (
+            f'<div style="background:{bg};border:{border};padding:5px 9px;'
+            f'border-radius:7px;margin:2px 0;font-size:13px">'
+            f'<b>{row["Nome"]}</b> <span style="color:#666;font-size:11px">'
+            f'{ruolo} · FM {fm}</span>  {badges}</div>'
         )
+
+    teams = sorted(lineups["Squadra"].unique())
+    per_row = 4
+    for start in range(0, len(teams), per_row):
+        cols = st.columns(per_row)
+        for col, team in zip(cols, teams[start:start + per_row]):
+            sub = lineups[lineups["Squadra"] == team]
+            modulo = sub.iloc[0]["Modulo"] if len(sub) else "?"
+            with col:
+                st.markdown(
+                    f'<div style="background:#f0f4f8;border:1px solid #d5dde5;'
+                    f'border-radius:10px;padding:8px 10px;margin-bottom:8px">'
+                    f'<b style="font-size:14px">{team}</b> '
+                    f'<span style="color:#444;font-size:12px">— {modulo}</span>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+                for _, row in sub.iterrows():
+                    st.markdown(player_row(row), unsafe_allow_html=True)
 
 
 def main():
