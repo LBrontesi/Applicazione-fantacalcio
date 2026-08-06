@@ -156,6 +156,23 @@ def render_players():
         info = asta_core.coach(session, player)
         player_card(player, info)
 
+    st.divider()
+    with st.expander("📋 Massimo per cluster (per ruolo)", expanded=True):
+        budget, fair = get_config()
+        st.caption(f"Budget: {budget} · cluster da 10 giocatori")
+        for role in ROLE_ORDER:
+            table = fair[role]
+            rows = [
+                {"Cluster": c, "Giocatori": f"dal {1 + (c - 1) * 10}° "
+                                           f"al {c * 10}°",
+                 "Massimo da offrire": table[min(c - 1, len(table) - 1)]}
+                for c in range(1, len(table) + 1)
+            ]
+            st.markdown(f"**{role}**")
+            st.dataframe(
+                pd.DataFrame(rows), width="stretch", hide_index=True,
+            )
+
 
 def main():
     st.sidebar.title("⚽ Asta Coach")
