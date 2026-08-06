@@ -310,10 +310,21 @@ def render_asta():
             budget_left = session["teams"][buyer]["budget_left"]
             if price > budget_left:
                 st.warning(f"{buyer} ha solo {budget_left} crediti rimasti!")
-            if price > info["cap"] and not info["full"]:
-                st.error(f"❌ Sopra il fair value ({info['cap']}) — lascia stare")
-            elif not info["full"]:
-                st.success(f"✅ Entro fair value — puoi spingere fino a {info['cap']}")
+            if info["full"]:
+                st.error(f"⛔ Rosa completa per il ruolo {player['Ruolo']} — "
+                         f"non puoi più comprare")
+            elif price > info["cap"]:
+                st.error(
+                    f"⛔ **FERMATI — NON OFFRIRE PIÙ!**\n\n"
+                    f"{player['Nome']} (cluster {info['cluster']}) ha "
+                    f"superato il cap: offerta **{price}** > cap **{info['cap']}**. "
+                    f"Esci dall'asta, non vale più la pena."
+                )
+            else:
+                st.success(
+                    f"✅ Offerta {price} entro il cap di {info['cap']} — "
+                    f"puoi spingere fino a **{info['cap']}**"
+                )
 
             if st.button("✔️ Registra vendita", type="primary"):
                 asta_core.register_bid(
