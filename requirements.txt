@@ -5,8 +5,3 @@ requests
 beautifulsoup4
 openpyxl
 numpy
-streamlit-webrtc
-av
-faster-whisper
-soundfile
-sounddevice
