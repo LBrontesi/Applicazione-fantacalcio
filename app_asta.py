@@ -7,8 +7,25 @@ import scraper
 from data_loader import (
     ROLE_ORDER, build_lineups, build_players, fair_values_scaled, suggest_player,
 )
+from scraper import ScrapeError
 
 st.set_page_config(page_title="Asta Coach", page_icon="⚽", layout="wide")
+
+
+def run_scrape(jobs):
+    with st.status("Scaricando dati...") as status:
+        try:
+            for label, job in jobs:
+                status.update(label=label)
+                job()
+            st.cache_data.clear()
+            status.update(label="Fatto!", state="complete")
+        except ScrapeError as exc:
+            status.update(label="Errore", state="error")
+            st.error(f"Download non riuscito: {exc}")
+        except Exception as exc:
+            status.update(label="Errore", state="error")
+            st.error(f"Errore inatteso: {exc}")
 
 
 @st.cache_data(show_spinner=False)
@@ -51,27 +68,24 @@ def render_setup():
     st.subheader("🔄 Dati")
     c1, c2, c3 = st.columns(3)
     if c1.button("Scarica quotazioni Gazzetta (veloce)"):
-        with st.status("Scaricando quotazioni...") as status:
-            scraper.scrape_quotazioni(progress_cb=lambda m: status.update(label=m))
-            st.cache_data.clear()
-            status.update(label="Fatto!", state="complete")
+        run_scrape([
+            ("Scaricando quotazioni...",
+             lambda: scraper.scrape_quotazioni(progress_cb=None)),
+        ])
         st.rerun()
     if c2.button("Scarica lista giocatori FCP (lento, ~10 min)"):
-        with st.status("Scaricando giocatori da fantacalciopedia...") as status:
-            scraper.scrape_fantacalciopedia(
-                progress_cb=lambda m: status.update(label=m)
-            )
-            st.cache_data.clear()
-            status.update(label="Fatto!", state="complete")
+        run_scrape([
+            ("Scaricando giocatori da fantacalciopedia...",
+             lambda: scraper.scrape_fantacalciopedia(progress_cb=None)),
+        ])
         st.rerun()
     if c3.button("Scarica formazioni + tiratori (~30s)"):
-        with st.status("Scaricando formazioni e set-pieces...") as status:
-            scraper.scrape_lineups(
-                progress_cb=lambda m: status.update(label=m))
-            scraper.scrape_set_pieces(
-                progress_cb=lambda m: status.update(label=m))
-            st.cache_data.clear()
-            status.update(label="Fatto!", state="complete")
+        run_scrape([
+            ("Scaricando formazioni e set-pieces...",
+             lambda: scraper.scrape_lineups(progress_cb=None)),
+            ("Scaricando tiratori...",
+             lambda: scraper.scrape_set_pieces(progress_cb=None)),
+        ])
         st.rerun()
 
     df = players_df()
@@ -167,6 +181,11 @@ def render_players():
     excluded = load_excluded()
     players = players[~players["Nome"].isin(excluded)].copy()
 
+    clicked = st.session_state.pop("search_click", None)
+    if clicked:
+        st.session_state["nom_search"] = clicked
+        st.session_state["nom_select"] = clicked
+
     st.header("🔍 Cerca giocatore")
     st.text_input("Cerca giocatore", key="nom_search")
     q = st.session_state.get("nom_search", "")
@@ -207,12 +226,42 @@ def render_players():
         view = view[view["Cluster"] == cluster]
     view = view.sort_values(["FM", "QA"], ascending=[False, False],
                             na_position="last")
+    budget, fair = get_config()
     view = view[["Nome", "Squadra", "Ruolo", "FM", "QA", "Cluster"]].copy()
+    view["Massimo da offrire"] = view.apply(
+        lambda r: fair.get(r["Ruolo"], [])[
+            min(int(r["Cluster"]) - 1, len(fair.get(r["Ruolo"], [1])) - 1)
+        ],
+        axis=1,
+    )
     view["Escludi"] = False
     edited = st.data_editor(
-        view, width="stretch", hide_index=True, key="cluster_editor"
+        view, width="stretch", hide_index=True, key="cluster_editor",
+        column_config={
+            "Nome": st.column_config.TextColumn(disabled=True),
+            "Squadra": st.column_config.TextColumn(disabled=True),
+            "Ruolo": st.column_config.TextColumn(disabled=True),
+            "FM": st.column_config.NumberColumn(disabled=True),
+            "QA": st.column_config.NumberColumn(disabled=True),
+            "Cluster": st.column_config.NumberColumn(disabled=True),
+            "Massimo da offrire": st.column_config.NumberColumn(
+                disabled=True, help="Massimo da offrire all'asta"),
+        },
     )
-    st.caption(f"{len(view)} giocatori nel cluster selezionato")
+    st.caption(f"{len(view)} giocatori nel cluster selezionato · "
+               f"budget {budget}")
+    if cluster != "Tutti":
+        for start in range(0, len(view), 5):
+            cols = st.columns(5)
+            for col, (_, r) in zip(cols, view.iloc[start:start + 5].iterrows()):
+                with col:
+                    if st.button(
+                        f"🔍 {r['Nome']}", key=f"pick_{r['Nome']}",
+                        width="stretch"
+                    ):
+                        st.session_state["search_click"] = r["Nome"]
+                        st.rerun()
+        st.caption("👆 Clicca un giocatore per aprirlo in 'Cerca giocatore'")
     if st.button("🗑️ Rimuovi selezionati (già battuti all'asta)",
                  type="primary"):
         to_remove = edited[edited["Escludi"] == True]["Nome"].tolist()
@@ -263,13 +312,12 @@ def render_formazioni():
     st.header("📋 Probabili formazioni — tutte le 20 squadre")
     c1, c2 = st.columns([2, 3])
     if c1.button("🔄 Ricomputa formazioni"):
-        with st.status("Ricalcolo...") as status:
-            scraper.scrape_lineups(
-                progress_cb=lambda m: status.update(label=m))
-            scraper.scrape_set_pieces(
-                progress_cb=lambda m: status.update(label=m))
-            st.cache_data.clear()
-            status.update(label="Fatto!", state="complete")
+        run_scrape([
+            ("Ricalcolo formazioni...",
+             lambda: scraper.scrape_lineups(progress_cb=None)),
+            ("Aggiornando tiratori...",
+             lambda: scraper.scrape_set_pieces(progress_cb=None)),
+        ])
         st.rerun()
     c2.caption("Fonte: fantacalcio.it (11 attesi + panchina) + "
                "fantacalciopedia (tiratori)")

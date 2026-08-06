@@ -20,6 +20,10 @@ HEADERS = {
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
 }
 
+
+class ScrapeError(Exception):
+    pass
+
 FCP_ROLES = [
     ("P", "https://www.fantacalciopedia.com/lista-calciatori-serie-a/portieri/"),
     ("D", "https://www.fantacalciopedia.com/lista-calciatori-serie-a/difensori/"),
@@ -54,7 +58,14 @@ def normalize_name(name):
 
 
 def _get(url, timeout=25):
-    return requests.get(url, headers=HEADERS, timeout=timeout)
+    try:
+        resp = requests.get(url, headers=HEADERS, timeout=timeout)
+        resp.raise_for_status()
+        return resp
+    except ScrapeError:
+        raise
+    except Exception as exc:
+        raise ScrapeError(f"Errore di rete scaricando {url}: {exc}") from exc
 
 
 def _clean(text):
@@ -67,7 +78,6 @@ def scrape_fantacalciopedia(limit=None, delay=0.4, progress_cb=None):
     links = []
     for role, url in FCP_ROLES:
         html = _get(url)
-        html.raise_for_status()
         soup = bs(html.content, "html.parser")
         for a in soup.select("div.col_full.giocatore a"):
             href = a.get("href")
@@ -143,7 +153,6 @@ def scrape_fantacalciopedia(limit=None, delay=0.4, progress_cb=None):
 def scrape_quotazioni(progress_cb=None):
     DATA_DIR.mkdir(exist_ok=True)
     html = _get(QUOTAZIONI_URL)
-    html.raise_for_status()
     soup = bs(html.content, "html.parser")
 
     rows = []
@@ -208,7 +217,6 @@ def _card_players(card, selector):
 def scrape_lineups(progress_cb=None):
     DATA_DIR.mkdir(exist_ok=True)
     html = _get(LINEUPS_URL)
-    html.raise_for_status()
     soup = bs(html.content, "html.parser")
 
     rows = []
@@ -279,7 +287,6 @@ def _split_names(raw):
 def scrape_set_pieces(progress_cb=None):
     DATA_DIR.mkdir(exist_ok=True)
     html = _get(SET_PIECES_URL)
-    html.raise_for_status()
     soup = bs(html.content, "html.parser")
     text = soup.get_text("\n")
 
