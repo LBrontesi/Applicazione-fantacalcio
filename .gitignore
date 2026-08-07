@@ -4,4 +4,7 @@ __pycache__/
 data/sessions/
 data/benchmark/
 data/webrtc_debug.log
+data/ranking_weights.json
+*.xlsx
+~$*.xlsx
 *.pyc

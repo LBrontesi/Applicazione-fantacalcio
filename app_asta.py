@@ -5,9 +5,21 @@ import asta_core
 import data_loader
 import scraper
 from data_loader import (
-    ROLE_ORDER, build_lineups, build_players, fair_values_scaled, suggest_player,
+    ROLE_ORDER, build_lineups, build_players, fair_values_scaled,
+    load_ranking_weights, save_ranking_weights, suggest_player,
+    backtest_predictor, DEFAULT_METHOD,
 )
 from scraper import ScrapeError
+
+WEIGHT_LABELS = {
+    "FM": "Fantamedia (FCP)",
+    "FVM": "Fantamedia (Gazzetta)",
+    "ALG": "Algoritmo (FCP)",
+    "Starter": "Probabile titolare",
+    "SetPieces": "Set-piece (rigorista/angoli/punizioni)",
+    "Tags": "Attributi (Fuoriclasse, Goleador, …)",
+    "Injury": "Robustezza infortuni (premia chi non si infortuna)",
+}
 
 st.set_page_config(page_title="Asta Coach", page_icon="⚽", layout="wide")
 
@@ -100,7 +112,6 @@ def render_setup():
                     ["Nome", "Squadra", "Ruolo", "FM", "QA", "QI", "Cluster",
                      "Attributi", "ResInf"]
                 ].head(50),
-                width="stretch",
             )
 
     st.divider()
@@ -119,7 +130,7 @@ def render_setup():
             fair_rows.append({"Ruolo": role, "Slot": slot, "Fair Value": value})
     fair_df = pd.DataFrame(fair_rows)
     edited = st.data_editor(
-        fair_df, num_rows="fixed", width="stretch", key="fair_editor"
+        fair_df, num_rows="fixed", use_container_width=True, key="fair_editor"
     )
     fair = {}
     for role in ROLE_ORDER:
@@ -141,6 +152,60 @@ def render_setup():
             st.session_state["session"] = asta_core.load_session(pick)
             st.rerun()
 
+    st.divider()
+    st.subheader("🎚️ Pesi classifica")
+    st.caption(
+        "Punteggio = media pesata normalizzata dei componenti, ognuno in 0–1 "
+        "per ruolo (percentile). Peso 0 = componente disattivata. La "
+        "robustezza infortuni premia. Starter/Set-pieces contano di più per "
+        "P e D che per A (automatico). Al salvataggio la classifica (rank e "
+        "cluster) viene ricalcolata."
+    )
+    saved = load_ranking_weights()
+    method = saved.get("_method", DEFAULT_METHOD)
+    method_labels = {
+        "blend": "Blend modello + pesi (consigliato)",
+        "model": "Modello predittivo (FM attesa)",
+        "manual": "Pesi manuali",
+    }
+    chosen = st.selectbox(
+        "Metodo classifica",
+        list(method_labels),
+        format_func=lambda m: method_labels[m],
+        index=list(method_labels).index(
+            method if method in method_labels else "blend"
+        ),
+        key="rank_method",
+    )
+    wcols = st.columns(2)
+    weights_edit = {}
+    for i, (key, label) in enumerate(WEIGHT_LABELS.items()):
+        weights_edit[key] = wcols[i % 2].slider(
+            label, 0.0, 2.0, float(saved[key]), 0.1, key=f"w_{key}"
+        )
+    if st.button("💾 Salva pesi classifica", type="primary"):
+        weights_edit["_method"] = chosen
+        save_ranking_weights(weights_edit)
+        st.cache_data.clear()
+        st.success("Pesi salvati — classifica ricalcolata")
+        st.rerun()
+    with st.expander("📊 Diagnostica modello (Spearman ρ)"):
+        rho = backtest_predictor(players_df())
+        cols = st.columns(len(ROLE_ORDER))
+        for col, role in zip(cols, ROLE_ORDER):
+            v = rho.get(role, float("nan"))
+            col.metric(role, f"{v:.2f}" if pd.notna(v) else "n/d")
+        st.caption(
+            "ρ = correlazione di Spearman tra la FM prevista dal modello e "
+            "la FM reale dell'ultima stagione, con validazione incrociata a "
+            "5 fold. Più alto è meglio; sotto 0.3 il modello è debole e "
+            "conviene il metodo manuale."
+        )
+
+
+def role_count(role):
+    return int((players_df()["Ruolo"] == role).sum())
+
 
 def player_card(player, info):
     cap = info["cap"]
@@ -150,26 +215,50 @@ def player_card(player, info):
         f'💰 Massimo da offrire: {cap} crediti</div>',
         unsafe_allow_html=True,
     )
-    c = st.columns(5)
+    c = st.columns(6)
     c[0].metric("Squadra", player["Squadra"])
     c[1].metric("Ruolo", player["Ruolo"])
-    c[2].metric("FantaMedia", f"{player['FM']:.2f}" if pd.notna(player["FM"])
-                else "-")
+    if pd.notna(player["FM"]):
+        fm_disp = f"{player['FM']:.2f}"
+    elif pd.notna(player["FMEst"]):
+        fm_disp = f"~{player['FMEst']:.2f} (stima)"
+    else:
+        fm_disp = "-"
+    c[2].metric("FantaMedia", fm_disp)
     qa = player["QA"]
     c[3].metric("Quotazione QA", f"{qa:.0f}" if pd.notna(qa) else "-")
     c[4].metric("Cluster", f"{info['cluster']}")
+    pred = player.get("PredFM")
+    c[5].metric("FM attesa (modello)", f"{pred:.2f}" if pd.notna(pred) else "-")
 
     st.markdown(
         f"{player['Nome']} è nel **cluster {info['cluster']}** dei {info['role']} "
-        f"(ordinati per fantamedia). Fair value del cluster: **{cap}**. "
+        f"(ordinati per punteggio). Fair value del cluster: **{cap}**. "
         f"Se il prezzo sale sopra {cap}, esci dall'asta."
     )
+    with st.expander("🧮 Breakdown punteggio"):
+        comps = pd.DataFrame({
+            "Componente": [
+                "FantaMedia (FCP)", "FVM (Gazzetta)", "Algoritmo FCP",
+                "Titolare", "Set-pieces", "Attributi", "Robustezza",
+                "Modello FM attesa",
+            ],
+            "Contributo": [
+                float(player.get("C_FM", 0)), float(player.get("C_FVM", 0)),
+                float(player.get("C_ALG", 0)), float(player.get("C_Starter", 0)),
+                float(player.get("C_SetPieces", 0)), float(player.get("C_Tags", 0)),
+                float(player.get("C_Injury", 0)), float(player.get("C_Model", 0)),
+            ],
+        })
+        st.dataframe(comps, hide_index=True)
+        st.caption(f"Punteggio totale: {player['Score']:.3f} · "
+                   f"rank {int(player['Rank'])}/{role_count(player['Ruolo'])}")
     with st.expander("Tabella fair value per il ruolo"):
         table = pd.DataFrame({
             "Cluster": list(range(1, len(info["fair_table"]) + 1)),
             "Fair value": info["fair_table"],
         })
-        st.dataframe(table, width="stretch", hide_index=True)
+        st.dataframe(table, use_container_width=True, hide_index=True)
 
 
 def render_players():
@@ -224,10 +313,10 @@ def render_players():
     view = sub.copy()
     if cluster != "Tutti":
         view = view[view["Cluster"] == cluster]
-    view = view.sort_values(["FM", "QA"], ascending=[False, False],
-                            na_position="last")
+    view = view.sort_values(["Ruolo", "Rank"], ascending=[True, True])
     budget, fair = get_config()
-    view = view[["Nome", "Squadra", "Ruolo", "FM", "QA", "Cluster"]].copy()
+    view = view[["Nome", "Squadra", "Ruolo", "FM", "QA", "Cluster",
+                 "Score"]].copy()
     view["Massimo da offrire"] = view.apply(
         lambda r: fair.get(r["Ruolo"], [])[
             min(int(r["Cluster"]) - 1, len(fair.get(r["Ruolo"], [1])) - 1)
@@ -236,7 +325,7 @@ def render_players():
     )
     view["Escludi"] = False
     edited = st.data_editor(
-        view, width="stretch", hide_index=True, key="cluster_editor",
+        view, use_container_width=True, hide_index=True, key="cluster_editor",
         column_config={
             "Nome": st.column_config.TextColumn(disabled=True),
             "Squadra": st.column_config.TextColumn(disabled=True),
@@ -244,6 +333,9 @@ def render_players():
             "FM": st.column_config.NumberColumn(disabled=True),
             "QA": st.column_config.NumberColumn(disabled=True),
             "Cluster": st.column_config.NumberColumn(disabled=True),
+            "Score": st.column_config.NumberColumn(
+                disabled=True, format="%.3f",
+                help="Punteggio composito ponderato (Setup → Pesi classifica)"),
             "Massimo da offrire": st.column_config.NumberColumn(
                 disabled=True, help="Massimo da offrire all'asta"),
         },
@@ -257,7 +349,7 @@ def render_players():
                 with col:
                     if st.button(
                         f"🔍 {r['Nome']}", key=f"pick_{r['Nome']}",
-                        width="stretch"
+                        use_container_width=True
                     ):
                         st.session_state["search_click"] = r["Nome"]
                         st.rerun()
@@ -287,18 +379,19 @@ def render_players():
     st.divider()
     with st.expander("📋 Massimo per cluster (per ruolo)", expanded=True):
         budget, fair = get_config()
-        st.caption(f"Budget: {budget} · cluster da 10 giocatori")
+        st.caption(
+            f"Budget: {budget} · cluster fissi da {10} giocatori "
+            f"(10 partecipanti, uno a testa per cluster)"
+        )
         for role in ROLE_ORDER:
             table = fair[role]
             rows = [
-                {"Cluster": c, "Giocatori": f"dal {1 + (c - 1) * 10}° "
-                                           f"al {c * 10}°",
-                 "Massimo da offrire": table[min(c - 1, len(table) - 1)]}
+                {"Cluster": c, "Massimo da offrire": table[min(c - 1, len(table) - 1)]}
                 for c in range(1, len(table) + 1)
             ]
             st.markdown(f"**{role}**")
             st.dataframe(
-                pd.DataFrame(rows), width="stretch", hide_index=True,
+                pd.DataFrame(rows), use_container_width=True, hide_index=True,
             )
 
 
@@ -330,7 +423,8 @@ def render_formazioni():
         'padding:1px 8px;font-size:12px">🚩 Angoli</span> '
         '<span style="background:#b8860b;color:white;border-radius:6px;'
         'padding:1px 8px;font-size:12px">🎯 Punizioni</span> — '
-        "sfondo verde = giocatore con probabili bonus",
+        "sfondo verde = giocatore con probabili bonus — "
+        "* = fantamedia stimata (nessuna stagione disponibile)",
         unsafe_allow_html=True,
     )
 
@@ -353,6 +447,8 @@ def render_formazioni():
                        '🎯 Punizioni</span> ')
         ruolo = row["Ruolo"] or "?"
         fm = f"{row['FM']:.2f}" if pd.notna(row["FM"]) else "-"
+        if pd.notna(row["FM"]) and row.get("FMImputed"):
+            fm += " *"
         cl = ""
         if pd.notna(row.get("Cluster")) and row.get("Cluster") != "":
             cl = (f'<span style="float:right;color:#1b5e20;font-weight:bold;'
@@ -409,9 +505,7 @@ def main():
             asta_core.save_session(session)
             st.sidebar.success("Salvata")
 
-    tab_setup, tab_players, tab_form = st.tabs(
-        ["Setup", "Giocatori", "Formazioni"], key="main_tabs"
-    )
+    tab_setup, tab_players, tab_form = st.tabs(["Setup", "Giocatori", "Formazioni"])
     with tab_setup:
         render_setup()
     with tab_players:
