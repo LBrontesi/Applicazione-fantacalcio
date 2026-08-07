@@ -24,6 +24,86 @@ WEIGHT_LABELS = {
 st.set_page_config(page_title="Asta Coach", page_icon="⚽", layout="wide")
 
 
+def inject_styles():
+    st.markdown(
+        """
+        <style>
+        .app-hero {
+            background: linear-gradient(135deg, #12372a 0%, #1f5c2e 100%);
+            border-radius: 14px;
+            color: #f4fbf5;
+            padding: 20px 24px;
+            margin: 0 0 18px;
+        }
+        .app-hero h1 {
+            font-size: 2rem;
+            line-height: 1.1;
+            margin: 0 0 6px;
+        }
+        .app-hero p {
+            color: #d7eadb;
+            margin: 0;
+        }
+        .bid-card {
+            align-items: center;
+            background: linear-gradient(135deg, #174b2d 0%, #287a3d 100%);
+            border-radius: 14px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            gap: 18px;
+            margin: 8px 0 16px;
+            padding: 18px 22px;
+        }
+        .bid-label {
+            color: #cfe8d4;
+            font-size: 0.78rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .bid-value {
+            font-size: 2rem;
+            font-weight: 750;
+            line-height: 1.1;
+            margin-top: 4px;
+        }
+        .bid-meta {
+            color: #d7eadb;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+        .bid-stop {
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            border-radius: 999px;
+            color: #f2fff4;
+            font-size: 0.85rem;
+            padding: 8px 12px;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .section-note {
+            color: #52635a;
+            font-size: 0.92rem;
+            margin: -8px 0 14px;
+        }
+        @media (max-width: 768px) {
+            .app-hero { padding: 16px 18px; }
+            .app-hero h1 { font-size: 1.55rem; }
+            .bid-card {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 10px;
+                padding: 16px 18px;
+            }
+            .bid-value { font-size: 1.75rem; }
+            .bid-stop { white-space: normal; }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def run_scrape(jobs):
     with st.status("Scaricando dati...") as status:
         try:
@@ -77,6 +157,11 @@ def get_config():
 
 def render_setup():
     st.header("⚙️ Setup")
+    st.markdown(
+        '<p class="section-note">Aggiorna le fonti, definisci il budget e '
+        'controlla il metodo con cui vengono costruiti rank e cluster.</p>',
+        unsafe_allow_html=True,
+    )
     st.subheader("🔄 Dati")
     c1, c2, c3 = st.columns(3)
     if c1.button("Scarica quotazioni Gazzetta (veloce)"):
@@ -102,10 +187,11 @@ def render_setup():
 
     df = players_df()
     if not df.empty:
-        st.caption(
-            f"{len(df)} giocatori · {len(df[df['QA'].notna()])} con quotazione · "
-            f"{len(df[df['FM'].notna()])} con fantamedia"
-        )
+        summary = st.columns(4)
+        summary[0].metric("Giocatori", len(df))
+        summary[1].metric("Con quotazione", int(df["QA"].notna().sum()))
+        summary[2].metric("Con fantamedia", int(df["FM"].notna().sum()))
+        summary[3].metric("Titolari probabili", int(df["Starter"].sum()))
         with st.expander("Anteprima dati"):
             st.dataframe(
                 df[
@@ -121,9 +207,13 @@ def render_setup():
         "uno per squadra). Il cap di un giocatore è il fair value del suo "
         "cluster: oltre quel prezzo conviene lasciar perdere."
     )
+    session_meta = st.session_state.get("session", {}).get("meta", {})
+    st.session_state.setdefault("cfg_budget", int(session_meta.get("budget", 500)))
     budget = st.number_input("Budget iniziale", min_value=10, max_value=5000,
-                             value=500, step=10, key="cfg_budget")
-    fair_default = fair_values_scaled(int(budget))
+                             step=10, key="cfg_budget")
+    fair_default = st.session_state.pop("_loaded_fair", None)
+    if not fair_default:
+        fair_default = fair_values_scaled(int(budget))
     fair_rows = []
     for role in ROLE_ORDER:
         for slot, value in enumerate(fair_default[role], start=1):
@@ -149,7 +239,11 @@ def render_setup():
         labels = {str(p): p.stem.replace("config_", "") for p in sessions}
         pick = c2.selectbox("Carica configurazione", [""] + list(labels))
         if pick:
-            st.session_state["session"] = asta_core.load_session(pick)
+            loaded = asta_core.load_session(pick)
+            st.session_state["session"] = loaded
+            st.session_state["cfg_budget"] = int(loaded["meta"]["budget"])
+            st.session_state["_loaded_fair"] = loaded["meta"].get("fair")
+            st.session_state.pop("fair_editor", None)
             st.rerun()
 
     st.divider()
@@ -210,26 +304,34 @@ def role_count(role):
 def player_card(player, info):
     cap = info["cap"]
     st.markdown(
-        f'<div style="background:#1f5c2e;color:white;padding:16px 20px;'
-        f'border-radius:10px;font-size:26px;font-weight:bold">'
-        f'💰 Massimo da offrire: {cap} crediti</div>',
+        f'<div class="bid-card"><div>'
+        f'<div class="bid-label">Massimo da offrire</div>'
+        f'<div class="bid-value">{cap} crediti</div>'
+        f'<div class="bid-meta">Cluster {info["cluster"]} · fair value '
+        f'del ruolo</div></div>'
+        f'<div class="bid-stop">STOP oltre {cap}</div></div>',
         unsafe_allow_html=True,
     )
-    c = st.columns(6)
-    c[0].metric("Squadra", player["Squadra"])
-    c[1].metric("Ruolo", player["Ruolo"])
+    identity = st.columns(3)
+    identity[0].metric("Squadra", player["Squadra"])
+    identity[1].metric("Ruolo", player["Ruolo"])
+    identity[2].metric("Cluster", f"{info['cluster']}")
     if pd.notna(player["FM"]):
         fm_disp = f"{player['FM']:.2f}"
     elif pd.notna(player["FMEst"]):
         fm_disp = f"~{player['FMEst']:.2f} (stima)"
     else:
         fm_disp = "-"
-    c[2].metric("FantaMedia", fm_disp)
-    qa = player["QA"]
-    c[3].metric("Quotazione QA", f"{qa:.0f}" if pd.notna(qa) else "-")
-    c[4].metric("Cluster", f"{info['cluster']}")
     pred = player.get("PredFM")
-    c[5].metric("FM attesa (modello)", f"{pred:.2f}" if pd.notna(pred) else "-")
+    performance = st.columns(3)
+    performance[0].metric("FantaMedia", fm_disp)
+    qa = player["QA"]
+    performance[1].metric(
+        "Quotazione QA", f"{qa:.0f}" if pd.notna(qa) else "-"
+    )
+    performance[2].metric(
+        "FM attesa (modello)", f"{pred:.2f}" if pd.notna(pred) else "-"
+    )
 
     st.markdown(
         f"{player['Nome']} è nel **cluster {info['cluster']}** dei {info['role']} "
@@ -276,6 +378,11 @@ def render_players():
         st.session_state["nom_select"] = clicked
 
     st.header("🔍 Cerca giocatore")
+    st.markdown(
+        '<p class="section-note">Cerca un nome per aprire la scheda completa, '
+        'oppure filtra direttamente il ranking per ruolo e cluster.</p>',
+        unsafe_allow_html=True,
+    )
     st.text_input("Cerca giocatore", key="nom_search")
     q = st.session_state.get("nom_search", "")
     suggestions = suggest_player(q, players) if len(q) >= 2 else pd.DataFrame()
@@ -314,6 +421,12 @@ def render_players():
     if cluster != "Tutti":
         view = view[view["Cluster"] == cluster]
     view = view.sort_values(["Ruolo", "Rank"], ascending=[True, True])
+    summary = st.columns(3)
+    summary[0].metric("Giocatori visibili", len(view))
+    summary[1].metric(
+        "Score migliore", f"{view['Score'].max():.3f}" if not view.empty else "-"
+    )
+    summary[2].metric("Filtro cluster", str(cluster))
     budget, fair = get_config()
     view = view[["Nome", "Squadra", "Ruolo", "FM", "QA", "Cluster",
                  "Score"]].copy()
@@ -428,6 +541,14 @@ def render_formazioni():
         unsafe_allow_html=True,
     )
 
+    teams = sorted(lineups["Squadra"].unique())
+    team_choice = st.selectbox(
+        "Vista squadra", ["Tutte"] + teams, key="lineup_team_filter"
+    )
+    shown_teams = teams if team_choice == "Tutte" else [team_choice]
+    st.caption(f"{len(shown_teams)} squadre visualizzate · seleziona una squadra "
+               "per una lettura piu compatta")
+
     def player_row(row):
         flagged = bool(row["Rigorista"] or row["Punizioni"] or row["Angoli"])
         bg = "#e8f5e9" if flagged else "#fafafa"
@@ -473,11 +594,10 @@ def render_formazioni():
             f'{ruolo} · FM {fm}</span>  {badges}{sub}</div>'
         )
 
-    teams = sorted(lineups["Squadra"].unique())
-    per_row = 4
-    for start in range(0, len(teams), per_row):
+    per_row = 4 if team_choice == "Tutte" else 1
+    for start in range(0, len(shown_teams), per_row):
         cols = st.columns(per_row)
-        for col, team in zip(cols, teams[start:start + per_row]):
+        for col, team in zip(cols, shown_teams[start:start + per_row]):
             sub = lineups[lineups["Squadra"] == team]
             modulo = sub.iloc[0]["Modulo"] if len(sub) else "?"
             with col:
@@ -494,7 +614,18 @@ def render_formazioni():
 
 
 def main():
+    inject_styles()
+    st.markdown(
+        '<div class="app-hero">'
+        '<h1>⚽ Asta Coach</h1>'
+        '<p>Ranking per ruolo, cluster da 10 e massimo da offrire: '
+        'decidi in fretta senza inseguire il prezzo.</p>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
     st.sidebar.title("⚽ Asta Coach")
+    budget, _ = get_config()
+    st.sidebar.metric("Budget attivo", f"{budget} crediti")
     session = st.session_state.get("session")
     if session:
         st.sidebar.caption(
@@ -504,6 +635,9 @@ def main():
         if st.sidebar.button("💾 Salva configurazione"):
             asta_core.save_session(session)
             st.sidebar.success("Salvata")
+    else:
+        st.sidebar.caption("Configurazione predefinita · salva un setup per "
+                           "conservarlo")
 
     tab_setup, tab_players, tab_form = st.tabs(["Setup", "Giocatori", "Formazioni"])
     with tab_setup:
