@@ -59,8 +59,20 @@ def players_df():
 def get_config():
     session = st.session_state.get("session")
     if session:
+        asta_core.ensure_session(session)
         return session["meta"]["budget"], session["meta"]["fair"]
     return 500, fair_values_scaled(500)
+
+
+def current_session(create=False):
+    """Return the active auction without requiring setup to be saved first."""
+    session = st.session_state.get("session")
+    if session:
+        return asta_core.ensure_session(session)
+    session = asta_core.new_session()
+    if create:
+        st.session_state["session"] = session
+    return session
 
 
 def render_setup():
@@ -127,11 +139,17 @@ def render_setup():
             .astype(int).tolist()
 
     c1, c2 = st.columns(2)
-    if c1.button("💾 Salva configurazione", type="primary"):
+    active = st.session_state.get("session")
+    if active and active.get("purchases"):
+        st.warning(
+            "Avviare una nuova asta azzera la rosa registrata. Usa il "
+            "salvataggio nella barra laterale per conservare l'asta corrente."
+        )
+    if c1.button("🚀 Avvia nuova asta", type="primary"):
         session = asta_core.new_session(budget=int(budget), fair=fair)
         st.session_state["session"] = session
         asta_core.save_session(session)
-        st.success("Configurazione salvata")
+        st.success("Nuova asta pronta")
         st.rerun()
     sessions = asta_core.list_sessions()
     if sessions:
@@ -144,10 +162,11 @@ def render_setup():
 
 def player_card(player, info):
     cap = info["cap"]
+    fair_cap = info["fair_cap"]
     st.markdown(
         f'<div style="background:#1f5c2e;color:white;padding:16px 20px;'
         f'border-radius:10px;font-size:26px;font-weight:bold">'
-        f'💰 Massimo da offrire: {cap} crediti</div>',
+        f'💰 Massimo da offrire ora: {cap} crediti</div>',
         unsafe_allow_html=True,
     )
     c = st.columns(5)
@@ -159,11 +178,19 @@ def player_card(player, info):
     c[3].metric("Quotazione QA", f"{qa:.0f}" if pd.notna(qa) else "-")
     c[4].metric("Cluster", f"{info['cluster']}")
 
-    st.markdown(
-        f"{player['Nome']} è nel **cluster {info['cluster']}** dei {info['role']} "
-        f"(ordinati per fantamedia). Fair value del cluster: **{cap}**. "
-        f"Se il prezzo sale sopra {cap}, esci dall'asta."
-    )
+    if not info["role_open"]:
+        st.error(f"Hai già riempito tutti gli slot {info['role']} della rosa.")
+    elif cap < fair_cap:
+        st.warning(
+            f"Fair value del cluster: **{fair_cap}**, ma il tuo budget consente "
+            f"al massimo **{cap}** ora (tenendo 1 credito per ogni altro slot)."
+        )
+    else:
+        st.markdown(
+            f"{player['Nome']} è nel **cluster {info['cluster']}** dei {info['role']} "
+            f"(ordinati per fantamedia). Fair value del cluster: **{fair_cap}**. "
+            f"Se il prezzo sale sopra {cap}, esci dall'asta."
+        )
     with st.expander("Tabella fair value per il ruolo"):
         table = pd.DataFrame({
             "Cluster": list(range(1, len(info["fair_table"]) + 1)),
@@ -203,8 +230,7 @@ def render_players():
             key="nom_select",
         )
         player = suggestions[suggestions["Nome"] == choice].iloc[0]
-        budget, fair = get_config()
-        session = {"meta": {"budget": budget, "fair": fair}}
+        session = current_session()
         info = asta_core.coach(session, player)
         player_card(player, info)
 
@@ -397,6 +423,116 @@ def render_formazioni():
                     st.markdown(player_row(row), unsafe_allow_html=True)
 
 
+def render_live_auction():
+    """The fast, stateful screen used while players are being called."""
+    players = players_df()
+    if players.empty:
+        st.warning("Nessun dato giocatori — scarica le quotazioni nella tab Setup")
+        return
+
+    session = current_session(create=True)
+    state = asta_core.roster_summary(session)
+    st.header("🔨 Asta live")
+    st.caption(
+        "Registra ogni giocatore vinto: il budget e il massimo da offrire "
+        "si aggiornano subito. Gli acquisti vengono salvati automaticamente."
+    )
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Crediti iniziali", state["budget"])
+    m2.metric("Spesi", state["spent"])
+    m3.metric("Rimasti", state["remaining"])
+    m4.metric("Massima offerta ora", state["max_next_bid"],
+              help="Lascia 1 credito per ogni altro slot ancora vuoto.")
+
+    role_rows = pd.DataFrame([
+        {
+            "Ruolo": role,
+            "Presi": state["bought_by_role"].get(role, 0),
+            "Da prendere": state["remaining_by_role"].get(role, 0),
+        }
+        for role in ROLE_ORDER
+    ])
+    st.dataframe(role_rows, hide_index=True, width="stretch")
+
+    bought_names = {p["name"].casefold() for p in session["purchases"]}
+    available = players[~players["Nome"].str.casefold().isin(bought_names)].copy()
+    available = available.sort_values(["Ruolo", "FM", "Nome"],
+                                      ascending=[True, False, True],
+                                      na_position="last")
+    if state["remaining"] < 1 or not state["slots_remaining"]:
+        st.success("Rosa completata — non ci sono altri acquisti da registrare.")
+    elif available.empty:
+        st.info("Tutti i giocatori disponibili risultano già nella tua rosa.")
+    else:
+        by_name = available.set_index("Nome", drop=False)
+        with st.form("purchase_form", clear_on_submit=True):
+            name = st.selectbox(
+                "Giocatore vinto",
+                available["Nome"].tolist(),
+                format_func=lambda n: (
+                    f"{n} · {by_name.loc[n, 'Squadra']} "
+                    f"({by_name.loc[n, 'Ruolo']})"
+                ),
+            )
+            player = by_name.loc[name]
+            advice = asta_core.coach(session, player)
+            st.caption(
+                f"Cap fair: {advice['fair_cap']} · "
+                f"massimo sicuro ora: {advice['cap']}"
+            )
+            price = st.number_input(
+                "Prezzo di aggiudicazione", min_value=1,
+                max_value=int(state["remaining"]),
+                value=min(max(1, int(advice["cap"])), int(state["remaining"])),
+                step=1,
+            )
+            submitted = st.form_submit_button("✅ Aggiungi alla rosa",
+                                               type="primary")
+        if submitted:
+            try:
+                purchase = asta_core.record_purchase(session, player, price)
+                asta_core.save_session(session)
+                if price > advice["cap"]:
+                    st.warning(
+                        f"{purchase['name']} registrato a {price}: "
+                        f"hai superato il cap consigliato di {advice['cap']}."
+                    )
+                else:
+                    st.success(f"{purchase['name']} registrato a {price} crediti.")
+                st.rerun()
+            except ValueError as exc:
+                st.error(str(exc))
+
+    st.divider()
+    st.subheader(f"La tua rosa ({state['filled']}/{state['total_slots']})")
+    if not session["purchases"]:
+        st.info("Nessun acquisto registrato.")
+        return
+    roster = pd.DataFrame(session["purchases"])
+    roster = roster.rename(columns={
+        "name": "Giocatore", "team": "Squadra", "role": "Ruolo",
+        "price": "Prezzo", "cluster": "Cluster", "fm": "FantaMedia",
+    })
+    roster.index = roster.index + 1
+    st.dataframe(roster, width="stretch")
+    st.download_button(
+        "⬇️ Scarica rosa CSV", roster.to_csv(index=False).encode("utf-8"),
+        file_name="rosa_asta.csv", mime="text/csv",
+    )
+    undo_options = [
+        f"{i + 1}. {p['name']} — {p['price']} crediti"
+        for i, p in enumerate(session["purchases"])
+    ]
+    c1, c2 = st.columns([3, 1])
+    to_undo = c1.selectbox("Correggi un acquisto", undo_options)
+    if c2.button("↩️ Annulla acquisto"):
+        index = undo_options.index(to_undo)
+        removed = asta_core.remove_purchase(session, index)
+        asta_core.save_session(session)
+        st.success(f"Rimosso {removed['name']} dalla rosa.")
+        st.rerun()
+
+
 def main():
     st.sidebar.title("⚽ Asta Coach")
     session = st.session_state.get("session")
@@ -409,13 +545,15 @@ def main():
             asta_core.save_session(session)
             st.sidebar.success("Salvata")
 
-    tab_setup, tab_players, tab_form = st.tabs(
-        ["Setup", "Giocatori", "Formazioni"], key="main_tabs"
+    tab_setup, tab_players, tab_live, tab_form = st.tabs(
+        ["Setup", "Giocatori", "Asta live", "Formazioni"], key="main_tabs"
     )
     with tab_setup:
         render_setup()
     with tab_players:
         render_players()
+    with tab_live:
+        render_live_auction()
     with tab_form:
         render_formazioni()
 
