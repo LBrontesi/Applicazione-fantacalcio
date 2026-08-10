@@ -13,8 +13,9 @@ import scraper
 from app_asta import load_excluded, roster_alerts, save_excluded, source_freshness
 from data_loader import (
     DEFAULT_METHOD, DEFAULT_RANK_WEIGHTS, ROLE_ORDER, backtest_predictor,
-    build_lineups, build_players, load_ranking_weights,
-    save_ranking_weights, _set_piece_score,
+    build_lineups, build_players, load_ranking_weights, load_set_pieces,
+    save_ranking_weights, _match_score, _set_piece_score, _short_source_name_score,
+    _tokens,
 )
 
 
@@ -132,6 +133,27 @@ def main():
     check("set-piece types use full scale",
           math.isclose(_set_piece_score(
               ["Rigorista", "Punizioni", "Angoli"]), 1.0))
+    check("set-piece hierarchy reduces backup value",
+          _set_piece_score([("Rigorista", 2)]) <
+          _set_piece_score([("Rigorista", 1)]))
+    check("source aliases resolve initials and short labels",
+          _match_score(_tokens("Ederson D.S."), _tokens("Ederson Dos Santos")) >= 0.90 and
+          _short_source_name_score("Ederson D.S.", "Ederson") >= 0.90)
+    ederson = players[players["NomeGaz"] == "Ederson D.S."]
+    check("Ederson identity sources linked", len(ederson) == 1 and
+          ederson.iloc[0]["FM1"] > 6.0 and
+          ederson.iloc[0]["SetPieces"] == 0.0 and
+          ederson.iloc[0]["DataConfidence"] >= 0.80,
+          ederson[["Rank", "Cluster"]].to_dict("records"))
+    atalanta_set_pieces = load_set_pieces().query("Squadra == 'Atalanta'")
+    check("Fantacalcio Atalanta hierarchy", [
+        (row["Giocatore"], row["Tipo"], int(row["Ordine"]))
+        for _, row in atalanta_set_pieces.iterrows()
+    ] == [
+        ("Scamacca", "Rigorista", 1), ("Krstovic", "Rigorista", 2),
+        ("Samardzic", "Rigorista", 3), ("De Ketelaere", "Piazzati", 1),
+        ("Samardzic", "Piazzati", 2), ("Gaetano", "Piazzati", 3),
+    ])
     check("blend score normalized", players["Score"].between(0.0, 1.0).all())
 
     rho = backtest_predictor(players)
@@ -143,6 +165,10 @@ def main():
     lineups = build_lineups(players)
     check("lineups built", not lineups.empty, f"({len(lineups)} starters)")
     check("substitute column", "Panchina" in lineups.columns)
+    scamacca_lineup = lineups[lineups["Nome"].astype(str).str.contains("Scamacca")]
+    check("lineup hierarchy rendered", not scamacca_lineup.empty and
+          bool(scamacca_lineup.iloc[0]["Rigorista"]) and
+          int(scamacca_lineup.iloc[0]["RigoristaOrdine"]) == 1)
     check("cluster columns", {"Cluster", "PanchinaCluster"}.issubset(
         lineups.columns))
     check("availability columns", {

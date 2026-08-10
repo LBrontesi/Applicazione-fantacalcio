@@ -1,165 +1,121 @@
-Squadra,Giocatore,Tipo
-Atalanta,Lookman,Rigorista
-Atalanta,Ederson,Rigorista
-Atalanta,Pasalic,Rigorista
-Atalanta,Ederson,Punizioni
-Atalanta,Lookman,Punizioni
-Atalanta,De Ketelaere,Punizioni
-Atalanta,Ederson,Angoli
-Atalanta,De Roon,Angoli
-Atalanta,De Ketelaere,Angoli
-Atalanta,Lookman,Angoli
-Bologna,Immobile,Rigorista
-Bologna,Orsolini,Rigorista
-Bologna,Ferguson,Rigorista
-Bologna,Orsolini,Punizioni
-Bologna,Fabbian,Punizioni
-Bologna,Lykogiannis,Punizioni
-Bologna,Orsolini,Angoli
-Bologna,Freuler,Angoli
-Bologna,Lykogiannis,Angoli
-Cagliari,Mina,Rigorista
-Cagliari,Gaetano,Rigorista
-Cagliari,Pavoletti,Rigorista
-Cagliari,Gaetano,Punizioni
-Cagliari,Prati,Punizioni
-Cagliari,Deiola,Punizioni
-Cagliari,Prati,Angoli
-Cagliari,Felici,Angoli
-Cagliari,Gaetano,Angoli
-Cagliari,Deiola,Angoli
-Como,Belotti,Rigorista
-Como,Nico Paz,Rigorista
-Como,Douvikas,Rigorista
-Como,Morata,Rigorista
-Como,Diao,Rigorista
-Como,Baturina,Punizioni
-Como,Nico Paz,Punizioni
-Como,Rodriguez,Punizioni
-Como,Moreno,Angoli
-Como,Nico Paz,Angoli
-Como,Da Cunha,Angoli
-Como,Baturina,Angoli
-Fiorentina,Kean,Rigorista
-Fiorentina,Dzeko,Rigorista
-Fiorentina,Gudmunsson,Rigorista
-Fiorentina,Gudmunsson,Punizioni
-Fiorentina,Nicolussi Caviglia,Punizioni
-Fiorentina,Mandragora,Punizioni
-Fiorentina,Colpani,Punizioni
-Fiorentina,Nicolussi .Caviglia,Angoli
-Fiorentina,Mandragora,Angoli
-Fiorentina,Gudmunsson,Angoli
-Genoa,Stanciu,Rigorista
-Genoa,Messias,Rigorista
-Genoa,Vitinha,Rigorista
-Genoa,Frendrup,Punizioni
-Genoa,Malinovskij,Punizioni
-Genoa,Messias,Punizioni
-Genoa,Malinovskij,Angoli
-Genoa,Badelji,Angoli
-Genoa,Frendrup,Angoli
-Genoa,Messias,Angoli
-Inter,Calhanoglu,Rigorista
-Inter,Lautaro Martinez,Rigorista
-Inter,Bonny,Rigorista
-Inter,Calhanoglu,Punizioni
-Inter,Dimarco,Punizioni
-Inter,Zielinski,Punizioni
-Inter,Calhanoglu,Angoli
-Inter,Dimarco,Angoli
-Inter,Carlos Augusto,Angoli
-Inter,Mkhitaryan,Angoli
-Juve,Openda,Rigorista
-Juve,David,Rigorista
-Juve,Vlahovic,Rigorista
-Juve,Yldiz,Rigorista
-Juve,Yldiz,Punizioni
-Juve,Vlahovic,Punizioni
-Juve,Zhegrova,Punizioni
-Juve,Koopmeiners,Punizioni
-Juve,Koopmeiners,Angoli
-Juve,Cambiaso,Angoli
-Lazio,Zaccagni,Rigorista
-Lazio,Castellanos,Rigorista
-Lazio,Dia,Rigorista
-Lazio,Rovella,Punizioni
-Lazio,Zaccagni,Punizioni
-Lazio,Isaksen,Punizioni
-Lazio,Rovella,Angoli
-Lazio,Isaksen,Angoli
-Lazio,Zaccagni,Angoli
-Lecce,Camarda,Rigorista
-Lecce,Stulic,Rigorista
-Lecce,Pierotti,Rigorista
-Lecce,Marchwinski,Rigorista
-Lecce,Helgason,Punizioni
-Lecce,Morente,Punizioni
-Lecce,Marchwinski,Punizioni
-Lecce,Rafia,Angoli
-Lecce,Helgason,Angoli
-Lecce,Morente,Angoli
-Milan,Gimenez,Rigorista
-Milan,Modric,Rigorista
-Milan,Pulisic,Rigorista
-Milan,Pulisic,Punizioni
-Milan,Modric,Punizioni
-Milan,Adli,Punizioni
-Milan,Pulisic,Angoli
-Milan,Modric,Angoli
-Milan,Adli,Angoli
-Napoli,Lukaku,Rigorista
-Napoli,De Bruyne,Rigorista
-Napoli,Politano,Rigorista
-Napoli,Politano,Punizioni
-Napoli,De Bruyneh,Punizioni
-Napoli,Lobotka,Punizioni
-Napoli,Raspadori,Punizioni
-Napoli,Neres,Angoli
-Napoli,De Bruyne,Angoli
-Napoli,Politano,Angoli
-Parma,Hernani,Rigorista
-Parma,M. Pellegrino,Rigorista
-Parma,Bernabè,Punizioni
-Parma,Hernani,Punizioni
-Parma,Hernani,Angoli
-Parma,Bernabè,Angoli
-Roma,Dybala,Rigorista
-Roma,Soulè,Rigorista
-Roma,Pellegrini,Rigorista
-Roma,Dovbyk,Rigorista
-Roma,Pellegrini,Punizioni
-Roma,Dybala,Punizioni
-Roma,Paredes,Punizioni
-Roma,Pellegrini,Angoli
-Roma,Angelino,Angoli
-Roma,Dybala,Angoli
-Roma,Soulè,Angoli
-Roma,Paredes,Angoli
-Sassuolo,Berardi,Rigorista
-Sassuolo,Pinamonti,Rigorista
-Sassuolo,Berardi,Punizioni
-Sassuolo,Thorsvedt,Punizioni
-Sassuolo,Lipani,Punizioni
-Sassuolo,Berardi,Angoli
-Sassuolo,Laurientè,Angoli
-Sassuolo,Lipani,Angoli
-Torino,Zapata,Rigorista
-Torino,Adams,Rigorista
-Torino,Vlasic,Rigorista
-Torino,Ngonge,Rigorista
-Torino,Biraghi,Punizioni
-Torino,Ilic,Punizioni
-Torino,Vlasic,Punizioni
-Torino,Ngonge,Punizioni
-Torino,Abouklhal,Punizioni
-Torino,Biraghi,Angoli
-Torino,llic,Angoli
-Torino,Vlasic,Angoli
-Torino,Aboukhlal,Angoli
-Udinese,Davis,Rigorista
-Udinese,Lovric,Punizioni
-Udinese,Miller,Punizioni
-Udinese,Lovric,Angoli
-Udinese,Miller,Angoli
-Udinese,Ekkelnkamp,Angoli
+Squadra,Giocatore,Tipo,Ordine
+Atalanta,Scamacca,Rigorista,1
+Atalanta,Krstovic,Rigorista,2
+Atalanta,Samardzic,Rigorista,3
+Atalanta,De Ketelaere,Piazzati,1
+Atalanta,Samardzic,Piazzati,2
+Atalanta,Gaetano,Piazzati,3
+Bologna,Orsolini,Rigorista,1
+Bologna,Bernardeschi,Rigorista,2
+Bologna,Dovbyk,Rigorista,3
+Bologna,Orsolini,Piazzati,1
+Bologna,Bernardeschi,Piazzati,2
+Bologna,Miranda J.,Piazzati,3
+Cagliari,Maldini,Rigorista,1
+Cagliari,Mina,Rigorista,2
+Cagliari,Fazzini,Rigorista,3
+Cagliari,Fazzini,Piazzati,1
+Cagliari,Maldini,Piazzati,2
+Cagliari,Winks,Piazzati,3
+Como,Da Cunha,Rigorista,1
+Como,Douvikas,Rigorista,2
+Como,Paz N.,Rigorista,3
+Como,Paz N.,Piazzati,1
+Como,Baturina,Piazzati,2
+Como,Da Cunha,Piazzati,3
+Fiorentina,Gudmundsson A.,Rigorista,1
+Fiorentina,Kean,Rigorista,2
+Fiorentina,Mandragora,Rigorista,3
+Fiorentina,Gudmundsson A.,Piazzati,1
+Fiorentina,Mastantuono,Piazzati,2
+Fiorentina,Atta,Piazzati,3
+Frosinone,Calò,Rigorista,1
+Frosinone,Raimondo,Rigorista,2
+Frosinone,Ghedjemis,Rigorista,3
+Frosinone,Calò,Piazzati,1
+Frosinone,Ghedjemis,Piazzati,2
+Frosinone,Zerbin,Piazzati,3
+Genoa,Colombo,Rigorista,1
+Genoa,Ostigard,Rigorista,2
+Genoa,Vitinha O.,Rigorista,3
+Genoa,Baldanzi,Piazzati,1
+Genoa,Martin,Piazzati,2
+Genoa,Vitinha O.,Piazzati,3
+Inter,Calhanoglu,Rigorista,1
+Inter,Zielinski,Rigorista,2
+Inter,Martinez L.,Rigorista,3
+Inter,Calhanoglu,Piazzati,1
+Inter,Dimarco,Piazzati,2
+Inter,Zielinski,Piazzati,3
+Juventus,Kolo Muani,Rigorista,1
+Juventus,Yildiz,Rigorista,2
+Juventus,Locatelli,Rigorista,3
+Juventus,Yildiz,Piazzati,1
+Juventus,Locatelli,Piazzati,2
+Juventus,Cambiaso,Piazzati,3
+Lazio,Zaccagni,Rigorista,1
+Lazio,Taylor K.,Rigorista,2
+Lazio,Cataldi,Rigorista,3
+Lazio,Rovella,Piazzati,1
+Lazio,Zaccagni,Piazzati,2
+Lazio,Cataldi,Piazzati,3
+Lecce,Geubbels,Rigorista,1
+Lecce,Stulic,Rigorista,2
+Lecce,Berisha M.,Rigorista,3
+Lecce,Pierotti,Piazzati,1
+Lecce,Berisha M.,Piazzati,2
+Lecce,Gandelman,Piazzati,3
+Milan,Nkunku,Rigorista,1
+Milan,Ramos G.,Rigorista,2
+Milan,Pulisic,Rigorista,3
+Milan,Modric,Piazzati,1
+Milan,Pulisic,Piazzati,2
+Milan,Saelemaekers,Piazzati,3
+Monza,Pessina,Rigorista,1
+Monza,Cutrone,Rigorista,2
+Monza,Petagna,Rigorista,3
+Monza,Pessina,Piazzati,1
+Monza,Colpani,Piazzati,2
+Monza,Mota,Piazzati,3
+Napoli,De Bruyne,Rigorista,1
+Napoli,Hojlund,Rigorista,2
+Napoli,Politano,Rigorista,3
+Napoli,De Bruyne,Piazzati,1
+Napoli,Politano,Piazzati,2
+Napoli,Neres,Piazzati,3
+Parma,Pellegrino M.,Rigorista,1
+Parma,Tourè E.,Rigorista,2
+Parma,Valeri,Rigorista,3
+Parma,Bernabè,Piazzati,1
+Parma,Nicolussi Caviglia,Piazzati,2
+Parma,Valeri,Piazzati,3
+Roma,Malen,Rigorista,1
+Roma,Dybala,Rigorista,2
+Roma,Castro S.,Rigorista,3
+Roma,Dybala,Piazzati,1
+Roma,Malen,Piazzati,2
+Roma,Soulè,Piazzati,3
+Sassuolo,Berardi,Rigorista,1
+Sassuolo,Pinamonti,Rigorista,2
+Sassuolo,Laurientè,Rigorista,3
+Sassuolo,Berardi,Piazzati,1
+Sassuolo,Laurientè,Piazzati,2
+Sassuolo,Adzic,Piazzati,3
+Torino,Vlasic,Rigorista,1
+Torino,Kulenovic,Rigorista,2
+Torino,Simeone,Rigorista,3
+Torino,Vlasic,Piazzati,1
+Torino,Oristanio,Piazzati,2
+Torino,Gineitis,Piazzati,3
+Udinese,Davis K.,Rigorista,1
+Udinese,Solet,Rigorista,2
+Udinese,Zaniolo,Rigorista,3
+Udinese,Zaniolo,Piazzati,1
+Udinese,Ekkelenkamp,Piazzati,2
+Udinese,Unai Gomez,Piazzati,3
+Venezia,Adams A.,Rigorista,1
+Venezia,Rrahmani Al.,Rigorista,2
+Venezia,Adorante,Rigorista,3
+Venezia,Busio,Piazzati,1
+Venezia,Yeboah J.,Piazzati,2
+Venezia,Perez K.,Piazzati,3

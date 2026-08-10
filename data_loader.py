@@ -30,8 +30,15 @@ DEFAULT_RANK_WEIGHTS = {
 
 DEFAULT_METHOD = "blend"
 
-SP_TYPE_WEIGHTS = {"Rigorista": 1.0, "Punizioni": 0.6, "Angoli": 0.3}
-SP_MAX_SCORE = sum(SP_TYPE_WEIGHTS.values())
+SP_TYPE_WEIGHTS = {
+    "Rigorista": 1.0, "Piazzati": 0.6, "Punizioni": 0.6, "Angoli": 0.3,
+}
+# "Piazzati" (Fantacalcio) è l'alternativa editoriale a punizioni+angoli
+# (FCP), non un quarto bonus che possa gonfiare il massimo teorico.
+SP_MAX_SCORE = 1.9
+# Il primo nome della gerarchia conta pienamente; le alternative sono utili,
+# ma non equivalgono al battitore designato.
+SP_PRIORITY_WEIGHTS = {1: 1.0, 2: 0.55, 3: 0.25}
 
 ROLE_FACTORS = {
     "P": {"Starter": 1.0, "SetPieces": 0.2},
@@ -126,8 +133,24 @@ def _tag_score(attr):
     return max(-2.0, min(2.0, total))
 
 
-def _set_piece_score(types):
-    weighted = sum(SP_TYPE_WEIGHTS.get(t, 0.0) for t in set(types))
+def _set_piece_score(entries):
+    """Score set-pieces, accepting legacy type names or (type, order) pairs."""
+    best_by_type = {}
+    for entry in entries:
+        if isinstance(entry, tuple):
+            tipo, order = entry
+        else:
+            tipo, order = entry, 1
+        try:
+            order = max(1, int(order))
+        except (TypeError, ValueError):
+            order = 1
+        best_by_type[tipo] = min(order, best_by_type.get(tipo, order))
+    weighted = sum(
+        SP_TYPE_WEIGHTS.get(tipo, 0.0)
+        * SP_PRIORITY_WEIGHTS.get(order, 0.10)
+        for tipo, order in best_by_type.items()
+    )
     return min(SP_MAX_SCORE, weighted) / SP_MAX_SCORE
 
 
@@ -182,6 +205,7 @@ def _fcp_parts(tokens):
 
 
 def _match_score(g_tokens, f_tokens):
+    """Conservative match for source-specific spellings of the same player."""
     if not g_tokens or not f_tokens:
         return 0.0
     g_surname, g_init = _gaz_parts(g_tokens)
@@ -197,7 +221,55 @@ def _match_score(g_tokens, f_tokens):
     ratio = difflib.SequenceMatcher(
         None, " ".join(g_tokens), " ".join(f_tokens)
     ).ratio()
-    return 0.85 if ratio >= 0.86 else 0.0
+    if ratio >= 0.86:
+        return 0.85
+
+    # Fonti diverse alternano nome/cognome, omettono secondi nomi o usano
+    # abbreviazioni (es. "Ederson D.S." vs "Ederson Dos Santos"). Abbiniamo
+    # solo se ogni token della quotazione trova una controparte non ambigua.
+    remaining = list(f_tokens)
+    matched = 0
+    for token in sorted(g_tokens, key=len, reverse=True):
+        position = next(
+            (i for i, candidate in enumerate(remaining)
+             if token == candidate or (
+                 len(token) >= 2 and (
+                     candidate.startswith(token) or token.startswith(candidate)
+                 )
+             )),
+            None,
+        )
+        if position is not None:
+            remaining.pop(position)
+            matched += 1
+            continue
+        # "ds" è l'acronimo dei token FCP ancora liberi: "dos santos".
+        initials = "".join(part[0] for part in remaining if part)
+        if len(token) >= 2 and token == initials:
+            remaining = []
+            matched += 1
+    if matched == len(g_tokens):
+        return 0.98 if len(g_tokens) >= 2 else 0.92
+    return 0.0
+
+
+def _short_source_name_score(full_name, source_name):
+    """Match a short editorial label ("Ederson") to a quoted player name."""
+    full_tokens = _tokens(full_name)
+    source_tokens = _tokens(source_name)
+    score = _match_score(full_tokens, source_tokens)
+    if score >= 0.90:
+        return score
+    # Editorial set-piece lists often omit all secondary names. This is safe
+    # only when every listed token occurs verbatim in the full player name;
+    # callers still resolve ties within the same club.
+    if source_tokens and all(
+        any(token == full or (len(token) >= 3 and full.startswith(token))
+            for full in full_tokens)
+        for token in source_tokens
+    ):
+        return 0.91
+    return 0.0
 
 
 def _advanced_for_player(name, team, stats):
@@ -227,18 +299,26 @@ def build_players(progress_cb=None, weights=None):
     fcp = load_fcp()
     advanced = load_advanced_stats()
 
-    gaz_tokens = {name: _tokens(name) for name in gaz["NomeGaz"]}
-    fcp_tokens = {name: _tokens(name) for name in fcp["NomeFCP"]}
-
     matched_fcp = {}
-    for fcp_name, f_tokens in fcp_tokens.items():
-        best = (None, 0.0)
-        for gaz_name, g_tokens in gaz_tokens.items():
-            score = _match_score(g_tokens, f_tokens)
-            if score > best[1]:
-                best = (gaz_name, score)
-        if best[1] >= 0.85:
-            matched_fcp[best[0]] = fcp_name
+    for _, g in gaz.iterrows():
+        team = normalize_name(g.get("SquadraNome", ""))
+        candidates = fcp[
+            (fcp["SquadraFCP"].fillna("").map(normalize_name) == team)
+            & (fcp["Ruolo"] == g["Ruolo"])
+        ]
+        scored = sorted(
+            [
+                (_match_score(_tokens(g["NomeGaz"]), _tokens(f["NomeFCP"])), f["NomeFCP"])
+                for _, f in candidates.iterrows()
+            ],
+            reverse=True,
+        )
+        if not scored or scored[0][0] < 0.90:
+            continue
+        # Non indoviniamo fra omonimi: serve un vincitore netto.
+        if len(scored) > 1 and scored[0][0] - scored[1][0] < 0.04:
+            continue
+        matched_fcp[g["NomeGaz"]] = scored[0][1]
 
     matched_rows = []
     for _, g in gaz.iterrows():
@@ -342,17 +422,23 @@ def build_players(progress_cb=None, weights=None):
     sp = load_set_pieces()
     if not sp.empty:
         for _, r in sp.iterrows():
-            k = (normalize_name(str(r["Squadra"])),
-                 normalize_name(str(r["Giocatore"])))
-            sp_types.setdefault(k, set()).add(str(r["Tipo"]))
+            team = normalize_name(str(r["Squadra"]))
+            sp_types.setdefault(team, []).append((
+                str(r["Giocatore"]), str(r["Tipo"]), r.get("Ordine", 1),
+            ))
 
-    def _sp_score(key):
-        return _set_piece_score(sp_types.get(key, ()))
+    def _sp_score(team, name):
+        candidates = [
+            (_short_source_name_score(name, sp_name), tipo, order)
+            for sp_name, tipo, order in sp_types.get(team, [])
+        ]
+        return _set_piece_score([
+            (tipo, order) for score, tipo, order in candidates if score >= 0.90
+        ])
 
     df["SetPieces"] = df.apply(
         lambda r: _sp_score(
-            (normalize_name(str(r["Squadra"])),
-             normalize_name(str(r["NomeGaz"])))
+            normalize_name(str(r["Squadra"])), str(r["NomeGaz"])
         ),
         axis=1,
     )
@@ -676,7 +762,12 @@ def load_formazioni():
 def load_set_pieces():
     if not SET_PIECES.exists():
         return pd.DataFrame()
-    return pd.read_csv(SET_PIECES)
+    df = pd.read_csv(SET_PIECES)
+    if "Ordine" not in df:
+        # Compatibilità con i CSV già scaricati: l'ordine delle righe è quello
+        # della gerarchia pubblicata dalla fonte.
+        df["Ordine"] = df.groupby(["Squadra", "Tipo"]).cumcount() + 1
+    return df
 
 
 def build_lineups(players_df, progress_cb=None):
@@ -693,7 +784,10 @@ def build_lineups(players_df, progress_cb=None):
     sp_map = {}
     for _, r in sp.iterrows():
         key = (r["Squadra"], normalize_name(r["Giocatore"]))
-        sp_map.setdefault(key, set()).add(r["Tipo"])
+        tipo = r["Tipo"]
+        ordine = int(r.get("Ordine", 1))
+        current = sp_map.setdefault(key, {}).get(tipo, ordine)
+        sp_map[key][tipo] = min(current, ordine)
     gaz_names = players_df["NomeGaz"].dropna().tolist()
     rows = []
     for _, f in form.iterrows():
@@ -735,6 +829,11 @@ def build_lineups(players_df, progress_cb=None):
                 "Rigorista": False,
                 "Punizioni": False,
                 "Angoli": False,
+                "Piazzati": False,
+                "RigoristaOrdine": 0,
+                "PunizioniOrdine": 0,
+                "AngoliOrdine": 0,
+                "PiazzatiOrdine": 0,
                 "Panchina": "",
                 "PanchinaFM": float("nan"),
                 "PanchinaRuolo": "",
@@ -769,15 +868,16 @@ def build_lineups(players_df, progress_cb=None):
                     row["PanchinaRuolo"] = b["ruolo"]
                     row["PanchinaCluster"] = b["cluster"]
                     break
-            flags = set()
+            flags = {}
             sp_names = [g for (t, g), _ in sp_map.items() if t == team]
             if sp_names:
                 hit = _fuzzy_match(name, sp_names)
                 if hit:
-                    flags = sp_map.get((team, hit), set())
-            for tipo in flags:
-                if tipo in ("Rigorista", "Punizioni", "Angoli"):
+                    flags = sp_map.get((team, hit), {})
+            for tipo, ordine in flags.items():
+                if tipo in ("Rigorista", "Piazzati", "Punizioni", "Angoli"):
                     row[tipo] = True
+                    row[f"{tipo}Ordine"] = ordine
             rows.append(row)
     df = pd.DataFrame(rows)
     if progress_cb:

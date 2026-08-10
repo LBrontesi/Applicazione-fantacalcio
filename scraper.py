@@ -35,8 +35,9 @@ FCP_ROLES = [
 
 QUOTAZIONI_URL = "https://www.fantacalcio.it/quotazioni-fantacalcio"
 LINEUPS_URL = "https://www.fantacalcio.it/probabili-formazioni-serie-a"
-SET_PIECES_URL = ("https://www.fantacalciopedia.com/articoli-fcp/"
-                  "consigli-fantacalcio/216-rigoristi-e-tiratori-2026-27.html")
+SET_PIECES_URL = "https://www.fantacalcio.it/rigoristi-serie-a"
+FCP_SET_PIECES_URL = ("https://www.fantacalciopedia.com/articoli-fcp/"
+                       "consigli-fantacalcio/216-rigoristi-e-tiratori-2026-27.html")
 
 TEAM_SLUGS = {
     "atalanta": "Atalanta", "bologna": "Bologna", "cagliari": "Cagliari",
@@ -417,51 +418,77 @@ def scrape_set_pieces(progress_cb=None):
     DATA_DIR.mkdir(exist_ok=True)
     html = _get(SET_PIECES_URL)
     soup = bs(html.content, "html.parser")
-    text = soup.get_text("\n")
-
-    start = text.find("Tiratori Atalanta")
-    if start < 0:
-        start = text.find("Rigoristi e Tiratori Serie A")
-    body = text[start:] if start >= 0 else text
-    for marker in ["Autore", "Copyrights", "Guida Fantacalcio 2022"]:
-        k = body.find(marker)
-        if k > 0:
-            body = body[:k]
-            break
-
-    team_pattern = re.compile(
-        r"Tiratori\s+([A-Z][A-Za-zÀ-ÿ ']+?)\s+20\d\d/27"
-    )
-    type_pattern = re.compile(
-        r"(Rigoristi in ordine|Calci di punizione|Calci d'angolo):"
-    )
-    tipo_map = {
-        "Rigoristi in ordine": "Rigorista",
-        "Calci di punizione": "Punizioni",
-        "Calci d'angolo": "Angoli",
-    }
-    junk_prefixes = ("da aggiornare", "autore", "bio", "ultimo aggiornamento")
-
-    matches = list(team_pattern.finditer(body))
     rows = []
-    for idx, m in enumerate(matches):
-        team = m.group(1).strip()
-        block_end = matches[idx + 1].start() if idx + 1 < len(matches) else len(body)
-        block = body[m.end():block_end]
-        types = list(type_pattern.finditer(block))
-        for j, tm in enumerate(types):
-            sec_end = types[j + 1].start() if j + 1 < len(types) else len(block)
-            section = block[tm.end():sec_end]
-            for name in _split_names(section):
-                name = name.rstrip(".")
-                if not name or len(name) > 40 \
-                        or name.lower().startswith(junk_prefixes) \
-                        or any(ch in name for ch in "0123456789:@/()|©"):
-                    continue
-                rows.append({"Squadra": team, "Giocatore": name,
-                             "Tipo": tipo_map[tm.group(1)]})
+    # Fonte primaria: stessa redazione delle quotazioni e delle probabili
+    # formazioni. Espone una gerarchia esplicita, non una lista piatta.
+    for card in soup.select("div.card.team-card"):
+        team_el = card.select_one("header.team-info .team-name")
+        if not team_el:
+            continue
+        team = _clean(team_el.get_text())
+        for col in card.select("div.row.row-responsive > div.col"):
+            heading = _clean(col.select_one("header").get_text() if col.select_one("header") else "")
+            tipo = {"Rigori": "Rigorista", "Calci piazzati": "Piazzati"}.get(heading)
+            if not tipo:
+                continue
+            for order, item in enumerate(col.select("ol.pill-list li"), start=1):
+                name_el = item.select_one("a.player-name")
+                name = _clean(name_el.get_text()) if name_el else ""
+                if name:
+                    rows.append({"Squadra": team, "Giocatore": name,
+                                 "Tipo": tipo, "Ordine": order})
+
+    if not rows:
+        # Fallback storico: mantiene l'app utilizzabile se la pagina primaria
+        # cambia struttura o non è momentaneamente disponibile.
+        html = _get(FCP_SET_PIECES_URL)
+        soup = bs(html.content, "html.parser")
+        text = soup.get_text("\n")
+
+        start = text.find("Tiratori Atalanta")
+        if start < 0:
+            start = text.find("Rigoristi e Tiratori Serie A")
+        body = text[start:] if start >= 0 else text
+        for marker in ["Autore", "Copyrights", "Guida Fantacalcio 2022"]:
+            k = body.find(marker)
+            if k > 0:
+                body = body[:k]
+                break
+
+        team_pattern = re.compile(
+            r"Tiratori\s+([A-Z][A-Za-zÀ-ÿ ']+?)\s+20\d\d/27"
+        )
+        type_pattern = re.compile(
+            r"(Rigoristi in ordine|Calci di punizione|Calci d'angolo):"
+        )
+        tipo_map = {
+            "Rigoristi in ordine": "Rigorista",
+            "Calci di punizione": "Punizioni",
+            "Calci d'angolo": "Angoli",
+        }
+        junk_prefixes = ("da aggiornare", "autore", "bio", "ultimo aggiornamento")
+
+        matches = list(team_pattern.finditer(body))
+        for idx, m in enumerate(matches):
+            team = m.group(1).strip()
+            block_end = matches[idx + 1].start() if idx + 1 < len(matches) else len(body)
+            block = body[m.end():block_end]
+            types = list(type_pattern.finditer(block))
+            for j, tm in enumerate(types):
+                sec_end = types[j + 1].start() if j + 1 < len(types) else len(block)
+                section = block[tm.end():sec_end]
+                for order, name in enumerate(_split_names(section), start=1):
+                    name = name.rstrip(".")
+                    if not name or len(name) > 40 \
+                            or name.lower().startswith(junk_prefixes) \
+                            or any(ch in name for ch in "0123456789:@/()|©"):
+                        continue
+                    rows.append({"Squadra": team, "Giocatore": name,
+                                 "Tipo": tipo_map[tm.group(1)], "Ordine": order})
 
     df = pd.DataFrame(rows).drop_duplicates()
+    if df.empty:
+        raise ScrapeError("Nessun rigorista o specialista trovato nelle fonti disponibili")
     df.to_csv(SET_PIECES, index=False)
     if progress_cb:
         progress_cb(f"{len(df)} indicazioni set-pieces "

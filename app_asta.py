@@ -993,8 +993,8 @@ def render_formazioni():
     st.header("🧩 Probabili formazioni")
     st.markdown(
         f"**Ultimo aggiornamento:** {updated_at:%d/%m/%Y %H:%M}  \n"
-        "Fonte: Fantacalcio.it per undici, ballottaggi e indisponibili; "
-        "Fantacalciopedia per i tiratori. Per aggiornare usa il pulsante unico "
+        "Fonte: Fantacalcio.it per undici, ballottaggi, indisponibili e gerarchie "
+        "dei tiratori. Per aggiornare usa il pulsante unico "
         "nella tab Setup."
     )
 
@@ -1005,7 +1005,8 @@ def render_formazioni():
         '<span style="background:#1565c0;color:white;border-radius:6px;'
         'padding:1px 8px;font-size:12px">🚩 Angoli</span> '
         '<span style="background:#b8860b;color:white;border-radius:6px;'
-        'padding:1px 8px;font-size:12px">🎯 Punizioni</span> — '
+        'padding:1px 8px;font-size:12px">🎯 Piazzati</span> — '
+        "il numero indica la posizione nella gerarchia (1° = prima scelta) — "
         "⭐ = nome da monitorare per bonus — "
         "* = fantamedia stimata (nessuna stagione disponibile)",
         unsafe_allow_html=True,
@@ -1020,7 +1021,7 @@ def render_formazioni():
     ]
     bonus_teams = [
         team for team, rows in team_rows.items()
-        if rows[["Rigorista", "Punizioni", "Angoli"]].any(axis=None)
+        if rows[["Rigorista", "Piazzati", "Punizioni", "Angoli"]].any(axis=None)
     ]
     overview = st.columns(4)
     overview[0].metric("Squadre", len(teams))
@@ -1060,15 +1061,19 @@ def render_formazioni():
         if row["Rigorista"]:
             badges += ('<span style="background:#c62828;color:white;'
                        'border-radius:6px;padding:1px 8px;font-size:11px">'
-                       '⚽ Rigorista</span> ')
+                       f"⚽ {int(row.get('RigoristaOrdine', 1))}° rigore</span> ")
         if row["Angoli"]:
             badges += ('<span style="background:#1565c0;color:white;'
                        'border-radius:6px;padding:1px 8px;font-size:11px">'
-                       '🚩 Angoli</span> ')
+                       f"🚩 {int(row.get('AngoliOrdine', 1))}° angolo</span> ")
         if row["Punizioni"]:
             badges += ('<span style="background:#b8860b;color:white;'
                        'border-radius:6px;padding:1px 8px;font-size:11px">'
-                       '🎯 Punizioni</span> ')
+                       f"🎯 {int(row.get('PunizioniOrdine', 1))}° punizione</span> ")
+        if row["Piazzati"]:
+            badges += ('<span style="background:#b8860b;color:white;'
+                       'border-radius:6px;padding:1px 8px;font-size:11px">'
+                       f"🎯 {int(row.get('PiazzatiOrdine', 1))}° piazzati</span> ")
         ruolo = row["Ruolo"] or "?"
         fm = f"{row['FM']:.2f}" if pd.notna(row["FM"]) else "-"
         if pd.notna(row["FM"]) and row.get("FMImputed"):
