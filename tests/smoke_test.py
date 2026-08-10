@@ -1,5 +1,6 @@
 import math
 import sys
+from io import StringIO
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -7,6 +8,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import pandas as pd
 from streamlit.testing.v1 import AppTest
 
+import asta_core
+import scraper
 from app_asta import load_excluded, save_excluded
 from data_loader import (
     DEFAULT_METHOD, DEFAULT_RANK_WEIGHTS, ROLE_ORDER, backtest_predictor,
@@ -27,6 +30,30 @@ def main():
     check("players loaded", not players.empty, f"({len(players)} players)")
     check("cluster column", "Cluster" in players.columns)
     check("score column", "Score" in players.columns)
+    check("season profile columns", {
+        "Availability", "SeasonValue", "Upside", "DataConfidence",
+        "ConfidenceLabel", "HistorySeasons",
+    }.issubset(players.columns))
+    check("season profile ranges",
+          players["Availability"].between(0, 1).all() and
+          players["SeasonValue"].between(0, 1).all() and
+          players["Upside"].between(0, 1).all() and
+          players["DataConfidence"].between(0, 1).all())
+    stats_backup = scraper.ADVANCED_STATS.read_bytes() \
+        if scraper.ADVANCED_STATS.exists() else None
+    try:
+        imported = scraper.import_advanced_stats(StringIO(
+            "Player,Squad,MP,Starts,Min,xG,xA,Gls,Ast\n"
+            "Martinez Lautaro,Inter,35,32,2800,18.2,4.1,20,5\n"
+        ))
+        enriched = build_players()
+        check("advanced stats import", len(imported) == 1 and
+              int(enriched["Minuti"].notna().sum()) >= 1)
+    finally:
+        if stats_backup is None:
+            scraper.ADVANCED_STATS.unlink(missing_ok=True)
+        else:
+            scraper.ADVANCED_STATS.write_bytes(stats_backup)
     check("roles present", {"P", "D", "C", "A"}.issubset(
         set(players["Ruolo"].dropna())))
     check("ALG normalized 0-1", players["ALGnum"].max() <= 1.01,
@@ -93,15 +120,58 @@ def main():
     check("substitute column", "Panchina" in lineups.columns)
     check("cluster columns", {"Cluster", "PanchinaCluster"}.issubset(
         lineups.columns))
+    check("availability columns", {
+        "Ballottaggi", "Squalificati", "Infortunati", "InDubbio",
+    }.issubset(lineups.columns))
     subs = lineups[lineups["Panchina"] != ""]
     check("substitutes matched", len(subs) > 0,
           f"({len(subs)}/{len(lineups)} with substitute)")
 
-    save_excluded({"zz-smoke-test-player"})
+    excluded_before = load_excluded()
+    save_excluded(excluded_before | {"zz-smoke-test-player"})
     ex = load_excluded()
     check("exclusion round-trip", "zz-smoke-test-player" in ex)
-    save_excluded(set())
-    check("exclusion cleanup", len(load_excluded()) == 0)
+    save_excluded(excluded_before)
+    check("exclusion cleanup", load_excluded() == excluded_before)
+
+    auction = asta_core.new_session(
+        budget=20,
+        fair={role: [20] for role in ROLE_ORDER},
+        slots={"P": 1, "D": 1, "C": 1, "A": 1},
+        teams=[f"Test {i}" for i in range(1, 11)],
+        created="2000-01-01T00:00:00",
+    )
+    sample = players.iloc[0]
+    advice = asta_core.auction_advice(
+        auction, sample, players.to_dict("records"), current_price=1
+    )
+    check("dynamic cap reserves remaining slots",
+          advice["fixed_cap"] == 20 and advice["personal_max"] == 17 and
+          advice["recommended"] <= advice["personal_max"] and
+          advice["verdict"] == "PUNTA")
+    asta_core.save_watchlist_item(auction, sample, "A", "obiettivo test")
+    check("watchlist saved", auction["watchlist"][0]["tier"] == "A")
+    advice_a = asta_core.auction_advice(auction, sample, players.to_dict("records"))
+    asta_core.save_watchlist_item(auction, sample, "C", "occasione test")
+    advice_c = asta_core.auction_advice(auction, sample, players.to_dict("records"))
+    check("watchlist adjusts recommendation",
+          advice_a["recommended"] >= advice["recommended"] and
+          advice_c["recommended"] <= advice_a["recommended"])
+    asta_core.remove_watchlist_item(auction, sample["Nome"])
+    check("watchlist removed", not auction["watchlist"])
+    purchase = asta_core.record_purchase(auction, sample, "Test 1", 7)
+    live = asta_core.team_summary(auction, "Test 1")
+    check("live auction records purchase", purchase["name"] == sample["Nome"] and
+          live["remaining"] == 13 and live["by_role"][sample["Ruolo"]] == 1)
+    try:
+        asta_core.record_purchase(auction, sample, "Test 2", 1)
+        duplicate_blocked = False
+    except ValueError:
+        duplicate_blocked = True
+    check("live auction blocks duplicate", duplicate_blocked)
+    asta_core.undo_purchase(auction, sample["Nome"])
+    check("live auction undo", not auction["purchases"] and
+          asta_core.team_summary(auction, "Test 1")["remaining"] == 20)
 
     before = load_ranking_weights()
     save_ranking_weights(before)
@@ -117,12 +187,34 @@ def main():
           f"({len(at.exception)} exceptions)")
     tabs = [t.label for t in at.tabs]
     check("all tabs present",
-          {"Setup", "Giocatori", "Formazioni"}.issubset(tabs), f"{tabs}")
+          {"Setup", "Asta live", "Giocatori", "Formazioni"}.issubset(tabs), f"{tabs}")
+    check("one-click auction refresh available",
+          any(button.label == "🚀 Aggiorna tutto per l'asta (~10 min)"
+              for button in at.button))
+    check("legacy refresh buttons removed",
+          not any(button.label in {
+              "Scarica quotazioni Gazzetta (veloce)",
+              "Scarica lista giocatori FCP (lento, ~10 min)",
+              "Scarica formazioni + tiratori (~30s)",
+              "🔄 Aggiorna ora formazioni",
+          } for button in at.button))
+    at.session_state["session"] = asta_core.new_session(
+        created="2000-01-01T00:00:00"
+    )
+    at.run()
+    check("personal auction view runs", len(at.exception) == 0,
+          f"({len(at.exception)} exceptions)")
+    called_search = next(widget for widget in at.text_input
+                         if widget.label == "Cerca giocatore chiamato")
+    called_search.set_value(str(players.iloc[0]["Nome"])).run()
+    check("called-player advice rendered", len(at.exception) == 0 and
+          any(metric.label == "Punta fino a" for metric in at.metric),
+          f"({len(at.exception)} exceptions)")
     if "Formazioni" in tabs:
         form = [t for t in at.tabs if t.label == "Formazioni"][0]
-        cards = sum(1 for m in form.markdown
-                    if "Sostituto probabile" in m.value)
-        check("substitute cards rendered", cards > 0, f"({cards} cards)")
+        cards = sum(1 for c in form.caption
+                    if "Panchina / coperture" in c.value)
+        check("substitute coverage rendered", cards > 0, f"({cards} cards)")
 
     print()
     if failures:

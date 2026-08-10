@@ -24,21 +24,43 @@ See `AVVIO_APP.md` for background startup, logging, and troubleshooting.
 
 - `Setup`: refresh data, configure the auction budget and fair-value table,
   and choose ranking weights/method.
+- `Asta live`: personal on-the-clock assistant with a dynamic bid recommendation,
+  an inviolable cluster cap, next-best alternatives, watchlist, and saved
+  budget/roster tracking. Other participants are recorded only to keep the
+  available-player pool and market context current.
 - `Giocatori`: browse players by role and cluster, see the computed score, and
-  mark players already bought.
-- `Formazioni`: inspect probable starters, substitutes, and set-piece duties.
+  mark unavailable players. Players recorded in the live auction disappear
+  automatically from this list.
+- `Formazioni`: one-click refresh of probable starters, set pieces,
+  ballottaggi, injuries, suspensions, doubts, and team-level warnings.
 
 ## Ranking Model
 
 The ranking is computed separately for each role using available historical
 fantamedia, Gazzetta FVM, FCP ALG, injury resistance, probable starting
-status, set pieces, and player attributes. The current implementation supports
-manual, predictive, and blended ranking methods.
+status, set pieces, and player attributes. If advanced historical statistics
+are imported, it also uses minutes, starts and xG+xA per 90. The current
+implementation supports manual, predictive, and blended ranking methods.
+
+`Affidabilità d'impiego` combines probable lineups with historical usage when
+available. `Valore stagione`, `Upside` and `Confidenza dati` are displayed as
+separate, transparent indicators: a player is never assigned invented minutes
+or xG when no source has supplied them.
 
 The rank is then divided into fixed groups of 10 players. This rule is part of
 the auction strategy: with 10 participants, each cluster represents one
 player per participant. Fair values remain a separate rule-of-thumb price
 table, indexed by role and cluster.
+
+## Personal auction advice
+
+The live assistant never raises a player above the fair value of their fixed
+cluster. Its lower, personal recommendation adapts to the player's position
+inside that cluster, open slots and chosen role priority in your squad, and
+the number of comparable available alternatives. It also reserves one credit
+for every other unfilled roster slot, so the personal maximum bid is always
+affordable through the end of the auction. The verdict is deliberately simple:
+bid, bid only if it is a priority, or walk away.
 
 The model is intended to estimate relative player quality. It does not yet
 learn auction prices because historical auction results are not available.
@@ -57,6 +79,22 @@ python3.13 scraper.py --lineups --setpieces
 
 Use `python3.13 scraper.py --all` to run every scraper. Scraping requires a
 network connection and overwrites the corresponding CSV files.
+
+### Advanced historical statistics
+
+For the best ranking, export the Serie A player-statistics table from FBref or
+FotMob shortly before the auction and upload the CSV in
+`Setup → Statistiche storiche avanzate`. The importer recognizes common English
+and Italian headings for player, team, appearances, starts, minutes, xG, xA,
+goals, assists, cards, injury days and matches missed, then saves a normalized local file at
+`data/advanced_stats.csv`.
+
+This deliberate CSV workflow is more reliable than an undocumented live API on
+auction day. You can also run it from the terminal:
+
+```bash
+python3.13 scraper.py --advanced /path/to/export.csv
+```
 
 ## Tests
 

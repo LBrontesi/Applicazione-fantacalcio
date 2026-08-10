@@ -7,7 +7,8 @@ import numpy as np
 import pandas as pd
 
 from scraper import (
-    DATA_DIR, FORMAZIONI, PLAYERS_FCP, QUOTAZIONI, SET_PIECES, normalize_name,
+    ADVANCED_STATS, DATA_DIR, FORMAZIONI, PLAYERS_FCP, QUOTAZIONI, SET_PIECES,
+    normalize_name,
 )
 
 ROLE_ORDER = ["P", "D", "C", "A"]
@@ -23,6 +24,8 @@ DEFAULT_RANK_WEIGHTS = {
     "SetPieces": 0.5,
     "Tags": 0.3,
     "Injury": 0.5,
+    "Availability": 0.4,
+    "ExpectedOutput": 0.35,
 }
 
 DEFAULT_METHOD = "blend"
@@ -37,9 +40,14 @@ ROLE_FACTORS = {
     "A": {"Starter": 0.5, "SetPieces": 0.5},
 }
 
+# Il modello cattura meglio il rendimento atteso dove i dati storici sono ricchi;
+# per i portieri, che hanno meno osservazioni, il giudizio manuale resta dominante.
+# Sono coefficienti prudenti per ruolo, non una promessa di accuratezza futura.
+ROLE_BLEND_MODEL_WEIGHT = {"P": 0.35, "D": 0.55, "C": 0.60, "A": 0.65}
+
 MODEL_FEATURES = [
     "FM2", "FM3", "ALGnum", "FVM", "TagScore", "Starter", "SetPieces",
-    "InjuryP",
+    "InjuryP", "Availability", "MinutesPct", "StartsPct", "xG90", "xA90",
 ]
 
 TAG_SCORES = {
@@ -123,6 +131,14 @@ def _set_piece_score(types):
     return min(SP_MAX_SCORE, weighted) / SP_MAX_SCORE
 
 
+def _confidence_label(value):
+    if value >= 0.75:
+        return "Alta"
+    if value >= 0.45:
+        return "Media"
+    return "Bassa"
+
+
 def load_fcp():
     if not PLAYERS_FCP.exists():
         return pd.DataFrame()
@@ -135,6 +151,20 @@ def load_quotazioni():
     if not QUOTAZIONI.exists():
         return pd.DataFrame()
     return pd.read_csv(QUOTAZIONI)
+
+
+def load_advanced_stats():
+    if not ADVANCED_STATS.exists():
+        return pd.DataFrame()
+    try:
+        df = pd.read_csv(ADVANCED_STATS)
+    except (OSError, ValueError):
+        return pd.DataFrame()
+    for col in ["NomeStats", "SquadraStats"]:
+        if col not in df:
+            return pd.DataFrame()
+        df[col] = df[col].fillna("").astype(str)
+    return df
 
 
 def _tokens(name):
@@ -170,9 +200,32 @@ def _match_score(g_tokens, f_tokens):
     return 0.85 if ratio >= 0.86 else 0.0
 
 
+def _advanced_for_player(name, team, stats):
+    """Find one imported row; club is used as a tie-breaker for homonyms."""
+    if stats.empty:
+        return None
+    player_tokens = _tokens(name)
+    wanted_team = normalize_name(team)
+    best, best_score = None, 0.0
+    for _, row in stats.iterrows():
+        stat_tokens = _tokens(row["NomeStats"])
+        score = _match_score(player_tokens, stat_tokens)
+        if set(player_tokens) == set(stat_tokens):
+            score = 1.0
+        if score <= 0:
+            continue
+        stat_team = normalize_name(row.get("SquadraStats", ""))
+        if wanted_team and stat_team and wanted_team == stat_team:
+            score += 0.05
+        if score > best_score:
+            best, best_score = row, score
+    return best if best_score >= 0.85 else None
+
+
 def build_players(progress_cb=None, weights=None):
     gaz = load_quotazioni()
     fcp = load_fcp()
+    advanced = load_advanced_stats()
 
     gaz_tokens = {name: _tokens(name) for name in gaz["NomeGaz"]}
     fcp_tokens = {name: _tokens(name) for name in fcp["NomeFCP"]}
@@ -216,6 +269,16 @@ def build_players(progress_cb=None, weights=None):
             row.update({"ALG": "", "FM1": float("nan"), "FM2": float("nan"),
                         "FM3": float("nan"), "Attributi": "", "ResInf": "",
                         "SquadraFCP": ""})
+        advanced_row = _advanced_for_player(row["Nome"], row["Squadra"], advanced)
+        if advanced_row is None:
+            advanced_row = _advanced_for_player(
+                row["NomeGaz"], row["Squadra"], advanced
+            )
+        for col in [
+            "Presenze", "Titolarita", "Minuti", "xG", "xA", "Gol", "Assist",
+            "Gialli", "Rossi", "xGI90", "GiorniInfortunio", "GareSaltate",
+        ]:
+            row[col] = _to_float(advanced_row[col]) if advanced_row is not None and col in advanced_row else float("nan")
         matched_rows.append(row)
 
     df = pd.DataFrame(matched_rows)
@@ -240,9 +303,11 @@ def build_players(progress_cb=None, weights=None):
             np.nansum(fm_arr, axis=1) / np.maximum(avail.sum(axis=1), 1),
             float("nan"),
         )
+        df["HistorySeasons"] = avail.sum(axis=1).astype(int)
     else:
         df["FM"] = float("nan")
         df["FMAvg"] = float("nan")
+        df["HistorySeasons"] = 0
 
     df["ALGnum"] = pd.to_numeric(
         df["ALG"].astype(str).str.extract(
@@ -292,6 +357,41 @@ def build_players(progress_cb=None, weights=None):
         axis=1,
     )
 
+    # Proxy esplicito: non spacciamo una previsione dei minuti senza una fonte
+    # affidabile di presenze/minuti. Combina formazione probabile e robustezza.
+    df["Availability"] = (
+        0.35 + 0.45 * df["Starter"] + 0.20 * df["InjuryP"].fillna(0.5)
+    ).clip(0.0, 1.0)
+    # Le statistiche importate coprono il passato: non sostituiscono le
+    # formazioni probabili, ma rendono meno ottimistica la stima per chi ha
+    # giocato poco o ha iniziato raramente.
+    df["MinutesPct"] = (df["Minuti"] / 3000.0).clip(0.0, 1.0)
+    df["StartsPct"] = (df["Titolarita"] / 33.0).clip(0.0, 1.0)
+    df["xG90"] = np.where(
+        df["Minuti"] > 0, df["xG"] / df["Minuti"] * 90.0, float("nan")
+    )
+    df["xA90"] = np.where(
+        df["Minuti"] > 0, df["xA"] / df["Minuti"] * 90.0, float("nan")
+    )
+    computed_xgi90 = df["xG90"] + df["xA90"]
+    df["xGI90"] = df["xGI90"].where(df["xGI90"].notna(), computed_xgi90)
+    historical_usage = 0.55 * df["MinutesPct"] + 0.45 * df["StartsPct"]
+    df["HistoricalUsage"] = historical_usage
+    has_usage = historical_usage.notna()
+    df.loc[has_usage, "Availability"] = (
+        0.55 * df.loc[has_usage, "Availability"]
+        + 0.45 * historical_usage.loc[has_usage]
+    ).clip(0.0, 1.0)
+    injury_history = (1.0 - df["GareSaltate"] / 20.0).clip(0.0, 1.0)
+    has_injury_history = injury_history.notna()
+    df.loc[has_injury_history, "Availability"] = (
+        0.85 * df.loc[has_injury_history, "Availability"]
+        + 0.15 * injury_history.loc[has_injury_history]
+    ).clip(0.0, 1.0)
+    df["HistoryStrength"] = (
+        df["HistorySeasons"].clip(lower=0, upper=3) / 3.0
+    )
+
     if weights is None:
         weights = load_ranking_weights()
 
@@ -322,6 +422,31 @@ def build_players(progress_cb=None, weights=None):
         df.loc[missing, "FMEst"] = np.clip(pred, lo, hi)
         df.loc[missing, "FMImputed"] = True
 
+    # Una sola stagione osservata è utile, ma troppo rumorosa per dominare il
+    # ranking. La riportiamo gradualmente verso la mediana del ruolo; FM resta
+    # sempre disponibile come valore storico grezzo nella UI.
+    for role in ROLE_ORDER:
+        role_rows = df["Ruolo"] == role
+        observed = role_rows & df["FM"].notna()
+        if not observed.any():
+            continue
+        prior = float(df.loc[observed, "FM"].median())
+        strength = df.loc[observed, "HistoryStrength"]
+        shrink = strength / (strength + 0.50)
+        df.loc[observed, "FMEst"] = (
+            shrink * df.loc[observed, "FM"] + (1.0 - shrink) * prior
+        )
+
+    source_coverage = (
+        df[["ALGnum", "FVM", "InjuryP"]].notna().sum(axis=1) / 3.0
+    )
+    advanced_coverage = df[["Minuti", "Titolarita", "xG", "xA", "xGI90"]].notna().sum(axis=1) / 5.0
+    df["DataConfidence"] = (
+        0.55 * df["HistoryStrength"] + 0.20 * source_coverage
+        + 0.10 * (~df["FMImputed"]).astype(float) + 0.15 * advanced_coverage
+    ).clip(0.0, 1.0)
+    df["ConfidenceLabel"] = df["DataConfidence"].apply(_confidence_label)
+
     df["PredFM"] = float("nan")
     ranks = []
     for role in ROLE_ORDER:
@@ -342,16 +467,23 @@ def build_players(progress_cb=None, weights=None):
         )
         sub["C_Tags"] = weights["Tags"] * (sub["TagScore"] + 2.0) / 4.0
         sub["C_Injury"] = weights["Injury"] * sub["InjuryP"]
+        sub["C_Availability"] = weights["Availability"] * sub["Availability"]
+        xgi_n = _rank_norm(sub["xGI90"].fillna(0))
+        sub["C_ExpectedOutput"] = weights["ExpectedOutput"] * xgi_n
         manual = (
             sub["C_FM"] + sub["C_FVM"] + sub["C_ALG"]
             + sub["C_Starter"] + sub["C_SetPieces"]
-            + sub["C_Tags"] + sub["C_Injury"]
+            + sub["C_Tags"] + sub["C_Injury"] + sub["C_Availability"]
+            + sub["C_ExpectedOutput"]
         )
         manual_scale = (
             abs(weights["FM"]) + abs(weights["FVM"]) + abs(weights["ALG"])
             + abs(weights["Starter"]) * fac["Starter"]
             + abs(weights["SetPieces"]) * fac["SetPieces"]
             + abs(weights["Tags"]) + abs(weights["Injury"])
+            + abs(weights["Availability"])
+            + (abs(weights["ExpectedOutput"])
+               if sub["xGI90"].notna().any() else 0.0)
         )
         manual_n = manual / manual_scale if manual_scale else manual * 0.0
         model = _role_model(sub)
@@ -364,12 +496,22 @@ def build_players(progress_cb=None, weights=None):
         if method == "model":
             sub["Score"] = pred_n if model is not None else manual_n
         elif method == "blend":
+            model_weight = ROLE_BLEND_MODEL_WEIGHT.get(role, 0.5)
             sub["Score"] = (
-                0.5 * pred_n + 0.5 * manual_n
+                model_weight * pred_n + (1.0 - model_weight) * manual_n
                 if model is not None else manual_n
             )
         else:
             sub["Score"] = manual_n
+        quality = pred_n if model is not None else fm_n
+        sub["SeasonValue"] = (0.75 * quality + 0.25 * sub["Availability"])
+        sub["Upside"] = (
+            0.35 * sub["ALGnum"] + 0.25 * sub["SetPieces"]
+            + 0.20 * ((sub["TagScore"] + 2.0) / 4.0) + 0.20 * xgi_n
+        ).clip(0.0, 1.0)
+        sub["BlendModelWeight"] = (
+            ROLE_BLEND_MODEL_WEIGHT.get(role, 0.5) if model is not None else 0.0
+        )
         sub = sub.sort_values(
             ["Score", "QA", "Nome"],
             ascending=[False, False, True],
@@ -401,10 +543,15 @@ def _role_model(role_df, cols=MODEL_FEATURES):
     known = role_df[role_df["FM1"].notna()]
     if len(known) < 30:
         return None
-    X = known[cols].to_numpy(dtype=float)
-    mu = np.nanmean(X, axis=0)
-    mu = np.where(np.isnan(mu), 0.0, mu)
-    sd = np.nanstd(X, axis=0)
+    # reindex mantiene leggibili anche cache/CSV creati prima dell'aggiunta di
+    # una feature: quella informazione diventa semplicemente mancante.
+    X = known.reindex(columns=cols).to_numpy(dtype=float)
+    present = ~np.isnan(X)
+    mu = np.zeros(X.shape[1])
+    has_values = present.any(axis=0)
+    mu[has_values] = np.nanmean(X[:, has_values], axis=0)
+    sd = np.ones(X.shape[1])
+    sd[has_values] = np.nanstd(X[:, has_values], axis=0)
     sd[(sd == 0) | np.isnan(sd)] = 1.0
     Xs = np.nan_to_num((X - mu) / sd, nan=0.0)
     coef = _ridge(Xs, known["FM1"].to_numpy(dtype=float))
@@ -413,7 +560,7 @@ def _role_model(role_df, cols=MODEL_FEATURES):
 
 def _model_predict(role_df, model, cols=MODEL_FEATURES):
     mu, sd, coef, lo, hi = model
-    X = role_df[cols].to_numpy(dtype=float)
+    X = role_df.reindex(columns=cols).to_numpy(dtype=float)
     Xs = np.nan_to_num((X - mu) / sd, nan=0.0)
     pred = np.column_stack([np.ones(len(Xs)), Xs]) @ coef
     return np.clip(pred, lo, hi)
@@ -516,7 +663,13 @@ def load_formazioni():
     if not FORMAZIONI.exists():
         return pd.DataFrame()
     df = pd.read_csv(FORMAZIONI)
-    df["Titolari"] = df["Titolari"].fillna("")
+    for col in [
+        "Titolari", "RuoliTitolari", "Panchina", "RuoliPanchina",
+        "Ballottaggi", "Squalificati", "Diffidati", "Infortunati", "InDubbio",
+    ]:
+        if col not in df.columns:
+            df[col] = ""
+        df[col] = df[col].fillna("")
     return df
 
 
@@ -586,6 +739,11 @@ def build_lineups(players_df, progress_cb=None):
                 "PanchinaFM": float("nan"),
                 "PanchinaRuolo": "",
                 "PanchinaCluster": "",
+                "Ballottaggi": f.get("Ballottaggi", ""),
+                "Squalificati": f.get("Squalificati", ""),
+                "Diffidati": f.get("Diffidati", ""),
+                "Infortunati": f.get("Infortunati", ""),
+                "InDubbio": f.get("InDubbio", ""),
             }
             if matched:
                 p = players_df[players_df["NomeGaz"] == matched].iloc[0]

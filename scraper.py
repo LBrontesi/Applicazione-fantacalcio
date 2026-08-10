@@ -14,6 +14,7 @@ PLAYERS_FCP = DATA_DIR / "players_fcp.csv"
 QUOTAZIONI = DATA_DIR / "quotazioni.csv"
 FORMAZIONI = DATA_DIR / "formazioni.csv"
 SET_PIECES = DATA_DIR / "set_pieces.csv"
+ADVANCED_STATS = DATA_DIR / "advanced_stats.csv"
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -70,6 +71,77 @@ def _get(url, timeout=25):
 
 def _clean(text):
     return re.sub(r"\s+", " ", (text or "")).strip()
+
+
+# Colonne accettate dagli export più comuni (FBref/FotMob). Il file salvato
+# localmente usa sempre lo schema italiano sottostante, così data_loader resta
+# indipendente dal sito che hai usato per esportare i dati.
+ADVANCED_STAT_ALIASES = {
+    "NomeStats": ["player", "name", "nome", "giocatore"],
+    "SquadraStats": ["squad", "team", "squadra", "club"],
+    "Presenze": ["mp", "matches played", "matches", "appearances", "presenze"],
+    "Titolarita": ["starts", "started", "titolarita", "starts made"],
+    "Minuti": ["min", "minutes", "minutes played", "minuti"],
+    "xG": ["xg", "expected goals"],
+    "xA": ["xa", "expected assists", "xag"],
+    "xGI90": ["xg + xa per 90", "xg+xa per 90", "xg+xA/90", "xgi90"],
+    "Gol": ["gls", "goals", "gol"],
+    "Assist": ["ast", "assists", "assist"],
+    "Gialli": ["crdy", "yellow cards", "gialli"],
+    "Rossi": ["crdr", "red cards", "rossi"],
+    "GiorniInfortunio": ["days", "days injured", "injury days", "giorni infortunio"],
+    "GareSaltate": ["games missed", "matches missed", "gare saltate"],
+}
+
+
+def _stat_column(frame, aliases):
+    normalized = {
+        re.sub(r"[^a-z0-9]", "", str(col).lower()): col
+        for col in frame.columns
+    }
+    for alias in aliases:
+        key = re.sub(r"[^a-z0-9]", "", alias.lower())
+        if key in normalized:
+            return normalized[key]
+    return None
+
+
+def import_advanced_stats(source, progress_cb=None):
+    """Normalize a FBref/FotMob CSV export and save it for offline ranking."""
+    try:
+        raw = pd.read_csv(source)
+    except Exception as exc:
+        raise ScrapeError(f"CSV statistiche non leggibile: {exc}") from exc
+    if raw.empty:
+        raise ScrapeError("Il CSV statistiche è vuoto")
+
+    out = pd.DataFrame(index=raw.index)
+    for target, aliases in ADVANCED_STAT_ALIASES.items():
+        col = _stat_column(raw, aliases)
+        if col is None:
+            out[target] = "" if target in {"NomeStats", "SquadraStats"} else float("nan")
+        else:
+            out[target] = raw[col]
+    if out["NomeStats"].replace("", float("nan")).isna().all():
+        raise ScrapeError("CSV senza una colonna giocatore (Player, Name, Nome o Giocatore)")
+
+    out["NomeStats"] = out["NomeStats"].fillna("").astype(str).str.strip()
+    out["SquadraStats"] = out["SquadraStats"].fillna("").astype(str).str.strip()
+    for col in out.columns.difference(["NomeStats", "SquadraStats"]):
+        out[col] = pd.to_numeric(
+            out[col].astype(str).str.replace(",", ".", regex=False)
+            .str.replace(r"[^0-9.\-]", "", regex=True),
+            errors="coerce",
+        )
+    out = out[out["NomeStats"] != ""].drop_duplicates(
+        ["NomeStats", "SquadraStats"], keep="first"
+    )
+    DATA_DIR.mkdir(exist_ok=True)
+    out.to_csv(ADVANCED_STATS, index=False)
+    if progress_cb:
+        coverage = int(out["Minuti"].notna().sum())
+        progress_cb(f"{len(out)} giocatori importati ({coverage} con minuti)")
+    return out
 
 
 def scrape_fantacalciopedia(limit=None, delay=0.4, progress_cb=None):
@@ -214,6 +286,41 @@ def _card_players(card, selector):
     return names, roles
 
 
+def _team_detail(match, section_class, team_index):
+    """Read one team's availability notes from the current lineup page."""
+    section = match.select_one(f"section.{section_class}")
+    if not section:
+        return ""
+    contents = section.select(":scope > div.content")
+    if team_index >= len(contents):
+        return ""
+    content = contents[team_index]
+    if content.select_one(".empty-list-message"):
+        return ""
+    items = []
+    for li in content.select("li"):
+        name = _clean(li.select_one(".player-name").get_text()) \
+            if li.select_one(".player-name") else ""
+        detail = _clean(li.select_one(".description").get_text()) \
+            if li.select_one(".description") else ""
+        label = ": ".join(value for value in [name, detail] if value)
+        if label:
+            items.append(label)
+    if items:
+        return " | ".join(items)
+    return _clean(content.get_text(" ", strip=True))
+
+
+def _team_availability(match, team_index):
+    return {
+        "Ballottaggi": _team_detail(match, "ballots", team_index),
+        "Squalificati": _team_detail(match, "suspendeds", team_index),
+        "Diffidati": _team_detail(match, "cautioneds", team_index),
+        "Infortunati": _team_detail(match, "injureds", team_index),
+        "InDubbio": _team_detail(match, "dubts", team_index),
+    }
+
+
 def scrape_lineups(progress_cb=None):
     DATA_DIR.mkdir(exist_ok=True)
     html = _get(LINEUPS_URL)
@@ -221,6 +328,27 @@ def scrape_lineups(progress_cb=None):
 
     rows = []
     for match in soup.select("li.match-item"):
+        # Layout corrente: un campo con due div.team e i dettagli per squadra.
+        team_nodes = match.select("div.pitch > div.team")
+        team_names = match.select(".match-pill .team-name")
+        if len(team_nodes) == 2 and len(team_names) >= 2:
+            for team_index, team_node in enumerate(team_nodes):
+                starters = [
+                    _clean(player.get_text())
+                    for player in team_node.select(
+                        "ul.team-lineup li.player a.player-name"
+                    )
+                ]
+                rows.append({
+                    "Squadra": _clean(team_names[team_index].get_text()),
+                    "Modulo": team_node.get("data-team-formation", "?"),
+                    "Titolari": "|".join(starters),
+                    "RuoliTitolari": "",
+                    "Panchina": "",
+                    "RuoliPanchina": "",
+                    **_team_availability(match, team_index),
+                })
+            continue
         for card in match.select("div.card.team-card"):
             team_el = card.select_one("header h3.team-name")
             if not team_el:
@@ -242,6 +370,7 @@ def scrape_lineups(progress_cb=None):
                     "RuoliTitolari": "|".join(s_roles),
                     "Panchina": "|".join(bench),
                     "RuoliPanchina": "|".join(b_roles),
+                    **_team_availability(match, len(rows) % 2),
                 }
             )
 
@@ -261,7 +390,7 @@ def scrape_lineups(progress_cb=None):
                     {"Squadra": team, "Modulo": modulo,
                      "Titolari": "|".join(players),
                      "RuoliTitolari": "", "Panchina": "",
-                     "RuoliPanchina": ""}
+                     "RuoliPanchina": "", **_team_availability(match, len(rows) % 2)}
                 )
 
     df = pd.DataFrame(rows)
@@ -346,6 +475,8 @@ if __name__ == "__main__":
     parser.add_argument("--quotes", action="store_true")
     parser.add_argument("--lineups", action="store_true")
     parser.add_argument("--setpieces", action="store_true")
+    parser.add_argument("--advanced", metavar="CSV",
+                        help="importa CSV storico FBref/FotMob")
     parser.add_argument("--all", action="store_true")
     parser.add_argument("--limit", type=int, default=None)
     args = parser.parse_args()
@@ -372,3 +503,6 @@ if __name__ == "__main__":
         print("scraping set pieces...")
         df = scrape_set_pieces(progress_cb=print)
         print(f"saved {len(df)} to {SET_PIECES}")
+    if args.advanced:
+        df = import_advanced_stats(args.advanced, progress_cb=print)
+        print(f"saved {len(df)} players to {ADVANCED_STATS}")

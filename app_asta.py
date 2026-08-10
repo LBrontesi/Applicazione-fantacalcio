@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import pandas as pd
 import streamlit as st
 
@@ -19,9 +21,27 @@ WEIGHT_LABELS = {
     "SetPieces": "Set-piece (rigorista/angoli/punizioni)",
     "Tags": "Attributi (Fuoriclasse, Goleador, …)",
     "Injury": "Robustezza infortuni (premia chi non si infortuna)",
+    "Availability": "Affidabilità d'impiego (formazione + robustezza)",
+    "ExpectedOutput": "xG + xA per 90 (CSV storico)",
+}
+
+ROLE_PLAN_CHOICES = {
+    "Risparmia": 0.8,
+    "Equilibrio": 1.0,
+    "Spingi": 1.2,
+}
+
+WATCHLIST_EXPLANATIONS = {
+    "A": "Obiettivo: puoi spingere fino al prezzo consigliato.",
+    "B": "Alternativa: segui il prezzo consigliato senza inseguire.",
+    "C": "Occasione: punta solo se il prezzo resta conveniente.",
 }
 
 st.set_page_config(page_title="Asta Coach", page_icon="⚽", layout="wide")
+
+# Cambiare quando cambia lo schema restituito da build_players: evita che una
+# cache Streamlit della versione precedente venga riutilizzata dalla nuova UI.
+PLAYER_CACHE_SCHEMA_VERSION = 2
 
 
 def inject_styles():
@@ -121,7 +141,8 @@ def run_scrape(jobs):
 
 
 @st.cache_data(show_spinner=False)
-def load_players():
+def load_players(schema_version=PLAYER_CACHE_SCHEMA_VERSION):
+    del schema_version
     return build_players()
 
 
@@ -151,8 +172,15 @@ def players_df():
 def get_config():
     session = st.session_state.get("session")
     if session:
+        asta_core.ensure_session(session)
         return session["meta"]["budget"], session["meta"]["fair"]
     return 500, fair_values_scaled(500)
+
+
+def closest_role_plan(value):
+    return min(ROLE_PLAN_CHOICES, key=lambda label: abs(
+        ROLE_PLAN_CHOICES[label] - float(value)
+    ))
 
 
 def render_setup():
@@ -163,35 +191,57 @@ def render_setup():
         unsafe_allow_html=True,
     )
     st.subheader("🔄 Dati")
-    c1, c2, c3 = st.columns(3)
-    if c1.button("Scarica quotazioni Gazzetta (veloce)"):
+    advanced_present = scraper.ADVANCED_STATS.exists()
+    st.caption(
+        "Un solo aggiornamento per arrivare pronto all'asta: quotazioni, lista "
+        "giocatori, formazioni, indisponibili e tiratori. Le statistiche avanzate "
+        f"CSV vengono {'mantenute' if advanced_present else 'lasciate vuote'} e non sovrascritte."
+    )
+    if st.button("🚀 Aggiorna tutto per l'asta (~10 min)", type="primary",
+                 use_container_width=True):
         run_scrape([
-            ("Scaricando quotazioni...",
+            ("1/4 Scaricando quotazioni Gazzetta...",
              lambda: scraper.scrape_quotazioni(progress_cb=None)),
-        ])
-        st.rerun()
-    if c2.button("Scarica lista giocatori FCP (lento, ~10 min)"):
-        run_scrape([
-            ("Scaricando giocatori da fantacalciopedia...",
+            ("2/4 Scaricando lista giocatori FCP (può richiedere alcuni minuti)...",
              lambda: scraper.scrape_fantacalciopedia(progress_cb=None)),
-        ])
-        st.rerun()
-    if c3.button("Scarica formazioni + tiratori (~30s)"):
-        run_scrape([
-            ("Scaricando formazioni e set-pieces...",
+            ("3/4 Aggiornando formazioni, ballottaggi e indisponibili...",
              lambda: scraper.scrape_lineups(progress_cb=None)),
-            ("Scaricando tiratori...",
+            ("4/4 Aggiornando rigoristi e tiratori...",
              lambda: scraper.scrape_set_pieces(progress_cb=None)),
         ])
         st.rerun()
+    st.caption(
+        "Dopo l'aggiornamento vengono ricalcolati automaticamente ranking, "
+        "cluster, valore stagione e suggerimenti per l'asta live."
+    )
+
+    with st.expander("📥 Statistiche storiche avanzate (consigliato)"):
+        st.caption(
+            "Esporta le statistiche giocatori Serie A da FBref o FotMob in CSV e "
+            "caricale qui. L'app riconosce automaticamente nome, squadra, presenze, "
+            "titolarità, minuti, xG, xA, gol, assist, cartellini e gare saltate. È un import locale: "
+            "non dipende da API fragili il giorno dell'asta."
+        )
+        advanced_file = st.file_uploader(
+            "CSV FBref / FotMob", type=["csv"], key="advanced_stats_upload"
+        )
+        if st.button("Importa statistiche avanzate", disabled=advanced_file is None):
+            try:
+                imported = scraper.import_advanced_stats(advanced_file)
+                st.cache_data.clear()
+                st.success(f"Importati {len(imported)} giocatori. Ranking aggiornato.")
+                st.rerun()
+            except ScrapeError as exc:
+                st.error(str(exc))
 
     df = players_df()
     if not df.empty:
-        summary = st.columns(4)
+        summary = st.columns(5)
         summary[0].metric("Giocatori", len(df))
         summary[1].metric("Con quotazione", int(df["QA"].notna().sum()))
         summary[2].metric("Con fantamedia", int(df["FM"].notna().sum()))
         summary[3].metric("Titolari probabili", int(df["Starter"].sum()))
+        summary[4].metric("Con minuti storici", int(df["Minuti"].notna().sum()))
         with st.expander("Anteprima dati"):
             st.dataframe(
                 df[
@@ -252,8 +302,9 @@ def render_setup():
         "Punteggio = media pesata normalizzata dei componenti, ognuno in 0–1 "
         "per ruolo (percentile). Peso 0 = componente disattivata. La "
         "robustezza infortuni premia. Starter/Set-pieces contano di più per "
-        "P e D che per A (automatico). Al salvataggio la classifica (rank e "
-        "cluster) viene ricalcolata."
+        "P e D che per A (automatico). L'affidabilità d'impiego è un proxy "
+        "trasparente, non una stima inventata dei minuti. Al salvataggio la "
+        "classifica (rank e cluster) viene ricalcolata."
     )
     saved = load_ranking_weights()
     method = saved.get("_method", DEFAULT_METHOD)
@@ -293,7 +344,10 @@ def render_setup():
             "ρ = correlazione di Spearman tra la FM prevista dal modello e "
             "la FM reale dell'ultima stagione, con validazione incrociata a "
             "5 fold. Più alto è meglio; sotto 0.3 il modello è debole e "
-            "conviene il metodo manuale."
+            "conviene il metodo manuale. Il blend usa pesi prudenti diversi "
+            "per ruolo (P 35%, D 55%, C 60%, A 65% modello); non viene "
+            "presentato come un backtest temporale finché non avremo snapshot "
+            "storici di presenze/minuti."
         )
 
 
@@ -323,7 +377,7 @@ def player_card(player, info):
     else:
         fm_disp = "-"
     pred = player.get("PredFM")
-    performance = st.columns(3)
+    performance = st.columns(4)
     performance[0].metric("FantaMedia", fm_disp)
     qa = player["QA"]
     performance[1].metric(
@@ -332,6 +386,27 @@ def player_card(player, info):
     performance[2].metric(
         "FM attesa (modello)", f"{pred:.2f}" if pd.notna(pred) else "-"
     )
+    confidence = float(player.get("DataConfidence", 0.0))
+    performance[3].metric(
+        "Confidenza dati", f"{confidence:.0%}",
+        help="Quanto sono complete e stabili le informazioni disponibili: stagioni di FM, fonti e stime.",
+    )
+    profile = st.columns(3)
+    profile[0].metric(
+        "Affidabilità impiego", f"{float(player.get('Availability', 0)):.0%}",
+        help="Proxy basato su formazione probabile e robustezza agli infortuni; non è una previsione di minuti.",
+    )
+    profile[1].metric("Valore stagione", f"{float(player.get('SeasonValue', 0)):.0%}")
+    profile[2].metric("Upside", f"{float(player.get('Upside', 0)):.0%}")
+    if pd.notna(player.get("Minuti")) or pd.notna(player.get("xGI90")):
+        advanced = st.columns(5)
+        advanced[0].metric("Minuti storici", f"{player['Minuti']:.0f}")
+        advanced[1].metric("Titolare storico", f"{player['Titolarita']:.0f}")
+        advanced[2].metric("xG/90", f"{player['xG90']:.2f}" if pd.notna(player['xG90']) else "-")
+        advanced[3].metric("xA/90", f"{player['xA90']:.2f}" if pd.notna(player['xA90']) else "-")
+        advanced[4].metric("xG+xA/90", f"{player['xGI90']:.2f}" if pd.notna(player['xGI90']) else "-")
+        if pd.notna(player.get("GareSaltate")):
+            st.caption(f"Storico infortuni importato: {player['GareSaltate']:.0f} gare saltate")
 
     st.markdown(
         f"{player['Nome']} è nel **cluster {info['cluster']}** dei {info['role']} "
@@ -343,13 +418,17 @@ def player_card(player, info):
             "Componente": [
                 "FantaMedia (FCP)", "FVM (Gazzetta)", "Algoritmo FCP",
                 "Titolare", "Set-pieces", "Attributi", "Robustezza",
-                "Modello FM attesa",
+                "Affidabilità impiego", "Modello FM attesa",
+                "xG + xA per 90",
             ],
             "Contributo": [
                 float(player.get("C_FM", 0)), float(player.get("C_FVM", 0)),
                 float(player.get("C_ALG", 0)), float(player.get("C_Starter", 0)),
                 float(player.get("C_SetPieces", 0)), float(player.get("C_Tags", 0)),
-                float(player.get("C_Injury", 0)), float(player.get("C_Model", 0)),
+                float(player.get("C_Injury", 0)),
+                float(player.get("C_Availability", 0)),
+                float(player.get("C_Model", 0)),
+                float(player.get("C_ExpectedOutput", 0)),
             ],
         })
         st.dataframe(comps, hide_index=True)
@@ -370,7 +449,9 @@ def render_players():
         return
 
     excluded = load_excluded()
-    players = players[~players["Nome"].isin(excluded)].copy()
+    session = st.session_state.get("session")
+    bought = asta_core.purchased_names(session) if session else set()
+    players = players[~players["Nome"].isin(excluded | bought)].copy()
 
     clicked = st.session_state.pop("search_click", None)
     if clicked:
@@ -383,6 +464,8 @@ def render_players():
         'oppure filtra direttamente il ranking per ruolo e cluster.</p>',
         unsafe_allow_html=True,
     )
+    if bought:
+        st.caption(f"{len(bought)} giocatori già registrati nell’asta live non sono mostrati qui.")
     st.text_input("Cerca giocatore", key="nom_search")
     q = st.session_state.get("nom_search", "")
     suggestions = suggest_player(q, players) if len(q) >= 2 else pd.DataFrame()
@@ -429,7 +512,7 @@ def render_players():
     summary[2].metric("Filtro cluster", str(cluster))
     budget, fair = get_config()
     view = view[["Nome", "Squadra", "Ruolo", "FM", "QA", "Cluster",
-                 "Score"]].copy()
+                 "Score", "SeasonValue", "DataConfidence"]].copy()
     view["Massimo da offrire"] = view.apply(
         lambda r: fair.get(r["Ruolo"], [])[
             min(int(r["Cluster"]) - 1, len(fair.get(r["Ruolo"], [1])) - 1)
@@ -449,6 +532,12 @@ def render_players():
             "Score": st.column_config.NumberColumn(
                 disabled=True, format="%.3f",
                 help="Punteggio composito ponderato (Setup → Pesi classifica)"),
+            "SeasonValue": st.column_config.NumberColumn(
+                "Valore stagione", disabled=True, format="%.0f%%",
+                help="Qualità attesa + affidabilità d'impiego."),
+            "DataConfidence": st.column_config.NumberColumn(
+                "Confidenza", disabled=True, format="%.0f%%",
+                help="Copertura e profondità dei dati disponibili."),
             "Massimo da offrire": st.column_config.NumberColumn(
                 disabled=True, help="Massimo da offrire all'asta"),
         },
@@ -508,25 +597,303 @@ def render_players():
             )
 
 
+def render_live_auction():
+    session = st.session_state.get("session")
+    if not session:
+        st.warning("Prima salva budget e fair value nella tab Setup: serviranno per l’asta live.")
+        return
+    asta_core.ensure_session(session)
+    meta = session["meta"]
+    teams = meta["teams"]
+    summaries = asta_core.auction_summary(session)
+    own = next(item for item in summaries if item["team"] == meta["my_team"])
+    available = players_df()
+    unavailable = load_excluded() | asta_core.purchased_names(session)
+    available = available[~available["Nome"].isin(unavailable)].copy()
+    available_records = available.to_dict("records")
+
+    st.header("🎯 Assistente asta personale")
+    st.markdown(
+        '<p class="section-note">Cerca il giocatore chiamato: ottieni un prezzo per provarci, '
+        'uno stop invalicabile e un piano B prima del prossimo rilancio.</p>',
+        unsafe_allow_html=True,
+    )
+    top = st.columns(4)
+    top[0].metric("La mia squadra", own["team"])
+    top[1].metric("Crediti rimasti", own["remaining"])
+    top[2].metric("Spesi", own["spent"])
+    top[3].metric("Giocatori presi", len(own["purchases"]))
+    role_progress = " · ".join(
+        f"{role} {own['by_role'][role]}/{meta['slots'][role]}" for role in ROLE_ORDER
+    )
+    st.caption(f"Rosa: {role_progress}")
+
+    with st.expander("🧭 Piano personale e watchlist", expanded=True):
+        st.caption(
+            "Scegli come vuoi spendere nei reparti. Questa scelta modifica solo il "
+            "prezzo consigliato: lo STOP del cluster non cambia mai."
+        )
+        cols = st.columns(len(ROLE_ORDER))
+        priorities = {}
+        for col, role in zip(cols, ROLE_ORDER):
+            current_plan = closest_role_plan(meta["role_priorities"].get(role, 1.0))
+            plan = col.selectbox(
+                f"{role}: strategia", list(ROLE_PLAN_CHOICES),
+                index=list(ROLE_PLAN_CHOICES).index(current_plan),
+                key=f"role_plan_{role}",
+            )
+            priorities[role] = ROLE_PLAN_CHOICES[plan]
+        st.caption(
+            "Risparmia = non inseguire quel reparto · Equilibrio = nessuna preferenza · "
+            "Spingi = avvicinati di più al prezzo consigliato se il profilo ti serve."
+        )
+        if st.button("💾 Salva piano personale"):
+            meta["role_priorities"] = priorities
+            asta_core.save_session(session)
+            st.success("Piano personale salvato")
+            st.rerun()
+        watchlist = session["watchlist"]
+        st.markdown("**La tua lista privata**")
+        st.caption(
+            "A = obiettivo principale · B = alternativa valida · C = occasione solo a buon prezzo. "
+            "La lettera modifica il prezzo consigliato, mai lo STOP del cluster."
+        )
+        if watchlist:
+            watch_df = pd.DataFrame(watchlist).rename(columns={
+                "name": "Giocatore", "club": "Squadra", "role": "Ruolo",
+                "tier": "Priorità", "note": "Nota",
+            })
+            st.dataframe(watch_df, hide_index=True, use_container_width=True)
+            remove_name = st.selectbox(
+                "Rimuovi dalla watchlist", [item["name"] for item in watchlist],
+                key="watchlist_remove",
+            )
+            if st.button("Rimuovi obiettivo"):
+                asta_core.remove_watchlist_item(session, remove_name)
+                asta_core.save_session(session)
+                st.rerun()
+        else:
+            st.caption("Nessun obiettivo salvato: aggiungine uno dalla scheda del giocatore chiamato.")
+
+    with st.expander("⚙️ Partecipanti", expanded=False):
+        st.caption("I nomi servono soltanto a registrare l’asta. Devono restare 10 e distinti.")
+        edited_teams = st.data_editor(
+            pd.DataFrame({"Partecipante": teams}),
+            num_rows="fixed", hide_index=True, use_container_width=True,
+            key="team_editor",
+        )
+        selected_own = st.selectbox(
+            "La mia squadra", teams,
+            index=teams.index(meta["my_team"]), key="my_team_editor",
+        )
+        if st.button("💾 Salva partecipanti"):
+            updated = [str(name).strip() for name in edited_teams["Partecipante"]]
+            if len(updated) != 10 or len(set(updated)) != 10 or not all(updated):
+                st.error("Inserisci esattamente 10 nomi distinti e non vuoti.")
+            else:
+                renamed = dict(zip(teams, updated))
+                for purchase in session["purchases"]:
+                    purchase["team"] = renamed.get(purchase["team"], purchase["team"])
+                meta["teams"] = updated
+                meta["my_team"] = renamed.get(selected_own, updated[0])
+                asta_core.save_session(session)
+                st.success("Partecipanti salvati")
+                st.rerun()
+
+    st.divider()
+    st.subheader("⚡ Giocatore chiamato ora")
+    if available.empty:
+        st.info("Non ci sono giocatori disponibili: controlla le esclusioni o annulla un acquisto.")
+    else:
+        st.text_input("Cerca giocatore chiamato", key="auction_query", placeholder="Es. Lautaro")
+        query = st.session_state.get("auction_query", "")
+        matches = suggest_player(query, available) if len(query) >= 2 else pd.DataFrame()
+        if len(query) < 2:
+            st.caption("Scrivi almeno due lettere per cercare il giocatore.")
+        elif matches.empty:
+            st.warning("Nessun giocatore disponibile con questo nome.")
+        else:
+            choices = matches["Nome"].tolist()
+            picked = st.selectbox(
+                "Giocatore", choices,
+                format_func=lambda name: (
+                    f"{name} · {matches[matches['Nome'] == name].iloc[0]['Squadra']} "
+                    f"({matches[matches['Nome'] == name].iloc[0]['Ruolo']})"
+                ),
+                key="auction_player",
+            )
+            player = matches[matches["Nome"] == picked].iloc[0]
+            if st.session_state.get("called_player") != picked:
+                st.session_state["called_player"] = picked
+                st.session_state["current_auction_price"] = 1
+                saved_watch = next(
+                    (item for item in session["watchlist"]
+                     if item["name"] == picked),
+                    None,
+                )
+                st.session_state["watch_tier"] = (
+                    saved_watch["tier"] if saved_watch else "B"
+                )
+                st.session_state["watch_note"] = (
+                    saved_watch["note"] if saved_watch else ""
+                )
+            current_price = st.number_input(
+                "Prezzo attuale", min_value=1, max_value=max(1, int(meta["budget"])),
+                step=1, key="current_auction_price",
+            )
+            advice = asta_core.auction_advice(
+                session, player, available_records, current_price=current_price
+            )
+            verdict_messages = {
+                "PUNTA": st.success,
+                "SOLO SE È UNA PRIORITÀ": st.warning,
+                "LASCIA": st.error,
+                "NON COMPRARE": st.error,
+            }
+            verdict_messages[advice["verdict"]](
+                f"{advice['verdict']} — prezzo consigliato fino a "
+                f"{advice['recommended']} crediti."
+            )
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Punta fino a", f"{advice['recommended']} crediti")
+            c2.metric("Massimo personale", f"{advice['personal_max']} crediti")
+            c3.metric("STOP cluster", f"{advice['fixed_cap']} crediti")
+            st.caption(
+                f"{advice['role_left']} slot {player['Ruolo']} da riempire · "
+                f"riserva {advice['reserve']} crediti per gli altri slot · "
+                f"{advice['alternatives']} alternative comparabili disponibili."
+            )
+            st.markdown(
+                f"**Perché:** qualità nel cluster {advice['quality']:.0%}, "
+                f"necessità reparto {advice['need']:.0%}, strategia "
+                f"{closest_role_plan(advice['priority']).lower()}."
+            )
+            if advice["watch_tier"]:
+                st.info(
+                    f"Watchlist {advice['watch_tier']}: "
+                    f"{WATCHLIST_EXPLANATIONS[advice['watch_tier']]}"
+                )
+
+            alternatives = available[
+                (available["Ruolo"] == player["Ruolo"]) &
+                (available["Nome"] != player["Nome"])
+            ].copy()
+            alternatives = alternatives[
+                (alternatives["Cluster"] <= int(player["Cluster"]) + 1) &
+                (alternatives["Rank"] > int(player["Rank"]))
+            ]
+            if alternatives.empty:
+                alternatives = available[
+                    (available["Ruolo"] == player["Ruolo"]) &
+                    (available["Nome"] != player["Nome"])
+                ].copy()
+            alternatives = alternatives.sort_values(["Cluster", "Rank"]).head(3)
+            if not alternatives.empty:
+                plan_b = alternatives[["Nome", "Squadra", "Cluster", "Rank"]].copy()
+                plan_b["Punta fino a"] = [
+                    asta_core.auction_advice(session, alt, available_records)["recommended"]
+                    for _, alt in alternatives.iterrows()
+                ]
+                plan_b["STOP"] = [
+                    asta_core.coach(session, alt)["cap"]
+                    for _, alt in alternatives.iterrows()
+                ]
+                st.markdown("**Piano B — se supera il tuo massimo, passa a:**")
+                st.dataframe(plan_b, hide_index=True, use_container_width=True)
+
+            w1, w2, w3 = st.columns([1, 1, 2])
+            watch_tier = w1.selectbox(
+                "Tipo obiettivo", ["A", "B", "C"],
+                format_func=lambda tier: f"{tier} — {WATCHLIST_EXPLANATIONS[tier]}",
+                key="watch_tier",
+            )
+            watch_note = w2.text_input("Nota privata", key="watch_note", placeholder="es. titolare")
+            if w3.button("⭐ Salva come obiettivo", use_container_width=True):
+                asta_core.save_watchlist_item(session, player, watch_tier, watch_note)
+                asta_core.save_session(session)
+                st.success(f"{player['Nome']} aggiunto alla watchlist {watch_tier}.")
+                st.rerun()
+
+            st.markdown("**Registra esito della chiamata**")
+            c1, c2 = st.columns(2)
+            buyer = c1.selectbox(
+                "Aggiudicato a", teams, index=teams.index(meta["my_team"]),
+                key="auction_buyer",
+            )
+            final_price = c2.number_input(
+                "Prezzo finale", min_value=1, max_value=max(1, int(meta["budget"])),
+                value=int(current_price), step=1, key="auction_price",
+            )
+            if st.button("✅ Registra acquisto", type="primary"):
+                try:
+                    purchase = asta_core.record_purchase(session, player, buyer, final_price)
+                    asta_core.save_session(session)
+                    over_cap = purchase["price"] - purchase["cap"]
+                    message = f"Registrato {purchase['name']} a {buyer} per {purchase['price']} crediti."
+                    if over_cap > 0:
+                        message += f" {over_cap} sopra il cap consigliato."
+                    st.success(message)
+                    st.rerun()
+                except ValueError as exc:
+                    st.error(str(exc))
+
+    st.divider()
+    market = asta_core.market_snapshot(session)
+    market_text = " · ".join(
+        f"{item['role']}: {'+' if item['delta'] >= 0 else ''}{item['delta']:.0%} "
+        f"su cap ({item['count']} acquisti)" for item in market if item["count"]
+    )
+    if market_text:
+        st.caption(f"Termometro mercato: {market_text}")
+    st.subheader("Situazione partecipanti")
+    board = pd.DataFrame([
+        {
+            "Partecipante": item["team"], "Crediti rimasti": item["remaining"],
+            "Spesi": item["spent"], "Rosa": len(item["purchases"]),
+            **item["by_role"],
+        }
+        for item in summaries
+    ])
+    st.dataframe(board, hide_index=True, use_container_width=True)
+
+    st.subheader("Rosa e annullamento")
+    roster_team = st.selectbox("Mostra rosa di", teams, key="roster_team")
+    roster = asta_core.team_summary(session, roster_team)["purchases"]
+    if not roster:
+        st.caption(f"{roster_team} non ha ancora acquisti registrati.")
+    else:
+        roster_df = pd.DataFrame(roster)[
+            ["name", "club", "role", "price", "cap", "cluster", "created"]
+        ].rename(columns={
+            "name": "Giocatore", "club": "Squadra", "role": "Ruolo",
+            "price": "Prezzo", "cap": "Cap", "cluster": "Cluster", "created": "Registrato",
+        })
+        st.dataframe(roster_df, hide_index=True, use_container_width=True)
+        undo_name = st.selectbox(
+            "Annulla acquisto", [purchase["name"] for purchase in roster],
+            key="undo_purchase",
+        )
+        if st.button("↩️ Annulla acquisto selezionato"):
+            asta_core.undo_purchase(session, undo_name)
+            asta_core.save_session(session)
+            st.success(f"Acquisto di {undo_name} annullato.")
+            st.rerun()
+
+
 def render_formazioni():
     lineups = load_lineups()
     if lineups.empty:
-        st.warning("Nessuna formazione — premi 'Scarica formazioni + tiratori' "
-                   "nella tab Setup")
+        st.warning("Nessuna formazione — usa 'Aggiorna tutto per l’asta' nella tab Setup")
         return
 
-    st.header("📋 Probabili formazioni — tutte le 20 squadre")
-    c1, c2 = st.columns([2, 3])
-    if c1.button("🔄 Ricomputa formazioni"):
-        run_scrape([
-            ("Ricalcolo formazioni...",
-             lambda: scraper.scrape_lineups(progress_cb=None)),
-            ("Aggiornando tiratori...",
-             lambda: scraper.scrape_set_pieces(progress_cb=None)),
-        ])
-        st.rerun()
-    c2.caption("Fonte: fantacalcio.it (11 attesi + panchina) + "
-               "fantacalciopedia (tiratori)")
+    updated_at = datetime.fromtimestamp(scraper.FORMAZIONI.stat().st_mtime)
+    st.header("🧩 Probabili formazioni")
+    st.markdown(
+        f"**Ultimo aggiornamento:** {updated_at:%d/%m/%Y %H:%M}  \n"
+        "Fonte: Fantacalcio.it per undici, ballottaggi e indisponibili; "
+        "Fantacalciopedia per i tiratori. Per aggiornare usa il pulsante unico "
+        "nella tab Setup."
+    )
 
     st.markdown(
         "**Legenda:** "
@@ -536,18 +903,51 @@ def render_formazioni():
         'padding:1px 8px;font-size:12px">🚩 Angoli</span> '
         '<span style="background:#b8860b;color:white;border-radius:6px;'
         'padding:1px 8px;font-size:12px">🎯 Punizioni</span> — '
-        "sfondo verde = giocatore con probabili bonus — "
+        "⭐ = nome da monitorare per bonus — "
         "* = fantamedia stimata (nessuna stagione disponibile)",
         unsafe_allow_html=True,
     )
 
     teams = sorted(lineups["Squadra"].unique())
-    team_choice = st.selectbox(
-        "Vista squadra", ["Tutte"] + teams, key="lineup_team_filter"
+    team_rows = {team: lineups[lineups["Squadra"] == team] for team in teams}
+    attention_cols = ["Ballottaggi", "Squalificati", "Infortunati", "InDubbio"]
+    attention_teams = [
+        team for team, rows in team_rows.items()
+        if any(str(rows.iloc[0].get(col, "")).strip() for col in attention_cols)
+    ]
+    bonus_teams = [
+        team for team, rows in team_rows.items()
+        if rows[["Rigorista", "Punizioni", "Angoli"]].any(axis=None)
+    ]
+    overview = st.columns(4)
+    overview[0].metric("Squadre", len(teams))
+    overview[1].metric("Titolari attesi", len(lineups))
+    overview[2].metric("Squadre con bonus", len(bonus_teams))
+    overview[3].metric("Da monitorare", len(attention_teams))
+
+    c1, c2, c3 = st.columns([2, 2, 2])
+    team_choice = c1.selectbox(
+        "Squadra", ["Tutte"] + teams, key="lineup_team_filter"
     )
+    focus = c2.selectbox(
+        "Mostra", ["Tutte", "Solo bonus", "Solo da monitorare"],
+        key="lineup_focus_filter",
+    )
+    c3.text_input("Trova giocatore", key="lineup_player_filter", placeholder="Es. Barella")
+    player_query = st.session_state.get("lineup_player_filter", "").strip().lower()
     shown_teams = teams if team_choice == "Tutte" else [team_choice]
-    st.caption(f"{len(shown_teams)} squadre visualizzate · seleziona una squadra "
-               "per una lettura piu compatta")
+    if focus == "Solo bonus":
+        shown_teams = [team for team in shown_teams if team in bonus_teams]
+    elif focus == "Solo da monitorare":
+        shown_teams = [team for team in shown_teams if team in attention_teams]
+    if player_query:
+        shown_teams = [
+            team for team in shown_teams
+            if team_rows[team]["Nome"].str.lower().str.contains(
+                player_query, regex=False
+            ).any()
+        ]
+    st.caption(f"{len(shown_teams)} squadre visibili · aggiorna i dati dalla tab Setup il giorno dell’asta")
 
     def player_row(row):
         flagged = bool(row["Rigorista"] or row["Punizioni"] or row["Angoli"])
@@ -573,28 +973,18 @@ def render_formazioni():
         cl = ""
         if pd.notna(row.get("Cluster")) and row.get("Cluster") != "":
             cl = (f'<span style="float:right;color:#1b5e20;font-weight:bold;'
-                  f'font-size:11px">Cluster {int(row["Cluster"])}</span>')
-        sub = ""
-        if row.get("Panchina"):
-            pfm = (f"{row['PanchinaFM']:.2f}"
-                   if pd.notna(row.get("PanchinaFM")) else "-")
-            pcl = ""
-            if pd.notna(row.get("PanchinaCluster")) \
-                    and row.get("PanchinaCluster") != "":
-                pcl = f' · Cluster {int(row["PanchinaCluster"])}'
-            sub = (f'<div style="color:#37474f;font-size:11px;'
-                   f'margin-top:3px;border-top:1px dashed #ccc;'
-                   f'padding-top:3px">↪ Sostituto probabile: '
-                   f'<b>{row["Panchina"]}</b> '
-                   f'<span style="color:#888">· FM {pfm}{pcl}</span></div>')
+                  f'font-size:11px">C{int(row["Cluster"])}</span>')
         return (
-            f'<div style="background:{bg};border:{border};padding:5px 9px;'
+            f'<div style="background:{bg};border:{border};padding:7px 9px;'
             f'border-radius:7px;margin:2px 0;font-size:13px">'
             f'{cl}<b>{row["Nome"]}</b> <span style="color:#666;font-size:11px">'
-            f'{ruolo} · FM {fm}</span>  {badges}{sub}</div>'
+            f'{ruolo} · FM {fm}</span>  {badges}</div>'
         )
 
-    per_row = 4 if team_choice == "Tutte" else 1
+    if not shown_teams:
+        st.info("Nessuna squadra corrisponde ai filtri selezionati.")
+        return
+    per_row = 2 if team_choice == "Tutte" else 1
     for start in range(0, len(shown_teams), per_row):
         cols = st.columns(per_row)
         for col, team in zip(cols, shown_teams[start:start + per_row]):
@@ -602,15 +992,54 @@ def render_formazioni():
             modulo = sub.iloc[0]["Modulo"] if len(sub) else "?"
             with col:
                 st.markdown(
-                    f'<div style="background:#f0f4f8;border:1px solid #d5dde5;'
-                    f'border-radius:10px;padding:8px 10px;margin-bottom:8px">'
-                    f'<b style="font-size:14px">{team}</b> '
-                    f'<span style="color:#444;font-size:12px">— {modulo}</span>'
+                    f'<div style="background:#12372a;color:#f4fbf5;border:1px solid #12372a;'
+                    f'border-radius:10px;padding:9px 11px;margin:8px 0 6px">'
+                    f'<b style="font-size:15px">{team}</b> '
+                    f'<span style="color:#d7eadb;font-size:12px">— {modulo} · '
+                    f'{len(sub)} titolari attesi</span>'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
-                for _, row in sub.iterrows():
-                    st.markdown(player_row(row), unsafe_allow_html=True)
+                for role in ROLE_ORDER + [""]:
+                    role_rows = sub[sub["Ruolo"].fillna("") == role]
+                    if role_rows.empty:
+                        continue
+                    label = role if role else "Ruolo da verificare"
+                    st.caption(label)
+                    for _, row in role_rows.iterrows():
+                        st.markdown(player_row(row), unsafe_allow_html=True)
+                bench = sub[sub["Panchina"].fillna("") != ""][
+                    ["Panchina", "PanchinaRuolo", "PanchinaFM", "PanchinaCluster"]
+                ].drop_duplicates()
+                if not bench.empty:
+                    bench_labels = []
+                    for _, substitute in bench.iterrows():
+                        fm = (f"FM {substitute['PanchinaFM']:.2f}"
+                              if pd.notna(substitute["PanchinaFM"]) else "FM -")
+                        cluster = (f"C{int(substitute['PanchinaCluster'])}"
+                                   if pd.notna(substitute["PanchinaCluster"])
+                                   and substitute["PanchinaCluster"] != "" else "")
+                        bench_labels.append(
+                            " · ".join(filter(None, [
+                                str(substitute["Panchina"]),
+                                str(substitute["PanchinaRuolo"]), fm, cluster,
+                            ]))
+                        )
+                    st.caption("Panchina / coperture: " + "  |  ".join(bench_labels))
+                notes = []
+                labels = {
+                    "Ballottaggi": "🔄 Ballottaggi",
+                    "Squalificati": "⛔ Squalificati",
+                    "Infortunati": "🩹 Infortunati",
+                    "InDubbio": "❓ In dubbio",
+                    "Diffidati": "🟨 Diffidati",
+                }
+                for field, label in labels.items():
+                    value = str(sub.iloc[0].get(field, "")).strip()
+                    if value:
+                        notes.append(f"**{label}:** {value}")
+                if notes:
+                    st.warning("  \n".join(notes))
 
 
 def main():
@@ -628,6 +1057,9 @@ def main():
     st.sidebar.metric("Budget attivo", f"{budget} crediti")
     session = st.session_state.get("session")
     if session:
+        asta_core.ensure_session(session)
+        own = asta_core.team_summary(session, session["meta"]["my_team"])
+        st.sidebar.metric("Miei crediti rimasti", own["remaining"])
         st.sidebar.caption(
             f"Configurazione: budget {session['meta']['budget']} · "
             f"salvata il {session['meta']['created'].replace('T', ' ')}"
@@ -639,9 +1071,13 @@ def main():
         st.sidebar.caption("Configurazione predefinita · salva un setup per "
                            "conservarlo")
 
-    tab_setup, tab_players, tab_form = st.tabs(["Setup", "Giocatori", "Formazioni"])
+    tab_setup, tab_live, tab_players, tab_form = st.tabs(
+        ["Setup", "Asta live", "Giocatori", "Formazioni"]
+    )
     with tab_setup:
         render_setup()
+    with tab_live:
+        render_live_auction()
     with tab_players:
         render_players()
     with tab_form:
