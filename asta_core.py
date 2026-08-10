@@ -6,7 +6,11 @@ from pathlib import Path
 from data_loader import ROLE_ORDER, fair_values_scaled
 
 SESSION_DIR = Path(__file__).parent / "data" / "sessions"
-DEFAULT_TEAMS = [f"Manager {number}" for number in range(1, 11)]
+DEFAULT_TEAMS = [
+    "bro", "giorgio", "lolo", "pistacchio", "rochira",
+    "piermattei", "babbo", "bubba", "riolo", "mattia",
+]
+LEGACY_DEFAULT_TEAMS = [f"Manager {number}" for number in range(1, 11)]
 DEFAULT_ROLE_PRIORITIES = {"P": 0.8, "D": 1.0, "C": 1.0, "A": 1.2}
 WATCHLIST_ADJUSTMENTS = {"A": 0.04, "B": 0.0, "C": -0.06}
 
@@ -37,6 +41,13 @@ def ensure_session(session):
     """Upgrade sessions created before the live-auction tracker existed."""
     meta = session.setdefault("meta", {})
     teams = meta.get("teams") or list(DEFAULT_TEAMS)
+    if teams == LEGACY_DEFAULT_TEAMS:
+        rename = dict(zip(LEGACY_DEFAULT_TEAMS, DEFAULT_TEAMS))
+        for purchase in session.get("purchases", []):
+            purchase["team"] = rename.get(purchase.get("team"), purchase.get("team"))
+        if meta.get("my_team") in rename:
+            meta["my_team"] = rename[meta["my_team"]]
+        teams = list(DEFAULT_TEAMS)
     if len(teams) != 10 or len(set(teams)) != 10:
         teams = list(DEFAULT_TEAMS)
     meta["teams"] = teams

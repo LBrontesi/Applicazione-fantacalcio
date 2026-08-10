@@ -27,6 +27,11 @@ def main():
             failures.append(name)
 
     players = build_players()
+    default_session = asta_core.new_session()
+    check("default participants", default_session["meta"]["teams"] == [
+        "bro", "giorgio", "lolo", "pistacchio", "rochira", "piermattei",
+        "babbo", "bubba", "riolo", "mattia",
+    ] and default_session["meta"]["my_team"] == "bro")
     check("players loaded", not players.empty, f"({len(players)} players)")
     check("cluster column", "Cluster" in players.columns)
     check("score column", "Score" in players.columns)
