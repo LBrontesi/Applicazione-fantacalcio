@@ -10,7 +10,7 @@ from streamlit.testing.v1 import AppTest
 
 import asta_core
 import scraper
-from app_asta import load_excluded, save_excluded
+from app_asta import load_excluded, roster_alerts, save_excluded, source_freshness
 from data_loader import (
     DEFAULT_METHOD, DEFAULT_RANK_WEIGHTS, ROLE_ORDER, backtest_predictor,
     build_lineups, build_players, load_ranking_weights,
@@ -44,6 +44,26 @@ def main():
           players["SeasonValue"].between(0, 1).all() and
           players["Upside"].between(0, 1).all() and
           players["DataConfidence"].between(0, 1).all())
+    freshness = source_freshness()
+    check("source freshness status", {
+        "Quotazioni", "Giocatori/FCP", "Formazioni", "Tiratori",
+    }.issubset({item["label"] for item in freshness}) and
+          all(item["state"] in {"🟢", "🟠", "🔴"} for item in freshness))
+    stack_sample = players.head(3)
+    stacked_own = {
+        "purchases": [
+            {"name": row["Nome"], "club": "Inter", "role": row["Ruolo"], "price": 1}
+            for _, row in stack_sample.iterrows()
+        ],
+        "spent": 3,
+        "by_role": stack_sample["Ruolo"].value_counts().to_dict(),
+    }
+    check("same-club roster alert", any(
+        "Troppi giocatori della stessa squadra" in alert
+        for alert in roster_alerts(
+            stacked_own, players, {"P": 3, "D": 8, "C": 8, "A": 6}
+        )
+    ))
     stats_backup = scraper.ADVANCED_STATS.read_bytes() \
         if scraper.ADVANCED_STATS.exists() else None
     try:

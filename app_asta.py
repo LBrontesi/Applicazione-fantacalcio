@@ -183,6 +183,74 @@ def closest_role_plan(value):
     ))
 
 
+def source_freshness():
+    """Return short, auction-day friendly freshness labels for local sources."""
+    sources = [
+        ("Quotazioni", scraper.QUOTAZIONI, 24),
+        ("Giocatori/FCP", scraper.PLAYERS_FCP, 24 * 7),
+        ("Formazioni", scraper.FORMAZIONI, 8),
+        ("Tiratori", scraper.SET_PIECES, 24 * 7),
+    ]
+    now = datetime.now().timestamp()
+    result = []
+    for label, path, fresh_hours in sources:
+        if not path.exists():
+            result.append({"label": label, "value": "Manca", "state": "🔴"})
+            continue
+        age_hours = max(0, (now - path.stat().st_mtime) / 3600)
+        if age_hours < 1:
+            value = f"{max(1, round(age_hours * 60))} min fa"
+        elif age_hours < 24:
+            value = f"{age_hours:.0f} ore fa"
+        else:
+            value = f"{age_hours / 24:.0f} giorni fa"
+        state = "🟢" if age_hours <= fresh_hours else "🟠"
+        result.append({"label": label, "value": value, "state": state})
+    return result
+
+
+def roster_alerts(own, players, slots):
+    """Return only actionable roster risks; avoid warnings at auction start."""
+    purchases = own.get("purchases", [])
+    if not purchases:
+        return []
+    alerts = []
+    clubs = pd.Series([
+        str(item.get("club", "")).strip() for item in purchases
+        if str(item.get("club", "")).strip()
+    ]).value_counts()
+    crowded = [f"{club} ({count})" for club, count in clubs.items() if count >= 3]
+    if crowded:
+        alerts.append("Troppi giocatori della stessa squadra: " + ", ".join(crowded) + ".")
+
+    total_spent = max(1, int(own.get("spent", 0)))
+    for role in ROLE_ORDER:
+        role_spent = sum(int(item.get("price", 0)) for item in purchases
+                         if item.get("role") == role)
+        if len(purchases) >= 5 and role_spent / total_spent >= 0.45:
+            alerts.append(
+                f"{role} assorbe il {role_spent / total_spent:.0%} dei crediti spesi."
+            )
+
+    if len(purchases) >= 10:
+        for role in ROLE_ORDER:
+            planned = max(1, int(slots.get(role, 0)))
+            bought = int(own.get("by_role", {}).get(role, 0))
+            if bought == 0 or (planned >= 4 and bought / planned < 0.25):
+                alerts.append(f"Reparto {role} molto indietro: {bought}/{planned} giocatori.")
+
+    names = {str(item.get("name", "")) for item in purchases}
+    owned = players[players["Nome"].isin(names)]
+    if len(purchases) >= 8 and not owned.empty:
+        starters = int(owned["Starter"].fillna(0).sum())
+        if starters < max(2, round(len(purchases) * 0.40)):
+            alerts.append(f"Pochi titolari probabili in rosa: {starters}/{len(purchases)}.")
+        attacking = owned[owned["Ruolo"].isin(["C", "A"])]
+        if len(attacking) >= 3 and not (attacking["SetPieces"].fillna(0) >= 0.3).any():
+            alerts.append("Nessun centrocampista/attaccante con piazzati rilevati.")
+    return alerts
+
+
 def render_setup():
     st.header("⚙️ Setup")
     st.markdown(
@@ -607,7 +675,8 @@ def render_live_auction():
     teams = meta["teams"]
     summaries = asta_core.auction_summary(session)
     own = next(item for item in summaries if item["team"] == meta["my_team"])
-    available = players_df()
+    all_players = players_df()
+    available = all_players
     unavailable = load_excluded() | asta_core.purchased_names(session)
     available = available[~available["Nome"].isin(unavailable)].copy()
     available_records = available.to_dict("records")
@@ -627,6 +696,18 @@ def render_live_auction():
         f"{role} {own['by_role'][role]}/{meta['slots'][role]}" for role in ROLE_ORDER
     )
     st.caption(f"Rosa: {role_progress}")
+
+    freshness = source_freshness()
+    freshness_columns = st.columns(len(freshness))
+    for column, item in zip(freshness_columns, freshness):
+        column.metric(item["label"], f"{item['state']} {item['value']}")
+    st.caption("🟢 aggiornato · 🟠 da aggiornare · 🔴 dato non disponibile")
+
+    alerts = roster_alerts(own, all_players, meta["slots"])
+    if alerts:
+        st.warning("**Attenzioni sulla mia rosa**\n\n" + "\n".join(
+            f"- {alert}" for alert in alerts
+        ))
 
     with st.expander("🧭 Piano personale e watchlist", expanded=True):
         st.caption(
@@ -788,18 +869,40 @@ def render_live_auction():
                     (available["Nome"] != player["Nome"])
                 ].copy()
             alternatives = alternatives.sort_values(["Cluster", "Rank"]).head(3)
-            if not alternatives.empty:
-                plan_b = alternatives[["Nome", "Squadra", "Cluster", "Rank"]].copy()
-                plan_b["Punta fino a"] = [
-                    asta_core.auction_advice(session, alt, available_records)["recommended"]
-                    for _, alt in alternatives.iterrows()
-                ]
-                plan_b["STOP"] = [
-                    asta_core.coach(session, alt)["cap"]
-                    for _, alt in alternatives.iterrows()
-                ]
-                st.markdown("**Piano B — se supera il tuo massimo, passa a:**")
-                st.dataframe(plan_b, hide_index=True, use_container_width=True)
+            comparison_rows = [{
+                "Scelta": "Chiamato ora",
+                "Giocatore": player["Nome"],
+                "Squadra": player["Squadra"],
+                "Cluster": int(player["Cluster"]),
+                "Valore stagione": f"{float(player.get('SeasonValue', 0)):.0%}",
+                "Titolare": "Sì" if float(player.get("Starter", 0)) >= 0.5 else "No / dubbio",
+                "Punta fino a": advice["recommended"],
+                "STOP": advice["fixed_cap"],
+            }]
+            for _, alternative in alternatives.iterrows():
+                alternative_advice = asta_core.auction_advice(
+                    session, alternative, available_records
+                )
+                comparison_rows.append({
+                    "Scelta": "Alternativa",
+                    "Giocatore": alternative["Nome"],
+                    "Squadra": alternative["Squadra"],
+                    "Cluster": int(alternative["Cluster"]),
+                    "Valore stagione": f"{float(alternative.get('SeasonValue', 0)):.0%}",
+                    "Titolare": (
+                        "Sì" if float(alternative.get("Starter", 0)) >= 0.5
+                        else "No / dubbio"
+                    ),
+                    "Punta fino a": alternative_advice["recommended"],
+                    "STOP": alternative_advice["fixed_cap"],
+                })
+            st.markdown("**Confronto diretto — il chiamato contro il tuo piano B:**")
+            st.dataframe(
+                pd.DataFrame(comparison_rows), hide_index=True,
+                use_container_width=True,
+            )
+            if alternatives.empty:
+                st.caption("Non ci sono alternative comparabili ancora disponibili in questo ruolo.")
 
             w1, w2, w3 = st.columns([1, 1, 2])
             watch_tier = w1.selectbox(
