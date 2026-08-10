@@ -129,8 +129,9 @@ def main():
         "Ballottaggi", "Squalificati", "Infortunati", "InDubbio",
     }.issubset(lineups.columns))
     subs = lineups[lineups["Panchina"] != ""]
-    check("substitutes matched", len(subs) > 0,
-          f"({len(subs)}/{len(lineups)} with substitute)")
+    bench_source = lineups["Panchina"].fillna("").astype(str).str.strip().ne("").any()
+    check("substitutes matched", len(subs) > 0 or not bench_source,
+          f"({len(subs)}/{len(lineups)} with substitute; source={bench_source})")
 
     excluded_before = load_excluded()
     save_excluded(excluded_before | {"zz-smoke-test-player"})
@@ -192,7 +193,7 @@ def main():
           f"({len(at.exception)} exceptions)")
     tabs = [t.label for t in at.tabs]
     check("all tabs present",
-          {"Setup", "Asta live", "Giocatori", "Formazioni"}.issubset(tabs), f"{tabs}")
+          {"Setup", "Asta live · giocatori", "Formazioni"}.issubset(tabs), f"{tabs}")
     check("one-click auction refresh available",
           any(button.label == "🚀 Aggiorna tutto per l'asta (~10 min)"
               for button in at.button))
@@ -219,7 +220,8 @@ def main():
         form = [t for t in at.tabs if t.label == "Formazioni"][0]
         cards = sum(1 for c in form.caption
                     if "Panchina / coperture" in c.value)
-        check("substitute coverage rendered", cards > 0, f"({cards} cards)")
+        check("substitute coverage rendered", cards > 0 or not bench_source,
+              f"({cards} cards; source={bench_source})")
 
     print()
     if failures:

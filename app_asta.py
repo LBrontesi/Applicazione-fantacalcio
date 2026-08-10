@@ -458,7 +458,7 @@ def render_players():
         st.session_state["nom_search"] = clicked
         st.session_state["nom_select"] = clicked
 
-    st.header("🔍 Cerca giocatore")
+    st.header("📊 Ranking e schede giocatori")
     st.markdown(
         '<p class="section-note">Cerca un nome per aprire la scheda completa, '
         'oppure filtra direttamente il ranking per ruolo e cluster.</p>',
@@ -1071,14 +1071,14 @@ def main():
         st.sidebar.caption("Configurazione predefinita · salva un setup per "
                            "conservarlo")
 
-    tab_setup, tab_live, tab_players, tab_form = st.tabs(
-        ["Setup", "Asta live", "Giocatori", "Formazioni"]
+    tab_setup, tab_auction, tab_form = st.tabs(
+        ["Setup", "Asta live · giocatori", "Formazioni"]
     )
     with tab_setup:
         render_setup()
-    with tab_live:
+    with tab_auction:
         render_live_auction()
-    with tab_players:
+        st.divider()
         render_players()
     with tab_form:
         render_formazioni()
