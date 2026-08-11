@@ -28,7 +28,7 @@ Lascia questo Terminale aperto fino alla fine dell'asta. Per fermarlo, premi `Ct
 
 ```bash
 cd /Users/bro/Desktop/Applicazione-fantacalcio
-/Library/Frameworks/Python.framework/Versions/3.13/bin/python3.13 -m streamlit run app_asta.py --server.port 7860 --server.address 127.0.0.1
+/Library/Frameworks/Python.framework/Versions/3.13/bin/python3.13 web_app.py
 ```
 
 4. Apri <http://127.0.0.1:7860/> e verifica che sia tutto visibile.

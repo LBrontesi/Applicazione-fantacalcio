@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Asta Coach — Assistente asta fantacalcio</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+  <div class="scroll-progress" aria-hidden="true"><span id="scroll-progress-bar"></span></div>
+  <div class="bg-glow bg-glow-1" aria-hidden="true"></div>
+  <div class="bg-glow bg-glow-2" aria-hidden="true"></div>
+
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">⚽</div>
+      <div>
+        <h1>Asta Coach</h1>
+        <p class="subtitle">Assistente personale per l'asta del fantacalcio</p>
+      </div>
+    </div>
+    <nav class="tabs" id="tab-nav" aria-label="Sezioni">
+      <button class="tab is-active" data-tab="auction">Asta live</button>
+      <button class="tab" data-tab="players">Giocatori</button>
+      <button class="tab" data-tab="lineups">Formazioni</button>
+      <button class="tab" data-tab="setup">Setup</button>
+    </nav>
+    <div class="header-actions">
+      <div id="budget-chip" class="chip chip-muted">—</div>
+      <button id="theme-toggle" class="btn btn-ghost" title="Alterna tema">🌙 Tema</button>
+      <div id="connection" class="badge badge-muted">connessione…</div>
+    </div>
+  </header>
+
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="hero-copy">
+      <span class="section-index">Auction day · Serie A</span>
+      <h2 id="hero-title">Decidi in fretta, <em>senza inseguire il prezzo.</em></h2>
+      <p>
+        Ranking per ruolo, cluster fissi da 10, fair value come cap invalicabile
+        e un consiglio personale che si adatta alla tua rosa.
+      </p>
+    </div>
+    <div class="hero-stats" id="hero-stats">
+      <div class="stat-card"><span class="stat-label">Giocatori</span><strong class="stat-value" data-stat="players">—</strong></div>
+      <div class="stat-card"><span class="stat-label">Budget attivo</span><strong class="stat-value" data-stat="budget">—</strong></div>
+      <div class="stat-card"><span class="stat-label">Crediti rimasti</span><strong class="stat-value" data-stat="remaining">—</strong></div>
+      <div class="stat-card"><span class="stat-label">Acquisti</span><strong class="stat-value" data-stat="bought">—</strong></div>
+    </div>
+  </section>
+
+  <main class="layout">
+    <!-- ============================ ASTA LIVE ============================ -->
+    <section class="tab-panel is-active" id="tab-auction" data-panel="auction">
+      <div id="auction-no-session" class="alert alert-info hidden">
+        Prima salva budget e fair value nella tab <button class="link-inline" data-action="goto-setup">Setup</button>:
+        serviranno per l'asta live.
+      </div>
+
+      <div class="panel" id="auction-top">
+        <div class="panel-head">
+          <h3>🎯 Il mio tavolo</h3>
+          <span class="panel-note" id="auction-session-name"></span>
+        </div>
+        <div class="grid cols-4" id="own-metrics"></div>
+        <div class="role-progress" id="role-progress"></div>
+        <div class="chips-row" id="freshness"></div>
+        <p class="note">🟢 aggiornato · 🟠 da aggiornare · 🔴 dato non disponibile</p>
+        <div id="roster-alerts"></div>
+      </div>
+
+      <div class="grid cols-2">
+        <details class="panel accordion" open>
+          <summary>🧭 Piano personale e watchlist</summary>
+          <div class="accordion-body">
+            <p class="note">Scegli come spendere nei reparti: cambia solo il prezzo consigliato, mai lo STOP del cluster.</p>
+            <div class="plan-row" id="plan-controls"></div>
+            <button class="btn btn-primary" data-action="save-plan">💾 Salva piano personale</button>
+            <div id="watchlist-panel"></div>
+          </div>
+        </details>
+
+        <details class="panel accordion">
+          <summary>⚙️ Partecipanti</summary>
+          <div class="accordion-body">
+            <p class="note">I nomi servono solo a registrare l'asta: 10 partecipanti, distinti e non vuoti.</p>
+            <div class="teams-editor" id="teams-editor"></div>
+            <div class="form-row">
+              <label>La mia squadra</label>
+              <select class="select" id="my-team-select"></select>
+            </div>
+            <button class="btn btn-primary" data-action="save-teams">💾 Salva partecipanti</button>
+          </div>
+        </details>
+      </div>
+
+      <div class="panel" id="auction-workspace">
+        <div class="panel-head">
+          <h3>⚡ Giocatore chiamato ora</h3>
+          <span class="panel-note">cerca il chiamato per ottenere prezzo, STOP e piano B</span>
+        </div>
+        <div id="auction-available-note"></div>
+        <div class="search-box" id="auction-search-wrap">
+          <input class="input search-input" id="auction-query" type="text"
+                 placeholder="Es. Lautaro" autocomplete="off" spellcheck="false">
+          <div class="suggestions" id="auction-suggestions" hidden></div>
+        </div>
+        <div id="auction-advice"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h3>📊 Situazione partecipanti</h3>
+          <span class="panel-note" id="market-thermometer"></span>
+        </div>
+        <div class="table-wrap"><table class="data" id="board-table"></table></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h3>🛒 Rosa e annullamento</h3></div>
+        <div class="form-row">
+          <label>Mostra rosa di</label>
+          <select class="select" id="roster-team-select"></select>
+        </div>
+        <div id="roster-view"></div>
+      </div>
+    </section>
+
+    <!-- ============================ GIOCATORI ============================ -->
+    <section class="tab-panel" id="tab-players" data-panel="players">
+      <div class="panel">
+        <div class="panel-head">
+          <h3>🔍 Cerca giocatore</h3>
+          <span class="panel-note" id="players-hidden-note"></span>
+        </div>
+        <div class="search-box">
+          <input class="input search-input" id="players-query" type="text"
+                 placeholder="Cerca un nome per aprire la scheda completa" autocomplete="off" spellcheck="false">
+          <div class="suggestions" id="players-suggestions" hidden></div>
+        </div>
+        <div id="player-card"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h3>🎯 Filtra per ruolo e cluster</h3></div>
+        <div class="form-row form-row-inline">
+          <label>Ruolo</label>
+          <select class="select" id="players-role"></select>
+          <label>Cluster</label>
+          <select class="select" id="players-cluster"></select>
+          <span class="note" id="players-count-note"></span>
+        </div>
+        <div class="table-wrap" id="players-table-wrap"></div>
+        <div class="action-row">
+          <button class="btn btn-primary" data-action="exclude-selected">🗑️ Rimuovi selezionati (già battuti)</button>
+        </div>
+        <div id="restore-panel"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h3>📋 Massimo per cluster</h3><span class="panel-note" id="fair-cluster-note"></span></div>
+        <div class="grid cols-4" id="fair-tables"></div>
+      </div>
+    </section>
+
+    <!-- ============================ FORMAZIONI ============================ -->
+    <section class="tab-panel" id="tab-lineups" data-panel="lineups">
+      <div class="panel">
+        <div class="panel-head"><h3>🧩 Probabili formazioni</h3><span class="panel-note" id="lineups-updated"></span></div>
+        <div class="legend" id="lineups-legend"></div>
+        <div class="grid cols-4" id="lineups-overview"></div>
+        <div class="form-row form-row-inline">
+          <label>Squadra</label>
+          <select class="select" id="lineups-team"></select>
+          <label>Mostra</label>
+          <select class="select" id="lineups-focus"></select>
+          <input class="input" id="lineups-query" type="text" placeholder="Trova giocatore" autocomplete="off">
+        </div>
+        <p class="note" id="lineups-count-note"></p>
+        <div id="lineups-list"></div>
+      </div>
+    </section>
+
+    <!-- ============================= SETUP ============================= -->
+    <section class="tab-panel" id="tab-setup" data-panel="setup">
+      <div class="panel">
+        <div class="panel-head">
+          <h3>🔄 Dati</h3>
+          <span class="panel-note">un solo aggiornamento per arrivare pronto all'asta</span>
+        </div>
+        <p class="note" id="setup-advanced-note"></p>
+        <div class="action-row">
+          <button class="btn btn-primary btn-lg" data-action="run-scrape">🚀 Aggiorna tutto per l'asta (~10 min)</button>
+          <div class="scrape-status" id="scrape-status"></div>
+        </div>
+        <div class="progress-track hidden" id="scrape-progress"><span></span></div>
+
+        <details class="accordion">
+          <summary>📥 Statistiche storiche avanzate (consigliato)</summary>
+          <div class="accordion-body">
+            <p class="note">Esporta le statistiche Serie A da FBref o FotMob in CSV e caricale qui: import locale, nessuna API fragile il giorno dell'asta.</p>
+            <div class="action-row">
+              <input class="input" id="advanced-file" type="file" accept=".csv">
+              <button class="btn btn-primary" data-action="import-advanced">Importa statistiche avanzate</button>
+            </div>
+          </div>
+        </details>
+
+        <div class="grid cols-5" id="setup-summary"></div>
+        <details class="accordion">
+          <summary>Anteprima dati</summary>
+          <div class="accordion-body">
+            <div class="table-wrap"><table class="data" id="setup-preview"></table></div>
+          </div>
+        </details>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h3>⚙️ Configurazione cap (fair value per cluster)</h3></div>
+        <p class="note">Cluster fissi da 10 giocatori: il cap di un giocatore è il fair value del suo cluster.</p>
+        <div class="form-row">
+          <label>Budget iniziale</label>
+          <input class="input" id="setup-budget" type="number" min="10" max="5000" step="10" value="500">
+          <button class="btn btn-primary" data-action="save-config">💾 Salva configurazione</button>
+          <div class="spacer"></div>
+          <label>Carica configurazione</label>
+          <select class="select" id="setup-load-session"></select>
+        </div>
+        <div class="fair-editor" id="fair-editor"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h3>🎚️ Pesi classifica</h3></div>
+        <p class="note">
+          Punteggio = media pesata normalizzata dei componenti (0–1 per ruolo). Al salvataggio
+          la classifica (rank e cluster) viene ricalcolata.
+        </p>
+        <div class="form-row">
+          <label>Metodo classifica</label>
+          <select class="select" id="setup-method"></select>
+        </div>
+        <div class="slider-grid" id="weights-editor"></div>
+        <div class="action-row">
+          <button class="btn btn-primary" data-action="save-weights">💾 Salva pesi classifica</button>
+          <span class="note">Diagnostica modello (Spearman ρ):</span>
+          <div class="chips-row" id="rho-chips"></div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      Asta Coach · ranking, cluster e consigli personali · dati locali in <code>data/</code>
+    </footer>
+  </main>
+
+  <div class="toast-wrap" id="toast-wrap" aria-live="polite"></div>
+
+  <script type="module" src="app.js?v=1"></script>
+</body>
+</html>

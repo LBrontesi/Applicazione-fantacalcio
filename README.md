@@ -12,7 +12,17 @@ Install the dependencies with Python 3.13:
 python3.13 -m pip install -r requirements.txt
 ```
 
-Start the application:
+Start the application (web UI — HTML/CSS/JavaScript client, Python HTTP backend):
+
+```bash
+python3.13 web_app.py
+```
+
+Open <http://127.0.0.1:7860/>. Set `PORT` to use a different port. The
+browser client talks to the JSON API in `web_app.py`; the data pipeline,
+auction engine and scrapers are shared with the Streamlit version.
+
+A legacy Streamlit UI is still available for reference:
 
 ```bash
 streamlit run app_asta.py
@@ -111,13 +121,21 @@ runtime state round-trips, and Streamlit startup.
 ## Project Structure
 
 ```text
-app_asta.py       Streamlit UI
+web_app.py        Python HTTP backend (static files + JSON API)
+web/              HTML/CSS/JavaScript frontend (index.html, style.css, app.js, api-client.js)
+app_asta.py       Legacy Streamlit UI
 data_loader.py    Data loading, feature engineering, ranking, and clusters
 asta_core.py      Auction sessions and cluster fair-value lookup
 scraper.py        External data download and parsing
 data/             CSV fixtures and runtime auction state
-tests/             Offline smoke test
+tests/            Offline smoke test
 ```
+
+The web UI offers the same four areas as the Streamlit version — Setup,
+Asta live, Giocatori, Formazioni — with a dynamic client: live search with
+suggestions, personal bid advice that refreshes as the price changes, a
+background data refresh with progress, dark/light themes, and toasts for
+every saved action.
 
 Runtime sessions and ranking preferences are local state. Do not commit
 `data/sessions/` or `data/ranking_weights.json`.
