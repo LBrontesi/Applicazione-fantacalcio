@@ -459,6 +459,9 @@ function adviceCoreHtml() {
     : a.verdict === "SOLO SE È UNA PRIORITÀ" ? "verdict-warn"
     : "verdict-leave";
   const watchTier = a.watch_tier ? `<div class="alert alert-info">Watchlist ${esc(a.watch_tier)}: ${esc(explanations[a.watch_tier] || "")}</div>` : "";
+  const stackWarning = a.club_stack_warning
+    ? `<div class="alert alert-warn">⚠️ Avresti ${int(a.same_club_owned + 1)} giocatori del ${esc(player.Squadra)}: diversifica la rosa salvo scelta consapevole.</div>`
+    : "";
 
   return `
     <div class="bid-card">
@@ -481,8 +484,9 @@ function adviceCoreHtml() {
       Prezzo attuale ${int(state.auction.price)} cr · ${int(a.role_left)} slot ${esc(player.Ruolo)} da riempire ·
       riserva ${int(a.reserve)} crediti per gli altri slot · ${int(a.alternatives)} alternative comparabili disponibili.
     </p>
-    <p class="note"><strong>Perché:</strong> qualità nel cluster ${pct(a.quality)} · necessità reparto ${pct(a.need)} · strategia ${esc(advice.plan_label)}.</p>
+    <p class="note"><strong>Perché:</strong> qualità ${pct(a.quality)} · confidenza dati ${pct(a.confidence)} · vantaggio sul miglior piano B ${pct(a.replacement_gap)} · opportunità al prezzo attuale ${pct(a.opportunity)} · necessità reparto ${pct(a.need)} · strategia ${esc(advice.plan_label)}.</p>
     ${watchTier}
+    ${stackWarning}
 
     <div class="panel-head"><h4 style="margin:10px 0 4px">Confronto diretto — il chiamato contro il tuo piano B</h4></div>
     <div class="table-wrap"><table class="data">
@@ -607,8 +611,9 @@ function renderPlayerCard() {
     ["Robustezza", p.C_Injury], ["Affidabilità impiego", p.C_Availability],
     ["Modello FM attesa", p.C_Model], ["xG + xA per 90", p.C_ExpectedOutput],
     ["Media voto storica", p.C_MediaVoto], ["Presenze storiche", p.C_Presenze],
-    ["Rigori segnati", p.C_Rigori], ["Gol+assist per 90", p.C_Produttivita],
-    ["Gol subiti/90 (inv.)", p.C_GolSubiti],
+    ["Gol+assist per presenza", p.C_Produttivita],
+    ["Gol subiti per presenza (inv.)", p.C_GolSubiti],
+    ["Contesto squadra", p.C_TeamContext], ["Confidenza dati", p.C_Confidence],
   ].filter(([label, value]) => value != null && Number(value) !== 0);
   const maxC = Math.max(1, ...components.map(([, v]) => Number(v) || 0));
 
@@ -626,6 +631,7 @@ function renderPlayerCard() {
       <div class="kv"><div class="kv-label">Quotazione QA</div><div class="kv-value">${int(p.QA)}</div></div>
       <div class="kv"><div class="kv-label">FM attesa (modello)</div><div class="kv-value">${p.PredFM != null ? num(p.PredFM) : "—"}</div></div>
       <div class="kv"><div class="kv-label">Confidenza dati</div><div class="kv-value">${pct(p.DataConfidence)}</div></div>
+      <div class="kv"><div class="kv-label">Contesto storico</div><div class="kv-value">${p.HistPresenze == null ? "nessun dato storico" : (p.TransferUncertainty > 0 ? "nuova squadra" : "coerente")}</div></div>
       <div class="kv"><div class="kv-label">Affidabilità impiego</div><div class="kv-value">${pct(p.Availability)}</div></div>
       <div class="kv"><div class="kv-label">Valore stagione</div><div class="kv-value">${pct(p.SeasonValue)}</div></div>
       <div class="kv"><div class="kv-label">Upside</div><div class="kv-value">${pct(p.Upside)}</div></div>
@@ -640,7 +646,7 @@ function renderPlayerCard() {
       <div class="kv"><div class="kv-label">xG+xA/90</div><div class="kv-value">${p.xGI90 != null ? num(p.xGI90) : "—"}</div></div>
     ${p.Ruolo === "P" && (p.GolSubiti90 != null || p.RigoriParati != null) ? `
       <div class="kv"><div class="kv-label">Gol subiti</div><div class="kv-value">${int(p.GolSubiti)}</div></div>
-      <div class="kv"><div class="kv-label">Gol subiti/partita</div><div class="kv-value">${p.GolSubiti90 != null ? num(p.GolSubiti90) : "—"}</div></div>
+      <div class="kv"><div class="kv-label">Gol subiti/presenza</div><div class="kv-value">${p.GolSubiti90 != null ? num(p.GolSubiti90) : "—"}</div></div>
       <div class="kv"><div class="kv-label">Rigori parati</div><div class="kv-value">${p.RigoriParati != null ? int(p.RigoriParati) : "—"}</div></div>` : ""}
     </div>` : ""}
     ${p.HistMV != null ? `
@@ -783,7 +789,7 @@ function renderTeamCard(team, rows) {
 }
 
 function playerRowHtml(row) {
-  const flagged = !!(row.Rigorista || row.Punizioni || row.Angoli);
+  const flagged = !!(row.Rigorista || row.Piazzati || row.Punizioni || row.Angoli);
   let badges = "";
   if (row.Rigorista) badges += `<span class="setpiece-badge sp-rig">⚽ ${int(row.RigoristaOrdine)}° rigore</span> `;
   if (row.Angoli) badges += `<span class="setpiece-badge sp-ang">🚩 ${int(row.AngoliOrdine)}° angolo</span> `;

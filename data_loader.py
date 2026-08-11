@@ -785,19 +785,20 @@ def build_players(progress_cb=None, weights=None):
                 sub["C_GolSubiti"] = (
                     weights.get("GolSubiti", 0.0) * ga_inv
                 ).where(ga90.notna(), 0.0)
-        sub["C_MediaVoto"] = weights.get("MediaVoto", 0.0) * _rank_norm(
-            pd.to_numeric(sub.get("HistMV"), errors="coerce").fillna(0.0)
+        # Missing historical data is neutral, not a synthetic zero that is
+        # then rewarded by a percentile rank.  Rank only observed values;
+        # _rank_norm keeps missing entries at zero contribution.
+        hist_mv = pd.to_numeric(sub.get("HistMV"), errors="coerce")
+        hist_apps = pd.to_numeric(sub.get("HistPresenze"), errors="coerce")
+        hist_penalties = pd.to_numeric(sub.get("HistRigori"), errors="coerce")
+        hist_output = (
+            pd.to_numeric(sub.get("HistGol90"), errors="coerce")
+            + pd.to_numeric(sub.get("HistAss90"), errors="coerce")
         )
-        sub["C_Presenze"] = weights.get("Presenze", 0.0) * _rank_norm(
-            pd.to_numeric(sub.get("HistPresenze"), errors="coerce").fillna(0.0)
-        )
-        sub["C_Rigori"] = weights.get("Rigori", 0.0) * _rank_norm(
-            pd.to_numeric(sub.get("HistRigori"), errors="coerce").fillna(0.0)
-        )
-        sub["C_Produttivita"] = weights.get("Produttivita", 0.0) * _rank_norm(
-            pd.to_numeric(sub.get("HistGol90"), errors="coerce").fillna(0.0)
-            + pd.to_numeric(sub.get("HistAss90"), errors="coerce").fillna(0.0)
-        )
+        sub["C_MediaVoto"] = weights.get("MediaVoto", 0.0) * _rank_norm(hist_mv)
+        sub["C_Presenze"] = weights.get("Presenze", 0.0) * _rank_norm(hist_apps)
+        sub["C_Rigori"] = weights.get("Rigori", 0.0) * _rank_norm(hist_penalties)
+        sub["C_Produttivita"] = weights.get("Produttivita", 0.0) * _rank_norm(hist_output)
         manual = (
             sub["C_FM"] + sub["C_FVM"] + sub["C_ALG"]
             + sub["C_Starter"] + sub["C_SetPieces"]

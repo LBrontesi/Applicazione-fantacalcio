@@ -163,13 +163,18 @@ def auction_advice(session, player, available_players, current_price=None):
     reserve = max(0, total_left - 1)
     affordable = max(0, summary["remaining"] - reserve)
     rank = int(_number(player.get("Rank"), 1))
-    quality = 1.0 - ((rank - 1) % 10) / 9.0
+    # Quality belongs to the player; opportunity depends on the live market.
+    # Keep a rank fallback for old player exports without SeasonValue.
+    quality = _number(player.get("SeasonValue"), -1.0)
+    if quality < 0.0:
+        quality = 1.0 - ((rank - 1) % 10) / 9.0
     need = role_left / slots if slots else 0.0
     priority = session["meta"]["role_priorities"].get(role, 1.0)
     priority_n = (priority - 0.5) / 1.0
     score = _number(player.get("Score"))
     cluster = int(_number(player.get("Cluster"), 1))
     alternatives = 0
+    replacement_values = []
     for candidate in available_players:
         if str(candidate.get("Nome", "")) == str(player["Nome"]):
             continue
@@ -179,7 +184,22 @@ def auction_advice(session, player, available_players, current_price=None):
         candidate_score = _number(candidate.get("Score"))
         if candidate_cluster <= cluster + 1 and candidate_score >= score - 0.10:
             alternatives += 1
+            replacement_values.append(_number(candidate.get("SeasonValue"), 0.0))
     scarcity = 1.0 - min(alternatives, 6) / 6.0
+    replacement_value = max(replacement_values, default=0.0)
+    replacement_gap = max(0.0, quality - replacement_value)
+    confidence = _number(player.get("DataConfidence"), 0.5)
+
+    # Warn before a third player from the same Serie A club. The warning is
+    # explicit and the recommendation is only gently reduced: it remains the
+    # user's choice to pursue a deliberate stack.
+    own_clubs = [
+        str(purchase.get("club", "")).strip()
+        for purchase in summary["purchases"]
+        if str(purchase.get("club", "")).strip()
+    ]
+    same_club_owned = sum(club == str(player.get("Squadra", "")).strip() for club in own_clubs)
+    club_stack_warning = same_club_owned >= 2
     watch_tier = next(
         (item.get("tier") for item in session["watchlist"]
          if item.get("name") == str(player["Nome"])),
@@ -187,13 +207,18 @@ def auction_advice(session, player, available_players, current_price=None):
     )
     watch_adjustment = WATCHLIST_ADJUSTMENTS.get(watch_tier, 0.0)
     target_ratio = (
-        0.58 + 0.20 * quality + 0.13 * need + 0.05 * priority_n
-        + 0.04 * scarcity + watch_adjustment
+        0.56 + 0.20 * quality + 0.13 * need + 0.05 * priority_n
+        + 0.04 * scarcity + 0.07 * replacement_gap
+        + 0.03 * confidence + watch_adjustment
     )
+    if club_stack_warning:
+        target_ratio -= 0.05
     target = max(1, round(fixed_cap * min(1.0, target_ratio)))
     personal_max = min(fixed_cap, affordable) if role_left else 0
     recommended = min(target, personal_max) if personal_max else 0
     price = _number(current_price, 0)
+    price_pressure = price / personal_max if personal_max else 1.0
+    opportunity = (quality + replacement_gap) * max(0.0, 1.0 - price_pressure)
     if not role_left or not personal_max:
         verdict = "NON COMPRARE"
     elif price and price > personal_max:
@@ -211,10 +236,16 @@ def auction_advice(session, player, available_players, current_price=None):
         "role_left": role_left,
         "total_left": total_left,
         "quality": quality,
+        "confidence": confidence,
         "need": need,
         "priority": priority,
         "alternatives": alternatives,
         "scarcity": scarcity,
+        "replacement_value": replacement_value,
+        "replacement_gap": replacement_gap,
+        "opportunity": opportunity,
+        "same_club_owned": same_club_owned,
+        "club_stack_warning": club_stack_warning,
         "watch_tier": watch_tier,
         "watch_adjustment": watch_adjustment,
         "verdict": verdict,

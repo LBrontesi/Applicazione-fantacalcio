@@ -39,6 +39,7 @@ from data_loader import (
 PROJECT_DIR = Path(__file__).resolve().parent
 WEB_DIR = PROJECT_DIR / "web"
 PORT = int(os.getenv("PORT", "7860"))
+HOST = os.getenv("HOST", "127.0.0.1")
 MAX_REQUEST_BYTES = int(os.getenv("MAX_REQUEST_BYTES", str(10 * 1024 * 1024)))
 
 WEIGHT_LABELS = {
@@ -51,11 +52,13 @@ WEIGHT_LABELS = {
     "Injury": "Robustezza infortuni (premia chi non si infortuna)",
     "Availability": "Affidabilità d'impiego (formazione + robustezza)",
     "ExpectedOutput": "xG + xA per 90 (CSV storico)",
-    "GolSubiti": "Gol subiti/90 (portieri, statistiche)",
+    "GolSubiti": "Gol subiti per presenza (portieri, statistiche)",
     "MediaVoto": "Media voto storica (Gazzetta)",
     "Presenze": "Presenze stagioni passate (affidabilità)",
     "Rigori": "Rigori segnati (bonus rigoristi)",
-    "Produttivita": "Gol + assist per 90 (storico)",
+    "Produttivita": "Gol + assist per presenza (storico)",
+    "TeamContext": "Contesto squadra attuale",
+    "Confidence": "Confidenza dati (premia stime robuste)",
 }
 
 METHOD_LABELS = {
@@ -880,9 +883,9 @@ class WebHandler(BaseHTTPRequestHandler):
 
 
 def main():
-    server = ThreadingHTTPServer(("0.0.0.0", PORT), WebHandler)
+    server = ThreadingHTTPServer((HOST, PORT), WebHandler)
     server.daemon_threads = True
-    LOGGER.info("Asta Coach listening on port %s — open http://127.0.0.1:%s/", PORT, PORT)
+    LOGGER.info("Asta Coach listening on http://%s:%s/", HOST, PORT)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

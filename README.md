@@ -121,10 +121,10 @@ python3.13 scraper.py --advanced /path/to/export.csv
 per i portieri:
 
 - **Media voto storica** (Gazzetta), **Presenze** (affidabilità), **Gol +
-  assist per 90** e **Rigori segnati** (chi batte i rigori prende un bonus)
+  assist per presenza** e **Rigori segnati** (chi batte i rigori prende un bonus)
   entrano come componenti per ogni ruolo, con peso regolabile in
   `Setup → Pesi classifica`.
-- Per i **portieri** la componente **Gol subiti/90** è invertita (meno gol
+- Per i **portieri** la componente **Gol subiti per presenza** è invertita (meno gol
   subiti = punteggio più alto) e si attiva solo con 10+ presenze nel campione.
 - Le stesse colonne storiche alimentano anche le feature del **modello
   predittivo**, alzando la diagnostica Spearman (ρ) di ogni ruolo.
