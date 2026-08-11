@@ -634,7 +634,7 @@ function renderPlayerCard() {
               <div class="bb-row">
                 <span class="bb-label" title="${esc(label)}">${esc(label)}</span>
                 <span class="bb-track"><span class="bb-fill" style="width:${share}%"></span></span>
-                <span class="bb-val">${num(value, 3)}<small>${share.toFixed(0)}%</small></span>
+                <span class="bb-val">${num(value, 3)}<small>/${String(Number(maxC))}</small></span>
               </div>`;
           }).join("")}
         </div>
