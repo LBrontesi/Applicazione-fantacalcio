@@ -458,7 +458,7 @@ function renderAuctionAdvice() {
     <div class="grid cols-3">
       <div class="metric-card"><div class="metric-label">Punta fino a</div><div class="metric-value">${int(a.recommended)} cr</div></div>
       <div class="metric-card"><div class="metric-label">Massimo personale</div><div class="metric-value">${int(a.personal_max)} cr</div></div>
-      <div class="metric-card"><div class="metric-label">Crediti disponibili</div><div class="metric-value">${int(a.affordable)} cr</div></div>
+      <div class="metric-card"><div class="metric-label">Crediti rimasti</div><div class="metric-value">${int(state.app.own.remaining)} cr</div><div class="metric-sub">di cui ${int(a.reserve)} riservati agli altri slot</div></div>
     </div>
     <div class="alert ${verdictClass}">
       ${esc(a.verdict)} — prezzo consigliato fino a ${int(a.recommended)} crediti.
