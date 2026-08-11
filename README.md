@@ -86,6 +86,8 @@ python3.13 scraper.py --quotes
 python3.13 scraper.py --players
 python3.13 scraper.py --lineups --setpieces
 python3.13 scraper.py --panchinari
+python3.13 scraper.py --statistiche          # ultime 3 stagioni
+python3.13 scraper.py --statistiche 2020-21,2019-20
 ```
 
 Use `python3.13 scraper.py --all` to run every scraper. Scraping requires a
@@ -110,6 +112,18 @@ auction day. You can also run it from the terminal:
 ```bash
 python3.13 scraper.py --advanced /path/to/export.csv
 ```
+
+### Gol subiti per i portieri
+
+`scraper.py --statistiche` scarica le tabelle stagionali di fantacalcio.it
+(anche indietro fino alla stagione 2015/16) e salva un CSV per stagione in
+`data/statistiche_*.csv`. Per ogni portiere con un campione utile (10+ presenze
+nelle stagioni scaricate) il ranking calcola la componente **Gol subiti/90**
+(peso regolabile in `Setup → Pesi classifica`): meno gol subiti = punteggio più
+alto. La scheda del portiere mostra anche i gol subiti totali e i rigori parati.
+I portieri che in quelle stagioni non erano in Serie A restano neutri (nessun
+dato, nessuna penalizzazione). Il pulsante **Aggiorna tutto per l'asta** esegue
+anche questo step.
 
 ## Tests
 

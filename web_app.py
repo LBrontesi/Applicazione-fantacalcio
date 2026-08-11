@@ -51,6 +51,7 @@ WEIGHT_LABELS = {
     "Injury": "Robustezza infortuni (premia chi non si infortuna)",
     "Availability": "Affidabilità d'impiego (formazione + robustezza)",
     "ExpectedOutput": "xG + xA per 90 (CSV storico)",
+    "GolSubiti": "Gol subiti/90 (portieri, CSV storico)",
 }
 
 METHOD_LABELS = {
@@ -221,6 +222,7 @@ def source_freshness():
         ("Formazioni", scraper.FORMAZIONI, 8),
         ("Tiratori", scraper.SET_PIECES, 24 * 7),
         ("Panchinari", scraper.PANCHINARI, 24 * 7),
+        ("Statistiche stagioni", _latest_statistiche_path(), 24 * 7),
     ]
     now = datetime.now().timestamp()
     result = []
@@ -238,6 +240,11 @@ def source_freshness():
         state = "green" if age_hours <= fresh_hours else "amber"
         result.append({"label": label, "value": value, "state": state})
     return result
+
+
+def _latest_statistiche_path():
+    files = sorted(scraper.DATA_DIR.glob("statistiche_*.csv"))
+    return files[-1] if files else scraper.DATA_DIR / "statistiche_nessuna.csv"
 
 
 def roster_alerts(session, players):
@@ -298,16 +305,18 @@ def closest_role_plan(value):
 
 def _run_scrape_job():
     jobs = [
-        ("1/5 Scaricando quotazioni Gazzetta...",
+        ("1/6 Scaricando quotazioni Gazzetta...",
          lambda: scraper.scrape_quotazioni(progress_cb=None)),
-        ("2/5 Scaricando lista giocatori FCP (può richiedere alcuni minuti)...",
+        ("2/6 Scaricando lista giocatori FCP (può richiedere alcuni minuti)...",
          lambda: scraper.scrape_fantacalciopedia(progress_cb=None)),
-        ("3/5 Aggiornando formazioni, ballottaggi e indisponibili...",
+        ("3/6 Aggiornando formazioni, ballottaggi e indisponibili...",
          lambda: scraper.scrape_lineups(progress_cb=None)),
-        ("4/5 Aggiornando rigoristi e tiratori...",
+        ("4/6 Aggiornando rigoristi e tiratori...",
          lambda: scraper.scrape_set_pieces(progress_cb=None)),
-        ("5/5 Aggiornando probabili panchinari (sosfanta)...",
+        ("5/6 Aggiornando probabili panchinari (sosfanta)...",
          lambda: scraper.scrape_panchinari(progress_cb=None)),
+        ("6/6 Aggiornando statistiche stagionali (gol subiti portieri)...",
+         lambda: scraper.scrape_statistiche(progress_cb=None)),
     ]
     total = float(len(jobs))
     try:

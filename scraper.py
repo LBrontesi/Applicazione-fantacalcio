@@ -98,6 +98,11 @@ ADVANCED_STAT_ALIASES = {
     "Rossi": ["crdr", "red cards", "rossi"],
     "GiorniInfortunio": ["days", "days injured", "injury days", "giorni infortunio"],
     "GareSaltate": ["games missed", "matches missed", "gare saltate"],
+    "GolSubiti": ["ga", "goals against", "gol subiti", "reti subite", "gol subiti subiti"],
+    "GolSubiti90": ["ga90", "ga per 90", "goals against per 90",
+                    "gol subiti per 90", "gol subiti/90", "reti subite per 90"],
+    "CleanSheet": ["cs", "clean sheets", "cleansheets", "clean sheet",
+                   "porte inviolate"],
 }
 
 
@@ -523,6 +528,89 @@ def _parse_formation_tipo(line):
     return rows
 
 
+STATISTICHE_URL = "https://www.fantacalcio.it/statistiche-serie-a"
+# Codici squadra 3 lettere usati nelle statistiche → nomi canonici.
+STAT_TEAM_CODES = {
+    "ATA": "Atalanta", "BOL": "Bologna", "CAG": "Cagliari", "CAR": "Carpi",
+    "CHI": "Chievo", "CRO": "Crotone", "COM": "Como", "CRE": "Cremonese",
+    "EMP": "Empoli", "FIO": "Fiorentina", "FRO": "Frosinone", "GEN": "Genoa",
+    "INT": "Inter", "JUV": "Juventus", "LAZ": "Lazio", "LEC": "Lecce",
+    "MIL": "Milan", "MON": "Monza", "NAP": "Napoli", "PAL": "Palermo",
+    "PAR": "Parma", "PES": "Pescara", "PIS": "Pisa", "ROM": "Roma",
+    "SAL": "Salernitana", "SAM": "Sampdoria", "SAS": "Sassuolo",
+    "SPA": "SPAL", "SPE": "Spezia", "TOR": "Torino", "UDI": "Udinese",
+    "VEN": "Venezia", "VER": "Verona", "BEN": "Benevento",
+}
+# Stagioni completate scaricate di default per gol subiti/rigori parati.
+DEFAULT_STATISTICHE_SEASONS = ["2025-26", "2024-25", "2023-24"]
+
+
+def _num(text):
+    try:
+        return float(_clean(text).replace(",", "."))
+    except (ValueError, AttributeError):
+        return float("nan")
+
+
+def scrape_statistiche_season(season, progress_cb=None):
+    """Season stats table (fantacalcio.it) for one Serie A season.
+
+    Includes, for every player: presenze, media voto, fantamedia, gol,
+    gol subiti, rigori (segnati/tirati), rigori parati, assist and cards.
+    Goalkeepers are the rows with GolSubiti > 0.
+    """
+    DATA_DIR.mkdir(exist_ok=True)
+    html = _get(f"{STATISTICHE_URL}/{season}")
+    soup = bs(html.content, "html.parser")
+    table = soup.select_one("table#stats")
+    if not table:
+        raise ScrapeError(
+            f"Tabella statistiche non trovata per la stagione {season}: "
+            "struttura del sito cambiata?"
+        )
+    rows = []
+    for tr in table.select("tbody tr"):
+        name_el = tr.select_one("th.player-name span")
+        if not name_el:
+            continue
+
+        def cell(key):
+            el = tr.select_one(f'td[data-col-key="{key}"]')
+            return _clean(el.get_text()) if el else ""
+
+        rows.append({
+            "Nome": _clean(name_el.get_text()),
+            "Squadra": cell("sq"),
+            "Presenze": _num(cell("pg")),
+            "MediaVoto": _num(cell("mv")),
+            "Fantamedia": _num(cell("mfv")),
+            "Gol": _num(cell("gol")),
+            "GolSubiti": _num(cell("gs")),
+            "Rigori": cell("rig"),
+            "RigoriParati": _num(cell("rp")),
+            "Assist": _num(cell("ass")),
+            "Ammonizioni": _num(cell("amm")),
+            "Espulsioni": _num(cell("esp")),
+        })
+    if not rows:
+        raise ScrapeError(f"Nessuna riga estratta per la stagione {season}")
+    out = pd.DataFrame(rows)
+    path = DATA_DIR / f"statistiche_{season}.csv"
+    out.to_csv(path, index=False)
+    if progress_cb:
+        progress_cb(f"{season}: {len(out)} calciatori salvati in {path.name}")
+    return out
+
+
+def scrape_statistiche(seasons=None, progress_cb=None):
+    """Scrape the season stats tables for the requested seasons."""
+    seasons = list(seasons or DEFAULT_STATISTICHE_SEASONS)
+    frames = []
+    for season in seasons:
+        frames.append(scrape_statistiche_season(season, progress_cb))
+    return pd.concat(frames, ignore_index=True)
+
+
 def scrape_panchinari(progress_cb=None):
     """Fetch the sosfanta season article and save possible bench players.
 
@@ -569,6 +657,12 @@ if __name__ == "__main__":
     parser.add_argument("--lineups", action="store_true")
     parser.add_argument("--setpieces", action="store_true")
     parser.add_argument("--panchinari", action="store_true")
+    parser.add_argument(
+        "--statistiche", nargs="?", const=True, default=False,
+        metavar="STAGIONI",
+        help="scarica statistiche stagionali (es. 2025-26,2024-25); "
+             "senza valore usa le ultime 3 stagioni",
+    )
     parser.add_argument("--advanced", metavar="CSV",
                         help="importa CSV storico FBref/FotMob")
     parser.add_argument("--all", action="store_true")
@@ -581,6 +675,7 @@ if __name__ == "__main__":
         args.lineups = True
         args.setpieces = True
         args.panchinari = True
+        args.statistiche = True
 
     if args.players:
         print("scraping fantacalciopedia players...")
@@ -602,6 +697,14 @@ if __name__ == "__main__":
         print("scraping probable bench players from sosfanta...")
         df = scrape_panchinari(progress_cb=print)
         print(f"saved {len(df)} bench slots to {PANCHINARI}")
+    if args.statistiche:
+        seasons = (
+            [s.strip() for s in args.statistiche.split(",") if s.strip()]
+            if isinstance(args.statistiche, str) else None
+        )
+        print(f"scraping season stats ({seasons or 'default 3 seasons'})...")
+        df = scrape_statistiche(seasons, progress_cb=print)
+        print(f"saved {len(df)} season rows to data/statistiche_*.csv")
     if args.advanced:
         df = import_advanced_stats(args.advanced, progress_cb=print)
         print(f"saved {len(df)} players to {ADVANCED_STATS}")

@@ -8,7 +8,7 @@ import pandas as pd
 
 from scraper import (
     ADVANCED_STATS, DATA_DIR, FORMAZIONI, PANCHINARI, PLAYERS_FCP, QUOTAZIONI,
-    SET_PIECES, normalize_name,
+    SET_PIECES, STAT_TEAM_CODES, normalize_name,
 )
 
 ROLE_ORDER = ["P", "D", "C", "A"]
@@ -26,6 +26,7 @@ DEFAULT_RANK_WEIGHTS = {
     "Injury": 0.5,
     "Availability": 0.4,
     "ExpectedOutput": 0.35,
+    "GolSubiti": 0.4,
 }
 
 DEFAULT_METHOD = "blend"
@@ -188,6 +189,102 @@ def load_advanced_stats():
             return pd.DataFrame()
         df[col] = df[col].fillna("").astype(str)
     return df
+
+
+def load_statistiche():
+    """Season stats tables from fantacalcio.it (one CSV per season)."""
+    frames = []
+    for path in sorted(DATA_DIR.glob("statistiche_*.csv")):
+        try:
+            frames.append(pd.read_csv(path))
+        except (OSError, ValueError):
+            continue
+    if not frames:
+        return pd.DataFrame()
+    return pd.concat(frames, ignore_index=True)
+
+
+def _keeper_name_score(player_name, stat_name):
+    """Strict name match for goalkeepers against the season stats table.
+
+    Both names are reduced to their significant tokens (single-letter
+    initials are dropped, so 'Milinkovic-Savic V.' loses its trailing 'V').
+    A candidate matches when its tokens equal the player's or form a prefix
+    of them ('Milinkovic-Savic' -> 'Milinkovic Savic Vanja'), or when a
+    single-surname stat name equals the player's first surname. Rejecting
+    single-letter prefixes avoids 'V.' matching an unrelated 'Vismara'.
+    """
+    p_tokens = _tokens(player_name)
+    s_tokens = _tokens(stat_name)
+    if not p_tokens or not s_tokens:
+        return 0.0
+    p_sig = [t for t in p_tokens if len(t) > 1]
+    s_sig = [t for t in s_tokens if len(t) > 1]
+    if not s_sig:
+        return 0.0
+    if p_sig == s_sig:
+        return 1.0
+    shorter, longer = (s_sig, p_sig) if len(s_sig) <= len(p_sig) else (p_sig, s_sig)
+    if longer[:len(shorter)] == shorter and len(shorter) >= 2:
+        return 0.98
+    if len(s_sig) == 1 and len(p_sig) >= 1 and s_sig[0] == p_sig[0]:
+        return 0.95
+    return 0.0
+
+
+def _apply_goalkeeper_stats(players):
+    """Fill keeper gol subiti / rigori parati from the season stats tables.
+
+    Totals are summed across all scraped seasons and, for goalkeepers who
+    switched clubs, across teams too (match by name). GolSubiti90 (goals
+    conceded per appearance) is only set for keepers with a meaningful sample
+    (10+ appearances), so backups with a handful of games stay neutral.
+    Rows without a match keep NaN, which the C_GolSubiti component treats as
+    neutral: these are keepers who did not play in Serie A in those seasons.
+    """
+    stats = load_statistiche()
+    if stats.empty:
+        return players
+    stats = stats.copy()
+    stats["Squadra"] = stats["Squadra"].map(
+        lambda code: STAT_TEAM_CODES.get(str(code).strip().upper(), str(code).strip())
+    )
+    agg = (
+        stats.groupby("Nome", as_index=False)
+        .agg(
+            GolSubiti=("GolSubiti", "sum"),
+            Presenze=("Presenze", "sum"),
+            RigoriParati=("RigoriParati", "sum"),
+        )
+    )
+    agg["GolSubiti"] = pd.to_numeric(agg["GolSubiti"], errors="coerce").fillna(0.0)
+    agg["Presenze"] = pd.to_numeric(agg["Presenze"], errors="coerce").fillna(0.0)
+    agg["RigoriParati"] = pd.to_numeric(agg["RigoriParati"], errors="coerce").fillna(0.0)
+    # Considera solo i veri portieri che hanno giocato: un ruolo di movimento
+    # ha sempre GolSubiti=0 e RigoriParati=0, quindi il filtro evita di
+    # agganciare omonimi (es. un difensore 'Pessina' a un portiere 'Pessina').
+    agg = agg[(agg["GolSubiti"] > 0) | (agg["RigoriParati"] > 0)]
+    agg = agg[agg["Presenze"] > 0]
+    for index, row in players.iterrows():
+        if row["Ruolo"] != "P":
+            continue
+        best, best_score = None, 0.0
+        for _, candidate in agg.iterrows():
+            score = max(
+                _keeper_name_score(str(row.get("NomeGaz", "")), str(candidate["Nome"])),
+                _keeper_name_score(str(row.get("Nome", "")), str(candidate["Nome"])),
+            )
+            if score > best_score:
+                best, best_score = candidate, score
+        if best is None or best_score < 0.9:
+            continue
+        players.at[index, "GolSubiti"] = float(best["GolSubiti"])
+        players.at[index, "RigoriParati"] = float(best["RigoriParati"])
+        if float(best["Presenze"]) >= 10:
+            players.at[index, "GolSubiti90"] = (
+                float(best["GolSubiti"]) / float(best["Presenze"])
+            )
+    return players
 
 
 def _tokens(name):
@@ -357,6 +454,7 @@ def build_players(progress_cb=None, weights=None):
         for col in [
             "Presenze", "Titolarita", "Minuti", "xG", "xA", "Gol", "Assist",
             "Gialli", "Rossi", "xGI90", "GiorniInfortunio", "GareSaltate",
+            "GolSubiti", "GolSubiti90", "CleanSheet",
         ]:
             row[col] = _to_float(advanced_row[col]) if advanced_row is not None and col in advanced_row else float("nan")
         matched_rows.append(row)
@@ -478,6 +576,11 @@ def build_players(progress_cb=None, weights=None):
         df["HistorySeasons"].clip(lower=0, upper=3) / 3.0
     )
 
+    # Gol subiti/90 per i portieri dalle statistiche stagionali fantacalcio.it
+    # (solo per chi ha giocato in Serie A nelle stagioni scaricate). La
+    # componente C_GolSubiti viene calcolata più avanti, per ruolo P.
+    df = _apply_goalkeeper_stats(df)
+
     if weights is None:
         weights = load_ranking_weights()
 
@@ -556,11 +659,25 @@ def build_players(progress_cb=None, weights=None):
         sub["C_Availability"] = weights["Availability"] * sub["Availability"]
         xgi_n = _rank_norm(sub["xGI90"].fillna(0))
         sub["C_ExpectedOutput"] = weights["ExpectedOutput"] * xgi_n
+        # Gol subiti/90 dal CSV storico (FBref): solo per i portieri e solo
+        # quando la fonte li ha registrati (es. squadre che erano in Serie A).
+        # Più basso è meglio: il rank viene invertito e chi non ha dati resta
+        # neutro (componente a zero) senza alterare i ruoli di movimento.
+        sub["C_GolSubiti"] = 0.0
+        ga_active = False
+        if role == "P" and "GolSubiti90" in sub.columns:
+            ga90 = pd.to_numeric(sub["GolSubiti90"], errors="coerce")
+            ga_active = bool(ga90.notna().any())
+            if ga_active:
+                ga_inv = 1.0 - _rank_norm(ga90)
+                sub["C_GolSubiti"] = (
+                    weights.get("GolSubiti", 0.0) * ga_inv
+                ).where(ga90.notna(), 0.0)
         manual = (
             sub["C_FM"] + sub["C_FVM"] + sub["C_ALG"]
             + sub["C_Starter"] + sub["C_SetPieces"]
             + sub["C_Tags"] + sub["C_Injury"] + sub["C_Availability"]
-            + sub["C_ExpectedOutput"]
+            + sub["C_ExpectedOutput"] + sub["C_GolSubiti"]
         )
         manual_scale = (
             abs(weights["FM"]) + abs(weights["FVM"]) + abs(weights["ALG"])
@@ -570,6 +687,7 @@ def build_players(progress_cb=None, weights=None):
             + abs(weights["Availability"])
             + (abs(weights["ExpectedOutput"])
                if sub["xGI90"].notna().any() else 0.0)
+            + (abs(weights.get("GolSubiti", 0.0)) if ga_active else 0.0)
         )
         manual_n = manual / manual_scale if manual_scale else manual * 0.0
         model = _role_model(sub)

@@ -23,6 +23,7 @@ WEIGHT_LABELS = {
     "Injury": "Robustezza infortuni (premia chi non si infortuna)",
     "Availability": "Affidabilità d'impiego (formazione + robustezza)",
     "ExpectedOutput": "xG + xA per 90 (CSV storico)",
+    "GolSubiti": "Gol subiti/90 (portieri, CSV storico)",
 }
 
 ROLE_PLAN_CHOICES = {

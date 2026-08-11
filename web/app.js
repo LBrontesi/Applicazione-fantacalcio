@@ -606,7 +606,8 @@ function renderPlayerCard() {
     ["Titolare", p.C_Starter], ["Set-pieces", p.C_SetPieces], ["Attributi", p.C_Tags],
     ["Robustezza", p.C_Injury], ["Affidabilità impiego", p.C_Availability],
     ["Modello FM attesa", p.C_Model], ["xG + xA per 90", p.C_ExpectedOutput],
-  ].filter(([label, value]) => value != null);
+    ["Gol subiti/90 (inv.)", p.C_GolSubiti],
+  ].filter(([label, value]) => value != null && (label === "Gol subiti/90 (inv.)" ? value !== 0 : true));
   const maxC = Math.max(1, ...components.map(([, v]) => Number(v) || 0));
 
   setHTML("#player-card", `
@@ -628,13 +629,18 @@ function renderPlayerCard() {
       <div class="kv"><div class="kv-label">Upside</div><div class="kv-value">${pct(p.Upside)}</div></div>
       <div class="kv"><div class="kv-label">Rank</div><div class="kv-value">${int(p.Rank)}/${roleCount}</div></div>
     </div>
-    ${p.Minuti != null || p.xGI90 != null ? `
+    ${p.Minuti != null || p.xGI90 != null || p.GolSubiti90 != null ? `
     <div class="kv-list">
       <div class="kv"><div class="kv-label">Minuti storici</div><div class="kv-value">${int(p.Minuti)}</div></div>
       <div class="kv"><div class="kv-label">Titolare storico</div><div class="kv-value">${int(p.Titolarita)}</div></div>
       <div class="kv"><div class="kv-label">xG/90</div><div class="kv-value">${p.xG90 != null ? num(p.xG90) : "—"}</div></div>
       <div class="kv"><div class="kv-label">xA/90</div><div class="kv-value">${p.xA90 != null ? num(p.xA90) : "—"}</div></div>
       <div class="kv"><div class="kv-label">xG+xA/90</div><div class="kv-value">${p.xGI90 != null ? num(p.xGI90) : "—"}</div></div>
+      ${p.Ruolo === "P" && (p.GolSubiti90 != null || p.RigoriParati != null) ? `
+      <div class="kv"><div class="kv-label">Gol subiti</div><div class="kv-value">${int(p.GolSubiti)}</div></div>
+      <div class="kv"><div class="kv-label">Gol subiti/partita</div><div class="kv-value">${p.GolSubiti90 != null ? num(p.GolSubiti90) : "—"}</div></div>
+      <div class="kv"><div class="kv-label">Rigori parati</div><div class="kv-value">${p.RigoriParati != null ? int(p.RigoriParati) : "—"}</div></div>
+      <div class="kv" style="grid-column:1/-1"><div class="kv-label">Ultime stagioni Serie A (fantacalcio.it)</div><div class="kv-value" style="font-weight:500;font-size:11px;color:var(--muted)">gol subiti totali nelle stagioni scaricate; assente se non in Serie A</div></div>` : ""}
       ${p.GareSaltate != null ? `<div class="kv"><div class="kv-label">Gare saltate</div><div class="kv-value">${int(p.GareSaltate)}</div></div>` : ""}
     </div>` : ""}
     <p class="note">${esc(p.Nome)} è nel cluster ${int(p.Cluster)} dei ${esc(p.Ruolo)} (ordinati per punteggio). Fair value del cluster: ${int(cap)}. Se il prezzo sale sopra ${int(cap)}, esci dall'asta.</p>
