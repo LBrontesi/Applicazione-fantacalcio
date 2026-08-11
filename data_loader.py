@@ -27,6 +27,10 @@ DEFAULT_RANK_WEIGHTS = {
     "Availability": 0.4,
     "ExpectedOutput": 0.35,
     "GolSubiti": 0.4,
+    "MediaVoto": 0.4,
+    "Presenze": 0.3,
+    "Rigori": 0.4,
+    "Produttivita": 0.3,
 }
 
 DEFAULT_METHOD = "blend"
@@ -56,6 +60,7 @@ ROLE_BLEND_MODEL_WEIGHT = {"P": 0.35, "D": 0.55, "C": 0.60, "A": 0.65}
 MODEL_FEATURES = [
     "FM2", "FM3", "ALGnum", "FVM", "TagScore", "Starter", "SetPieces",
     "InjuryP", "Availability", "MinutesPct", "StartsPct", "xG90", "xA90",
+    "HistMV", "HistGol90", "HistAss90", "HistRigori", "HistPresenze",
 ]
 
 TAG_SCORES = {
@@ -232,15 +237,15 @@ def _keeper_name_score(player_name, stat_name):
     return 0.0
 
 
-def _apply_goalkeeper_stats(players):
-    """Fill keeper gol subiti / rigori parati from the season stats tables.
+def _apply_season_stats(players):
+    """Fill historical season stats for every player from fantacalcio.it.
 
-    Totals are summed across all scraped seasons and, for goalkeepers who
-    switched clubs, across teams too (match by name). GolSubiti90 (goals
-    conceded per appearance) is only set for keepers with a meaningful sample
-    (10+ appearances), so backups with a handful of games stay neutral.
-    Rows without a match keep NaN, which the C_GolSubiti component treats as
-    neutral: these are keepers who did not play in Serie A in those seasons.
+    Goalkeepers are the rows with GolSubiti/RigoriParati > 0, everyone else
+    is an outfield row. Totals (goals, assists, appearances, penalties) are
+    summed across the scraped seasons and MediaVoto is averaged weighted by
+    appearances; a player who switched clubs is matched by name. For keepers
+    with a meaningful sample (10+ appearances) GolSubiti90 is also derived
+    from goals conceded. Rows without a match stay NaN (not in Serie A).
     """
     stats = load_statistiche()
     if stats.empty:
@@ -249,41 +254,77 @@ def _apply_goalkeeper_stats(players):
     stats["Squadra"] = stats["Squadra"].map(
         lambda code: STAT_TEAM_CODES.get(str(code).strip().upper(), str(code).strip())
     )
-    agg = (
-        stats.groupby("Nome", as_index=False)
-        .agg(
-            GolSubiti=("GolSubiti", "sum"),
+    for col in ["GolSubiti", "RigoriParati"]:
+        if col not in stats:
+            stats[col] = 0.0
+    stats["GolSubiti"] = pd.to_numeric(stats["GolSubiti"], errors="coerce").fillna(0.0)
+    stats["RigoriParati"] = pd.to_numeric(stats["RigoriParati"], errors="coerce").fillna(0.0)
+    is_keeper = (stats["GolSubiti"] > 0) | (stats["RigoriParati"] > 0)
+    keeper_rows = stats[is_keeper].copy()
+    outfield_rows = stats[~is_keeper].copy()
+
+    def aggregate(frame):
+        if frame.empty:
+            return pd.DataFrame()
+        out = frame.groupby("Nome", as_index=False).agg(
+            Gol=("Gol", "sum"),
+            Assist=("Assist", "sum"),
             Presenze=("Presenze", "sum"),
-            RigoriParati=("RigoriParati", "sum"),
+            RigoriSegnati=("RigoriSegnati", "sum"),
         )
-    )
-    agg["GolSubiti"] = pd.to_numeric(agg["GolSubiti"], errors="coerce").fillna(0.0)
-    agg["Presenze"] = pd.to_numeric(agg["Presenze"], errors="coerce").fillna(0.0)
-    agg["RigoriParati"] = pd.to_numeric(agg["RigoriParati"], errors="coerce").fillna(0.0)
-    # Considera solo i veri portieri che hanno giocato: un ruolo di movimento
-    # ha sempre GolSubiti=0 e RigoriParati=0, quindi il filtro evita di
-    # agganciare omonimi (es. un difensore 'Pessina' a un portiere 'Pessina').
-    agg = agg[(agg["GolSubiti"] > 0) | (agg["RigoriParati"] > 0)]
-    agg = agg[agg["Presenze"] > 0]
-    for index, row in players.iterrows():
-        if row["Ruolo"] != "P":
-            continue
+        mv = frame.groupby("Nome").apply(
+            lambda g: float(np.average(
+                pd.to_numeric(g["MediaVoto"], errors="coerce").fillna(0.0),
+                weights=pd.to_numeric(g["Presenze"], errors="coerce").fillna(0.0).clip(lower=0),
+            )) if g["Presenze"].sum() > 0 else float("nan"),
+            include_groups=False,
+        ).reset_index(name="MediaVoto")
+        return out.merge(mv, on="Nome")
+
+    agg_keeper = aggregate(keeper_rows)
+    agg_outfield = aggregate(outfield_rows)
+    for col in ["Gol", "Assist", "Presenze", "RigoriSegnati"]:
+        for frame in [agg_keeper, agg_outfield]:
+            frame[col] = pd.to_numeric(frame[col], errors="coerce").fillna(0.0)
+
+    def match_candidates(name, candidates):
         best, best_score = None, 0.0
-        for _, candidate in agg.iterrows():
+        for _, candidate in candidates.iterrows():
             score = max(
-                _keeper_name_score(str(row.get("NomeGaz", "")), str(candidate["Nome"])),
-                _keeper_name_score(str(row.get("Nome", "")), str(candidate["Nome"])),
+                _keeper_name_score(name, str(candidate["Nome"])),
+                _keeper_name_score(name, str(candidate["Nome"])),
             )
             if score > best_score:
                 best, best_score = candidate, score
-        if best is None or best_score < 0.9:
+        return best, best_score
+
+    for index, row in players.iterrows():
+        name = str(row.get("NomeGaz", "")) or str(row.get("Nome", ""))
+        if row["Ruolo"] == "P":
+            candidate, score = match_candidates(name, agg_keeper)
+        else:
+            candidate, score = match_candidates(name, agg_outfield)
+        if candidate is None or score < 0.9:
             continue
-        players.at[index, "GolSubiti"] = float(best["GolSubiti"])
-        players.at[index, "RigoriParati"] = float(best["RigoriParati"])
-        if float(best["Presenze"]) >= 10:
-            players.at[index, "GolSubiti90"] = (
-                float(best["GolSubiti"]) / float(best["Presenze"])
-            )
+        players.at[index, "HistGol"] = float(candidate["Gol"])
+        players.at[index, "HistAss"] = float(candidate["Assist"])
+        players.at[index, "HistPresenze"] = float(candidate["Presenze"])
+        players.at[index, "HistRigori"] = float(candidate["RigoriSegnati"])
+        players.at[index, "HistMV"] = float(candidate["MediaVoto"]) if pd.notna(candidate["MediaVoto"]) else float("nan")
+        presenze = float(candidate["Presenze"])
+        if presenze > 0:
+            players.at[index, "HistGol90"] = float(candidate["Gol"]) / presenze * 90.0
+            players.at[index, "HistAss90"] = float(candidate["Assist"]) / presenze * 90.0
+        else:
+            players.at[index, "HistGol90"] = float("nan")
+            players.at[index, "HistAss90"] = float("nan")
+        if row["Ruolo"] == "P" and presenze >= 10:
+            players.at[index, "GolSubiti"] = float(candidate["GolSubiti"]) \
+                if "GolSubiti" in candidate else float("nan")
+            players.at[index, "GolSubiti90"] = float(candidate["GolSubiti"]) / presenze \
+                if "GolSubiti" in candidate else float("nan")
+            players.at[index, "RigoriParati"] = float(candidate["RigoriParati"]) \
+                if "RigoriParati" in candidate else float("nan")
     return players
 
 
@@ -576,10 +617,10 @@ def build_players(progress_cb=None, weights=None):
         df["HistorySeasons"].clip(lower=0, upper=3) / 3.0
     )
 
-    # Gol subiti/90 per i portieri dalle statistiche stagionali fantacalcio.it
-    # (solo per chi ha giocato in Serie A nelle stagioni scaricate). La
-    # componente C_GolSubiti viene calcolata più avanti, per ruolo P.
-    df = _apply_goalkeeper_stats(df)
+    # Storico stagionale fantacalcio.it per TUTTI i ruoli (gol, assist,
+    # presenze, media voto, rigori) + gol subiti/90 per i portieri. Le nuove
+    # componenti C_* vengono calcolate nel loop di ranking qui sotto.
+    df = _apply_season_stats(df)
 
     if weights is None:
         weights = load_ranking_weights()
@@ -659,10 +700,8 @@ def build_players(progress_cb=None, weights=None):
         sub["C_Availability"] = weights["Availability"] * sub["Availability"]
         xgi_n = _rank_norm(sub["xGI90"].fillna(0))
         sub["C_ExpectedOutput"] = weights["ExpectedOutput"] * xgi_n
-        # Gol subiti/90 dal CSV storico (FBref): solo per i portieri e solo
-        # quando la fonte li ha registrati (es. squadre che erano in Serie A).
-        # Più basso è meglio: il rank viene invertito e chi non ha dati resta
-        # neutro (componente a zero) senza alterare i ruoli di movimento.
+        # Storico stagionale (fantacalcio.it): gol subiti per i portieri,
+        # media voto / presenze / produttività / rigori per tutti.
         sub["C_GolSubiti"] = 0.0
         ga_active = False
         if role == "P" and "GolSubiti90" in sub.columns:
@@ -673,11 +712,26 @@ def build_players(progress_cb=None, weights=None):
                 sub["C_GolSubiti"] = (
                     weights.get("GolSubiti", 0.0) * ga_inv
                 ).where(ga90.notna(), 0.0)
+        sub["C_MediaVoto"] = weights.get("MediaVoto", 0.0) * _rank_norm(
+            pd.to_numeric(sub.get("HistMV"), errors="coerce").fillna(0.0)
+        )
+        sub["C_Presenze"] = weights.get("Presenze", 0.0) * _rank_norm(
+            pd.to_numeric(sub.get("HistPresenze"), errors="coerce").fillna(0.0)
+        )
+        sub["C_Rigori"] = weights.get("Rigori", 0.0) * _rank_norm(
+            pd.to_numeric(sub.get("HistRigori"), errors="coerce").fillna(0.0)
+        )
+        sub["C_Produttivita"] = weights.get("Produttivita", 0.0) * _rank_norm(
+            pd.to_numeric(sub.get("HistGol90"), errors="coerce").fillna(0.0)
+            + pd.to_numeric(sub.get("HistAss90"), errors="coerce").fillna(0.0)
+        )
         manual = (
             sub["C_FM"] + sub["C_FVM"] + sub["C_ALG"]
             + sub["C_Starter"] + sub["C_SetPieces"]
             + sub["C_Tags"] + sub["C_Injury"] + sub["C_Availability"]
             + sub["C_ExpectedOutput"] + sub["C_GolSubiti"]
+            + sub["C_MediaVoto"] + sub["C_Presenze"]
+            + sub["C_Rigori"] + sub["C_Produttivita"]
         )
         manual_scale = (
             abs(weights["FM"]) + abs(weights["FVM"]) + abs(weights["ALG"])
@@ -688,6 +742,10 @@ def build_players(progress_cb=None, weights=None):
             + (abs(weights["ExpectedOutput"])
                if sub["xGI90"].notna().any() else 0.0)
             + (abs(weights.get("GolSubiti", 0.0)) if ga_active else 0.0)
+            + abs(weights.get("MediaVoto", 0.0))
+            + abs(weights.get("Presenze", 0.0))
+            + abs(weights.get("Rigori", 0.0))
+            + abs(weights.get("Produttivita", 0.0))
         )
         manual_n = manual / manual_scale if manual_scale else manual * 0.0
         model = _role_model(sub)

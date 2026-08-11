@@ -113,17 +113,27 @@ auction day. You can also run it from the terminal:
 python3.13 scraper.py --advanced /path/to/export.csv
 ```
 
-### Gol subiti per i portieri
+### Statistiche stagionali (fantacalcio.it)
 
 `scraper.py --statistiche` scarica le tabelle stagionali di fantacalcio.it
 (anche indietro fino alla stagione 2015/16) e salva un CSV per stagione in
-`data/statistiche_*.csv`. Per ogni portiere con un campione utile (10+ presenze
-nelle stagioni scaricate) il ranking calcola la componente **Gol subiti/90**
-(peso regolabile in `Setup → Pesi classifica`): meno gol subiti = punteggio più
-alto. La scheda del portiere mostra anche i gol subiti totali e i rigori parati.
-I portieri che in quelle stagioni non erano in Serie A restano neutri (nessun
-dato, nessuna penalizzazione). Il pulsante **Aggiorna tutto per l'asta** esegue
-anche questo step.
+`data/statistiche_*.csv`. Sono dati usati in **tutto** il ranking, non solo
+per i portieri:
+
+- **Media voto storica** (Gazzetta), **Presenze** (affidabilità), **Gol +
+  assist per 90** e **Rigori segnati** (chi batte i rigori prende un bonus)
+  entrano come componenti per ogni ruolo, con peso regolabile in
+  `Setup → Pesi classifica`.
+- Per i **portieri** la componente **Gol subiti/90** è invertita (meno gol
+  subiti = punteggio più alto) e si attiva solo con 10+ presenze nel campione.
+- Le stesse colonne storiche alimentano anche le feature del **modello
+  predittivo**, alzando la diagnostica Spearman (ρ) di ogni ruolo.
+
+I giocatori che nelle stagioni scaricate non erano in Serie A restano neutri
+(nessun dato, nessuna penalizzazione). La scheda del giocatore mostra i totali
+storici (media voto, presenze, gol, assist, rigori e, per i portieri, gol
+subiti e rigori parati). Il pulsante **Aggiorna tutto per l'asta** esegue
+questo step (6/6).
 
 ## Tests
 

@@ -552,6 +552,14 @@ def _num(text):
         return float("nan")
 
 
+def _rig_parts(text):
+    """Parse a 'scored / taken' penalty cell like '4 / 5'."""
+    parts = str(_clean(text)).split("/")
+    if len(parts) != 2:
+        return float("nan"), float("nan")
+    return _num(parts[0]), _num(parts[1])
+
+
 def scrape_statistiche_season(season, progress_cb=None):
     """Season stats table (fantacalcio.it) for one Serie A season.
 
@@ -578,6 +586,7 @@ def scrape_statistiche_season(season, progress_cb=None):
             el = tr.select_one(f'td[data-col-key="{key}"]')
             return _clean(el.get_text()) if el else ""
 
+        rig_seg, rig_tir = _rig_parts(cell("rig"))
         rows.append({
             "Nome": _clean(name_el.get_text()),
             "Squadra": cell("sq"),
@@ -586,7 +595,8 @@ def scrape_statistiche_season(season, progress_cb=None):
             "Fantamedia": _num(cell("mfv")),
             "Gol": _num(cell("gol")),
             "GolSubiti": _num(cell("gs")),
-            "Rigori": cell("rig"),
+            "RigoriSegnati": rig_seg,
+            "RigoriTirati": rig_tir,
             "RigoriParati": _num(cell("rp")),
             "Assist": _num(cell("ass")),
             "Ammonizioni": _num(cell("amm")),

@@ -606,8 +606,10 @@ function renderPlayerCard() {
     ["Titolare", p.C_Starter], ["Set-pieces", p.C_SetPieces], ["Attributi", p.C_Tags],
     ["Robustezza", p.C_Injury], ["Affidabilità impiego", p.C_Availability],
     ["Modello FM attesa", p.C_Model], ["xG + xA per 90", p.C_ExpectedOutput],
+    ["Media voto storica", p.C_MediaVoto], ["Presenze storiche", p.C_Presenze],
+    ["Rigori segnati", p.C_Rigori], ["Gol+assist per 90", p.C_Produttivita],
     ["Gol subiti/90 (inv.)", p.C_GolSubiti],
-  ].filter(([label, value]) => value != null && (label === "Gol subiti/90 (inv.)" ? value !== 0 : true));
+  ].filter(([label, value]) => value != null && Number(value) !== 0);
   const maxC = Math.max(1, ...components.map(([, v]) => Number(v) || 0));
 
   setHTML("#player-card", `
@@ -636,12 +638,19 @@ function renderPlayerCard() {
       <div class="kv"><div class="kv-label">xG/90</div><div class="kv-value">${p.xG90 != null ? num(p.xG90) : "—"}</div></div>
       <div class="kv"><div class="kv-label">xA/90</div><div class="kv-value">${p.xA90 != null ? num(p.xA90) : "—"}</div></div>
       <div class="kv"><div class="kv-label">xG+xA/90</div><div class="kv-value">${p.xGI90 != null ? num(p.xGI90) : "—"}</div></div>
-      ${p.Ruolo === "P" && (p.GolSubiti90 != null || p.RigoriParati != null) ? `
+    ${p.Ruolo === "P" && (p.GolSubiti90 != null || p.RigoriParati != null) ? `
       <div class="kv"><div class="kv-label">Gol subiti</div><div class="kv-value">${int(p.GolSubiti)}</div></div>
       <div class="kv"><div class="kv-label">Gol subiti/partita</div><div class="kv-value">${p.GolSubiti90 != null ? num(p.GolSubiti90) : "—"}</div></div>
-      <div class="kv"><div class="kv-label">Rigori parati</div><div class="kv-value">${p.RigoriParati != null ? int(p.RigoriParati) : "—"}</div></div>
-      <div class="kv" style="grid-column:1/-1"><div class="kv-label">Ultime stagioni Serie A (fantacalcio.it)</div><div class="kv-value" style="font-weight:500;font-size:11px;color:var(--muted)">gol subiti totali nelle stagioni scaricate; assente se non in Serie A</div></div>` : ""}
-      ${p.GareSaltate != null ? `<div class="kv"><div class="kv-label">Gare saltate</div><div class="kv-value">${int(p.GareSaltate)}</div></div>` : ""}
+      <div class="kv"><div class="kv-label">Rigori parati</div><div class="kv-value">${p.RigoriParati != null ? int(p.RigoriParati) : "—"}</div></div>` : ""}
+    </div>` : ""}
+    ${p.HistMV != null ? `
+    <div class="kv-list">
+      <div class="kv"><div class="kv-label">Media voto storica</div><div class="kv-value">${num(p.HistMV)}</div></div>
+      <div class="kv"><div class="kv-label">Presenze</div><div class="kv-value">${int(p.HistPresenze)}</div></div>
+      <div class="kv"><div class="kv-label">Gol</div><div class="kv-value">${int(p.HistGol)}</div></div>
+      <div class="kv"><div class="kv-label">Assist</div><div class="kv-value">${int(p.HistAss)}</div></div>
+      <div class="kv"><div class="kv-label">Rigori</div><div class="kv-value">${p.HistRigori ? `${int(p.HistRigori)} segnati` : "—"}</div></div>
+      <div class="kv" style="grid-column:1/-1"><div class="kv-label">Stagioni passate (fantacalcio.it)</div><div class="kv-value" style="font-weight:500;font-size:11px;color:var(--muted)">ultime 3 stagioni Serie A; assente se non era in Serie A</div></div>
     </div>` : ""}
     <p class="note">${esc(p.Nome)} è nel cluster ${int(p.Cluster)} dei ${esc(p.Ruolo)} (ordinati per punteggio). Fair value del cluster: ${int(cap)}. Se il prezzo sale sopra ${int(cap)}, esci dall'asta.</p>
     <details class="accordion">
