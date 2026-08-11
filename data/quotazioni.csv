@@ -1,35 +1,35 @@
 NomeGaz,SquadraGaz,SquadraNome,Ruolo,QI,QA,FVM,M_QI,M_QA,M_FVM
 Martinez L.,INTER,Inter,A,35,35,370,35,35,370
 Malen,ROMA,Roma,A,34,34,365,34,34,365
-Dimarco,INTER,Inter,D,32,32,265,30,30,255
+Dimarco,INTER,Inter,D,32,32,265,30,30,265
 Paz N.,COMO,Como,C,30,30,250,28,28,250
 Thuram,INTER,Inter,A,29,29,280,29,29,280
 McTominay,NAPOLI,Napoli,C,28,28,240,28,28,240
 Hojlund,NAPOLI,Napoli,A,28,28,271,28,28,271
 Calhanoglu,INTER,Inter,C,27,27,230,28,28,260
-Ramos G.,MILAN,Milan,A,27,27,240,27,27,240
+Ramos G.,MILAN,Milan,A,27,27,232,27,27,232
 Orsolini,BOLOGNA,Bologna,C,26,26,200,25,25,200
 Kolo Muani,JUVENTUS,Juventus,A,26,26,225,26,26,225
 Kean,FIORENTINA,Fiorentina,A,25,25,212,25,25,212
-Pulisic,MILAN,Milan,C,25,25,180,23,23,174
-Yildiz,JUVENTUS,Juventus,A,23,23,200,24,24,205
+Pulisic,MILAN,Milan,C,25,25,180,23,23,180
+Yildiz,JUVENTUS,Juventus,A,23,23,192,24,24,190
 Rabiot,MILAN,Milan,C,22,22,128,22,22,128
 Douvikas,COMO,Como,A,20,20,157,20,20,154
-Scamacca,ATALANTA,Atalanta,A,19,19,128,18,18,125
+Scamacca,ATALANTA,Atalanta,A,19,19,131,18,18,128
 Baturina,COMO,Como,C,19,19,102,18,18,100
-Davis K.,UDINESE,Udinese,A,19,19,121,19,19,121
-Krstovic,ATALANTA,Atalanta,A,18,18,100,17,17,97
+Davis K.,UDINESE,Udinese,A,19,19,122,19,19,119
+Krstovic,ATALANTA,Atalanta,A,18,18,95,17,17,92
 Da Cunha,COMO,Como,C,18,18,90,18,18,90
 Leao,MILAN,Milan,A,18,18,120,19,19,123
 Svilar,ROMA,Roma,P,18,18,65,18,18,65
 Berardi,SASSUOLO,Sassuolo,A,18,18,115,19,19,118
-Zaniolo,UDINESE,Udinese,C,18,18,90,17,17,88
+Zaniolo,UDINESE,Udinese,C,18,18,100,17,17,100
 De Ketelaere,ATALANTA,Atalanta,A,17,17,106,18,18,108
 Atta,FIORENTINA,Fiorentina,C,17,17,87,17,17,87
 Martinez Jo.,INTER,Inter,P,17,17,63,17,17,63
-Barella,INTER,Inter,C,17,17,82,17,17,82
+Barella,INTER,Inter,C,17,17,80,17,17,80
 McKennie,JUVENTUS,Juventus,C,17,17,68,17,17,68
-Wesley,ROMA,Roma,D,17,17,90,16,16,88
+Wesley,ROMA,Roma,D,17,17,83,16,16,80
 Carnesecchi,ATALANTA,Atalanta,P,16,16,52,16,16,52
 Dovbyk,BOLOGNA,Bologna,A,16,16,84,16,16,81
 Butez,COMO,Como,P,16,16,56,16,16,56
@@ -38,7 +38,7 @@ Esposito F.P.,INTER,Inter,A,16,16,93,16,16,90
 Zaccagni,LAZIO,Lazio,C,16,16,91,15,15,88
 Bremer,JUVENTUS,Juventus,D,15,15,50,15,15,50
 Maignan,MILAN,Milan,P,15,15,50,15,15,50
-De Bruyne,NAPOLI,Napoli,C,15,15,100,14,14,94
+De Bruyne,NAPOLI,Napoli,C,15,15,98,14,14,95
 Pellegrino M.,PARMA,Parma,A,15,15,81,15,15,79
 Mancini,ROMA,Roma,D,15,15,49,15,15,49
 Laurientè,SASSUOLO,Sassuolo,A,15,15,88,16,16,91
@@ -46,9 +46,9 @@ Simeone,TORINO,Torino,A,15,15,82,15,15,79
 Bastoni,INTER,Inter,D,14,14,44,14,14,44
 Pavlovic,MILAN,Milan,D,14,14,48,14,14,48
 Rrahmani,NAPOLI,Napoli,D,14,14,47,14,14,47
-Santos A.,NAPOLI,Napoli,A,14,14,60,15,15,63
+Santos A.,NAPOLI,Napoli,A,14,14,57,15,15,57
 Dybala,ROMA,Roma,A,14,14,67,15,15,67
-Castro S.,ROMA,Roma,A,14,14,83,13,13,80
+Castro S.,ROMA,Roma,A,14,14,81,13,13,78
 Vlasic,TORINO,Torino,C,14,14,80,13,13,77
 Raspadori,ATALANTA,Atalanta,A,13,13,62,14,14,64
 Esposito Se.,CAGLIARI,Cagliari,A,13,13,50,14,14,50
@@ -58,19 +58,21 @@ Kalulu,JUVENTUS,Juventus,D,13,13,46,14,14,48
 Taylor K.,LAZIO,Lazio,C,13,13,64,13,13,64
 Nkunku,MILAN,Milan,A,13,13,52,14,14,54
 N'Dicka,ROMA,Roma,D,13,13,44,13,13,44
-Pinamonti,SASSUOLO,Sassuolo,A,13,13,58,12,12,55
+Pinamonti,SASSUOLO,Sassuolo,A,13,13,55,12,12,52
 Solet,UDINESE,Udinese,D,13,13,46,13,13,46
+Kevin Carlos,CAGLIARI,Cagliari,A,13,13,47,12,12,44
 Ederson D.S.,ATALANTA,Atalanta,C,12,12,45,13,13,48
 Samardzic,ATALANTA,Atalanta,C,12,12,42,12,12,42
 Rodriguez Je.,COMO,Como,C,12,12,32,11,11,31
 Stones,INTER,Inter,D,12,12,38,12,12,38
-Alajbegovic,JUVENTUS,Juventus,C,12,12,57,12,12,57
-Conceicao,JUVENTUS,Juventus,C,12,12,60,11,11,57
+Alajbegovic,JUVENTUS,Juventus,C,12,12,56,12,12,56
+Conceicao,JUVENTUS,Juventus,C,12,12,60,11,11,60
 Gila,MILAN,Milan,D,12,12,31,12,12,31
 Modric,MILAN,Milan,C,12,12,50,13,13,60
 Di Lorenzo,NAPOLI,Napoli,D,12,12,40,12,12,40
-Soulè,ROMA,Roma,A,12,12,55,13,13,55
-Adams A.,VENEZIA,Venezia,A,12,12,52,11,11,50
+Soulè,ROMA,Roma,A,12,12,53,13,13,53
+Adams A.,VENEZIA,Venezia,A,12,12,51,11,11,48
+Mastantuono,FIORENTINA,Fiorentina,C,12,12,58,12,12,58
 Rowe,BOLOGNA,Bologna,C,11,11,37,11,11,40
 Diao,COMO,Como,A,11,11,50,12,12,52
 Ostigard,GENOA,Genoa,D,11,11,40,11,11,40
@@ -78,7 +80,8 @@ Baldanzi,GENOA,Genoa,C,11,11,30,10,10,27
 Colombo,GENOA,Genoa,A,11,11,63,10,10,60
 Bisseck,INTER,Inter,D,11,11,33,11,11,33
 Meret,NAPOLI,Napoli,P,11,11,45,11,11,45
-Zambo Anguissa,NAPOLI,Napoli,C,11,11,55,11,11,55
+Zambo Anguissa,NAPOLI,Napoli,C,11,11,54,11,11,54
+Tourè E.,PARMA,Parma,A,11,11,43,11,11,43
 Scalvini,ATALANTA,Atalanta,D,10,10,28,10,10,28
 Skorupski,BOLOGNA,Bologna,P,10,10,37,10,10,37
 Ramon,COMO,Como,D,10,10,32,10,10,32
@@ -97,6 +100,7 @@ Thorstvedt,SASSUOLO,Sassuolo,C,10,10,41,10,10,41
 Bowie,SASSUOLO,Sassuolo,A,10,10,39,9,9,36
 Casadei,TORINO,Torino,C,10,10,37,10,10,37
 Ekkelenkamp,UDINESE,Udinese,C,10,10,41,10,10,41
+Pellegrini Lo.,ROMA,Roma,C,10,10,28,10,10,28
 Pasalic,ATALANTA,Atalanta,C,9,9,32,9,9,32
 Bernardeschi,BOLOGNA,Bologna,C,9,9,21,9,9,21
 Caprile,CAGLIARI,Cagliari,P,9,9,27,9,9,27
@@ -114,6 +118,7 @@ Cutrone,MONZA,Monza,A,9,9,33,8,8,30
 Konè I.,SASSUOLO,Sassuolo,C,9,9,20,9,9,20
 Adams C.,TORINO,Torino,A,9,9,32,10,10,34
 Okoye,UDINESE,Udinese,P,9,9,29,9,9,29
+Chalobah T.,COMO,Como,D,9,9,26,10,10,28
 Hien,ATALANTA,Atalanta,D,8,8,16,8,8,16
 Zappacosta,ATALANTA,Atalanta,D,8,8,24,8,8,24
 Lucumì,BOLOGNA,Bologna,D,8,8,18,8,8,18
@@ -147,6 +152,7 @@ Cristante,ROMA,Roma,C,8,8,29,9,9,32
 Vojvoda,UDINESE,Udinese,D,8,8,19,8,8,19
 Yeboah J.,VENEZIA,Venezia,A,8,8,28,8,8,29
 Rrahmani Al.,VENEZIA,Venezia,A,8,8,20,7,7,17
+Couto,COMO,Como,D,8,8,27,8,8,27
 Djimsiti,ATALANTA,Atalanta,D,7,7,16,7,7,16
 Gaetano,ATALANTA,Atalanta,C,7,7,24,8,8,27
 Ferguson,BOLOGNA,Bologna,C,7,7,18,8,8,21
@@ -180,6 +186,7 @@ Oristanio,TORINO,Torino,C,7,7,27,7,7,27
 Zapata D.,TORINO,Torino,A,7,7,18,6,6,16
 Kristensen T.,UDINESE,Udinese,D,7,7,15,8,8,17
 Unai Gomez,UDINESE,Udinese,C,7,7,23,6,6,20
+Sow,GENOA,Genoa,C,7,7,14,8,8,17
 Ahanor,ATALANTA,Atalanta,D,6,6,16,7,7,18
 Bellanova,ATALANTA,Atalanta,D,6,6,15,6,6,15
 Bernasconi,ATALANTA,Atalanta,D,6,6,17,6,6,17
@@ -226,7 +233,7 @@ Stankovic F.,VENEZIA,Venezia,P,6,6,14,6,6,14
 Bella-Kotchap,VENEZIA,Venezia,D,6,6,13,6,6,13
 Basic,VENEZIA,Venezia,C,6,6,19,7,7,20
 Kolasinac,ATALANTA,Atalanta,D,5,5,12,6,6,14
-Maldini,ATALANTA,Atalanta,A,5,5,14,6,6,15
+Maldini,CAGLIARI,Cagliari,A,5,5,14,6,6,15
 Vitik,BOLOGNA,Bologna,D,5,5,11,5,5,11
 Holm,BOLOGNA,Bologna,D,5,5,13,5,5,13
 Amondarain,BOLOGNA,Bologna,C,5,5,12,6,6,14
@@ -327,6 +334,7 @@ Arizala,UDINESE,Udinese,D,4,4,8,4,4,8
 Gueye,UDINESE,Udinese,A,4,4,7,3,3,6
 Halhal,VENEZIA,Venezia,D,4,4,10,4,4,10
 Correia T.,VENEZIA,Venezia,D,4,4,12,4,4,12
+Robinson J.,MONZA,Monza,A,4,4,10,4,4,10
 Kossounou,ATALANTA,Atalanta,D,3,3,7,3,3,8
 Sulemana I.,ATALANTA,Atalanta,C,3,3,7,3,3,8
 Casale,BOLOGNA,Bologna,D,3,3,6,3,3,6
@@ -382,7 +390,7 @@ Hasa,FROSINONE,Frosinone,C,2,2,5,2,2,5
 Otoa,GENOA,Genoa,D,2,2,5,2,2,5
 Puczka,GENOA,Genoa,D,2,2,7,2,2,7
 Sabelli,GENOA,Genoa,D,2,2,5,2,2,5
-Masini,GENOA,Genoa,C,2,2,4,2,2,4
+Masini,FROSINONE,Frosinone,C,2,2,4,2,2,4
 Venturino,GENOA,Genoa,C,2,2,6,2,2,5
 Provedel,INTER,Inter,P,2,2,5,2,2,5
 Lazzari,LAZIO,Lazio,D,2,2,8,2,2,8
@@ -405,6 +413,7 @@ Buksa,UDINESE,Udinese,A,2,2,4,2,2,4
 Franjic,VENEZIA,Venezia,D,2,2,4,2,2,4
 Sagrado,VENEZIA,Venezia,D,2,2,4,2,2,4
 Duncan,VENEZIA,Venezia,C,2,2,4,2,2,4
+Aurelio,CAGLIARI,Cagliari,D,2,2,5,2,2,5
 Rossi F.,ATALANTA,Atalanta,P,1,1,1,1,1,1
 Sportiello,ATALANTA,Atalanta,P,1,1,1,1,1,1
 Happonen,BOLOGNA,Bologna,P,1,1,1,1,1,1
@@ -494,3 +503,4 @@ Dagasso,VENEZIA,Venezia,C,1,1,1,1,1,1
 Lisman,VENEZIA,Venezia,A,1,1,1,1,1,1
 Lauberbach,VENEZIA,Venezia,A,1,1,1,1,1,1
 Vismara,ATALANTA,Atalanta,P,1,1,1,1,1,1
+Satalino,SASSUOLO,Sassuolo,P,1,1,1,1,1,1
