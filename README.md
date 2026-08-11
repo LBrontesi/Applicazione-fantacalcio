@@ -85,10 +85,15 @@ tests. Refresh them from the configured external sources with:
 python3.13 scraper.py --quotes
 python3.13 scraper.py --players
 python3.13 scraper.py --lineups --setpieces
+python3.13 scraper.py --panchinari
 ```
 
 Use `python3.13 scraper.py --all` to run every scraper. Scraping requires a
-network connection and overwrites the corresponding CSV files.
+network connection and overwrites the corresponding CSV files. The panchinari
+source (sosfanta) is a seasonal "formazione-tipo" article: when the new season
+is published, update `PANCHINARI_URL` in `scraper.py` and re-run
+`--panchinari`. The `Formazioni` tab then shows, under every probable starter,
+the most likely bench player for the same spot.
 
 ### Advanced historical statistics
 

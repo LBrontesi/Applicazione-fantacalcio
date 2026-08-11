@@ -728,23 +728,6 @@ function renderTeamCard(team, rows) {
     sections.push(`<div class="role-section-title">${esc(title)}</div>${items}`);
   }
 
-  const bench = new Map();
-  for (const r of rows) {
-    if (r.Panchina) {
-      const key = `${r.Panchina}|${r.PanchinaRuolo}`;
-      if (!bench.has(key)) bench.set(key, r);
-    }
-  }
-  let benchHtml = "";
-  if (bench.size) {
-    const labels = [...bench.values()].map((b) => {
-      const fm = b.PanchinaFM != null ? `FM ${num(b.PanchinaFM)}` : "FM -";
-      const cluster = b.PanchinaCluster != null && b.PanchinaCluster !== "" ? `C${int(b.PanchinaCluster)}` : "";
-      return [b.Panchina, b.PanchinaRuolo, fm, cluster].filter(Boolean).join(" · ");
-    });
-    benchHtml = `<p class="note">Panchina / coperture: ${esc(labels.join("  |  "))}</p>`;
-  }
-
   const noteLabels = [
     ["Ballottaggi", "🔄 Ballottaggi"], ["Squalificati", "⛔ Squalificati"],
     ["Infortunati", "🩹 Infortunati"], ["InDubbio", "❓ In dubbio"], ["Diffidati", "🟨 Diffidati"],
@@ -762,7 +745,6 @@ function renderTeamCard(team, rows) {
       <div class="team-card-head"><span>${esc(team)}</span><span>${esc(modulo)} · ${rows.length} titolari attesi</span></div>
       <div class="team-card-body">
         ${sections.join("")}
-        ${benchHtml}
         ${notesHtml}
       </div>
     </div>`;
@@ -779,7 +761,15 @@ function playerRowHtml(row) {
   if (row.FM != null && row.FMImputed) fm += " *";
   const cluster = row.Cluster != null && row.Cluster !== ""
     ? `<span class="cluster-badge">C${int(row.Cluster)}</span>` : "";
-  return `<div class="player-row ${flagged ? "flagged" : ""}">${cluster}<b>${esc(row.Nome || row.NomeLineup)}</b> <span class="pr-meta">${esc(row.Ruolo || "?")} · FM ${fm}</span> ${badges}</div>`;
+  let bench = "";
+  if (row.Panchina) {
+    const bfm = row.PanchinaFM != null ? `FM ${num(row.PanchinaFM)}` : "FM -";
+    const bcl = row.PanchinaCluster != null && row.PanchinaCluster !== ""
+      ? ` · C${int(row.PanchinaCluster)}` : "";
+    const bruolo = row.PanchinaRuolo ? `${esc(row.PanchinaRuolo)} · ` : "";
+    bench = `<div class="pr-bench">⬇ possibile panchinaro: <b>${esc(row.Panchina)}</b> <span class="pr-meta">${bruolo}${bfm}${bcl}</span></div>`;
+  }
+  return `<div class="player-row ${flagged ? "flagged" : ""}">${cluster}<b>${esc(row.Nome || row.NomeLineup)}</b> <span class="pr-meta">${esc(row.Ruolo || "?")} · FM ${fm}</span> ${badges}${bench}</div>`;
 }
 
 /* ------------------------------------------------------------------ */

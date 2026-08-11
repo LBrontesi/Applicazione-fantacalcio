@@ -7,8 +7,8 @@ import numpy as np
 import pandas as pd
 
 from scraper import (
-    ADVANCED_STATS, DATA_DIR, FORMAZIONI, PLAYERS_FCP, QUOTAZIONI, SET_PIECES,
-    normalize_name,
+    ADVANCED_STATS, DATA_DIR, FORMAZIONI, PANCHINARI, PLAYERS_FCP, QUOTAZIONI,
+    SET_PIECES, normalize_name,
 )
 
 ROLE_ORDER = ["P", "D", "C", "A"]
@@ -770,6 +770,66 @@ def load_set_pieces():
     return df
 
 
+def load_panchinari():
+    """Probabili panchinari per posizione (fonte sosfanta, stagionale)."""
+    if not PANCHINARI.exists():
+        return pd.DataFrame()
+    return pd.read_csv(PANCHINARI)
+
+
+def _apply_bench_panchinari(lineups, players_df, panch):
+    """Add the 'possibile panchinaro' to every starter of the expected XI.
+
+    The sosfanta source stores each spot as the favourite starter plus his
+    alternatives (``Nome1|Nome2``). When a starter of the Fantacalcio lineup
+    belongs to a spot with more than one player, the other player becomes his
+    bench alternative.
+    """
+    slots_by_team = {}
+    for _, r in panch.iterrows():
+        team = normalize_name(str(r["Squadra"]))
+        names = [n for n in str(r["Nomi"]).split("|") if n]
+        slots_by_team.setdefault(team, []).append(names)
+
+    for col in ["Panchina", "PanchinaRuolo", "PanchinaCluster"]:
+        if col in lineups.columns:
+            lineups[col] = lineups[col].astype(object)
+
+    gaz_names = players_df["NomeGaz"].dropna().tolist()
+    for index, row in lineups.iterrows():
+        slots = slots_by_team.get(normalize_name(str(row["Squadra"])), [])
+        if not slots:
+            continue
+        tokens = _tokens(row["NomeLineup"])
+        bench_name = None
+        for names in slots:
+            if not any(
+                _match_score(tokens, _tokens(n)) >= 0.9 for n in names
+            ):
+                continue
+            for candidate in names:
+                if not _match_score(tokens, _tokens(candidate)) >= 0.9:
+                    bench_name = candidate
+                    break
+            break
+        if not bench_name:
+            continue
+        lineups.at[index, "Panchina"] = bench_name
+        matched = _fuzzy_match(bench_name, gaz_names)
+        if matched:
+            p = players_df[players_df["NomeGaz"] == matched].iloc[0]
+            lineups.at[index, "PanchinaFM"] = p["FMEst"]
+            lineups.at[index, "PanchinaFMImputed"] = bool(p["FMImputed"])
+            lineups.at[index, "PanchinaRuolo"] = p["Ruolo"]
+            lineups.at[index, "PanchinaCluster"] = p["Cluster"]
+        else:
+            lineups.at[index, "PanchinaFM"] = float("nan")
+            lineups.at[index, "PanchinaFMImputed"] = False
+            lineups.at[index, "PanchinaRuolo"] = row["Ruolo"] or ""
+            lineups.at[index, "PanchinaCluster"] = ""
+    return lineups
+
+
 def build_lineups(players_df, progress_cb=None):
     form = load_formazioni()
     sp = load_set_pieces()
@@ -880,7 +940,12 @@ def build_lineups(players_df, progress_cb=None):
                     row[f"{tipo}Ordine"] = ordine
             rows.append(row)
     df = pd.DataFrame(rows)
+    panch = load_panchinari()
+    if not panch.empty:
+        df = _apply_bench_panchinari(df, players_df, panch)
     if progress_cb:
         matched_n = df["Ruolo"].astype(str).str.len().gt(0).sum()
-        progress_cb(f"{len(df)} titolari ({matched_n} abbinati ai giocatori)")
+        bench_n = df["Panchina"].fillna("").astype(str).str.len().gt(0).sum()
+        progress_cb(f"{len(df)} titolari ({matched_n} abbinati ai giocatori, "
+                    f"{bench_n} con possibile panchinaro)")
     return df

@@ -15,6 +15,7 @@ QUOTAZIONI = DATA_DIR / "quotazioni.csv"
 FORMAZIONI = DATA_DIR / "formazioni.csv"
 SET_PIECES = DATA_DIR / "set_pieces.csv"
 ADVANCED_STATS = DATA_DIR / "advanced_stats.csv"
+PANCHINARI = DATA_DIR / "panchinari.csv"
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -36,6 +37,11 @@ FCP_ROLES = [
 QUOTAZIONI_URL = "https://www.fantacalcio.it/quotazioni-fantacalcio"
 LINEUPS_URL = "https://www.fantacalcio.it/probabili-formazioni-serie-a"
 SET_PIECES_URL = "https://www.fantacalcio.it/rigoristi-serie-a"
+# Formazioni-tipo con le alternative ruolo per ruolo (Titolare/Panchinaro).
+# L'articolo è stagionale: aggiorna l'URL alla nuova stagione quando esce.
+PANCHINARI_URL = ("https://www.sosfanta.com/asta-fantacalcio/"
+                  "seriea-tutte-formazioni-tipo-fantacalcio-2026-2027-"
+                  "asta-consigli-chi-prendere/")
 FCP_SET_PIECES_URL = ("https://www.fantacalciopedia.com/articoli-fcp/"
                        "consigli-fantacalcio/216-rigoristi-e-tiratori-2026-27.html")
 
@@ -496,12 +502,73 @@ def scrape_set_pieces(progress_cb=None):
     return df
 
 
+def _parse_formation_tipo(line):
+    """Parse a sosfanta 'Formazione-tipo' line into role-by-role slots.
+
+    Positions are separated by ';' (P, D, C, A), players by ',', and the
+    alternatives for the same spot by '/'. Returns rows with the slot order
+    preserved so the first name is the favourite starter.
+    """
+    roles = ["P", "D", "C", "A"]
+    text = _clean(line).rstrip(".").strip()
+    rows = []
+    for index, group in enumerate(text.split(";")):
+        if index >= len(roles):
+            break
+        role = roles[index]
+        for slot_no, slot in enumerate(group.split(","), start=1):
+            names = [n.strip() for n in slot.split("/") if n.strip()]
+            if names:
+                rows.append({"Ruolo": role, "Slot": slot_no, "Nomi": "|".join(names)})
+    return rows
+
+
+def scrape_panchinari(progress_cb=None):
+    """Fetch the sosfanta season article and save possible bench players.
+
+    Every slot stores the favourite starter plus his alternatives; a player
+    not in the starting XI (or the other way around) is the 'possibile
+    panchinaro' shown per player in the Formazioni tab.
+    """
+    DATA_DIR.mkdir(exist_ok=True)
+    html = _get(PANCHINARI_URL)
+    soup = bs(html.content, "html.parser")
+    rows = []
+    for em in soup.find_all("em"):
+        label = (em.get_text("", strip=True) or "").lower()
+        if "formazione-tipo" not in label:
+            continue
+        team = None
+        for strong in em.find_all_previous("strong"):
+            key = normalize_name(strong.get_text("", strip=True))
+            if key in TEAM_SLUGS:
+                team = TEAM_SLUGS[key]
+                break
+        if not team:
+            continue
+        text = em.parent.get_text(" ", strip=True)
+        text = re.sub(r"^Formazione-tipo\s*:", "", text, flags=re.IGNORECASE).strip()
+        for entry in _parse_formation_tipo(text):
+            rows.append({"Squadra": team, **entry})
+    if not rows:
+        raise ScrapeError(
+            "Nessuna formazione-tipo trovata su sosfanta: struttura o URL cambiati?"
+        )
+    out = pd.DataFrame(rows)
+    out.to_csv(PANCHINARI, index=False)
+    if progress_cb:
+        progress_cb(f"{len(out)} slot panchinari "
+                    f"({out['Squadra'].nunique()} squadre)")
+    return out
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--players", action="store_true")
     parser.add_argument("--quotes", action="store_true")
     parser.add_argument("--lineups", action="store_true")
     parser.add_argument("--setpieces", action="store_true")
+    parser.add_argument("--panchinari", action="store_true")
     parser.add_argument("--advanced", metavar="CSV",
                         help="importa CSV storico FBref/FotMob")
     parser.add_argument("--all", action="store_true")
@@ -513,6 +580,7 @@ if __name__ == "__main__":
         args.quotes = True
         args.lineups = True
         args.setpieces = True
+        args.panchinari = True
 
     if args.players:
         print("scraping fantacalciopedia players...")
@@ -530,6 +598,10 @@ if __name__ == "__main__":
         print("scraping set pieces...")
         df = scrape_set_pieces(progress_cb=print)
         print(f"saved {len(df)} to {SET_PIECES}")
+    if args.panchinari:
+        print("scraping probable bench players from sosfanta...")
+        df = scrape_panchinari(progress_cb=print)
+        print(f"saved {len(df)} bench slots to {PANCHINARI}")
     if args.advanced:
         df = import_advanced_stats(args.advanced, progress_cb=print)
         print(f"saved {len(df)} players to {ADVANCED_STATS}")

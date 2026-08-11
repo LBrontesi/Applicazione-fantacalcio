@@ -1,0 +1,211 @@
+Squadra,Ruolo,Slot,Nomi
+Atalanta,P,1,Carnesecchi
+Atalanta,D,1,Zappacosta|Bellanova
+Atalanta,D,2,Scalvini
+Atalanta,D,3,Kolasinac|Hien
+Atalanta,D,4,Bernasconi|Ahanor
+Atalanta,C,1,Samardzic|Pasalic
+Atalanta,C,2,Gaetano|De Roon
+Atalanta,C,3,Ederson D.s.
+Atalanta,A,1,De Ketelaere
+Atalanta,A,2,Scamacca|Krstovic
+Atalanta,A,3,Raspadori
+Bologna,P,1,Skorupski
+Bologna,D,1,Zortea|Holm
+Bologna,D,2,Vitik|Heggem
+Bologna,D,3,Lucumì
+Bologna,D,4,Miranda J.
+Bologna,C,1,Bernardeschi|Odgaard
+Bologna,C,2,Pobega|Moro N.
+Bologna,C,3,Ferguson
+Bologna,A,1,Orsolini
+Bologna,A,2,Dovbyk
+Bologna,A,3,Rowe
+Cagliari,P,1,Caprile
+Cagliari,D,1,Zè Pedro|Zappa
+Cagliari,D,2,Mina|Deiola
+Cagliari,D,3,Rodriguez Ju.
+Cagliari,D,4,Obert
+Cagliari,C,1,Adopo
+Cagliari,C,2,Winks
+Cagliari,C,3,Romano
+Cagliari,A,1,Maldini
+Cagliari,A,2,Borrelli|Mendy P.
+Cagliari,A,3,Fazzini
+Como,P,1,Butez
+Como,D,1,Couto|Smolcic I.
+Como,D,2,Ramon|Kempf
+Como,D,3,Chalobah T.
+Como,D,4,Valle|Kaiki
+Como,C,1,Perrone|Milla
+Como,C,2,Da Cunha
+Como,A,1,Diao|Rodriguez Je.
+Como,A,2,Paz N.
+Como,A,3,Baturina
+Fiorentina,P,1,De Gea
+Fiorentina,D,1,Jimenez A.|Joao Mario
+Fiorentina,D,2,Dragusin
+Fiorentina,D,3,Viery|Ranieri L.
+Fiorentina,D,4,Valdepenas
+Fiorentina,C,1,Oulai
+Fiorentina,C,2,Fagioli
+Fiorentina,C,3,Ndour|Gudmundsson A.
+Fiorentina,A,1,Atta
+Fiorentina,A,2,Mastantuono
+Frosinone,P,1,Palmisani|Desplanches
+Frosinone,D,1,Oyono A.
+Frosinone,D,2,Akpoguma
+Frosinone,D,3,Monterisi|Calvani
+Frosinone,D,4,Bracaglia
+Frosinone,C,1,El Azzouzi A.|Gelli F.
+Frosinone,C,2,Calò
+Frosinone,C,3,Koutsoupias|Hasa
+Frosinone,A,1,Ghedjemis
+Frosinone,A,2,Raimondo
+Frosinone,A,3,Zerbin|Kvernadze
+Genoa,P,1,Bijlow
+Genoa,D,1,Marcandalli
+Genoa,D,2,Ostigard
+Genoa,D,3,Vasquez
+Genoa,C,1,Norton-Cuffy
+Genoa,C,2,Sow
+Genoa,C,3,Frendrup
+Genoa,C,4,Mitaj|Ellertsson
+Genoa,A,1,Baldanzi|Traorè Hj.
+Genoa,A,2,Vitinha O.|Meichtry
+Inter,P,1,Martinez Jo.|Provedel
+Inter,D,1,Akanji
+Inter,D,2,Stones|Bisseck
+Inter,D,3,Bastoni
+Inter,C,1,Diouf|Luis Henrique
+Inter,C,2,Barella
+Inter,C,3,Calhanoglu
+Inter,C,4,Zielinski|Sucic P.
+Inter,C,5,Dimarco
+Inter,A,1,Martinez L.
+Inter,A,2,Thuram
+Juventus,P,1,Di Gregorio
+Juventus,D,1,Kalulu
+Juventus,D,2,Bremer
+Juventus,D,3,Kelly L.
+Juventus,D,4,Cambiaso
+Juventus,C,1,Thuram K.
+Juventus,C,2,Locatelli
+Juventus,A,1,Alajbegovic|Conceicao
+Juventus,A,2,Mckennie
+Juventus,A,3,Yildiz
+Lazio,P,1,Mandas
+Lazio,D,1,Marusic
+Lazio,D,2,Doekhi
+Lazio,D,3,Romagnoli|Provstgaard
+Lazio,D,4,Pedraza|Tavares N.
+Lazio,C,1,Taylor K.
+Lazio,C,2,Rovella|Cataldi
+Lazio,C,3,Dele-Bashiru
+Lazio,A,1,Isaksen|Cancellieri
+Lazio,A,2,Noslin
+Lazio,A,3,Zaccagni
+Lecce,P,1,Falcone
+Lecce,D,1,Veiga D.
+Lecce,D,2,Tiago Gabriel
+Lecce,D,3,Siebert
+Lecce,D,4,Gallo
+Lecce,C,1,Coulibaly L.
+Lecce,C,2,Berisha M.|Ngom
+Lecce,C,3,Gandelman
+Lecce,A,1,Pierotti
+Lecce,A,2,Geubbels|Stulic
+Lecce,A,3,N'dri
+Milan,P,1,Maignan
+Milan,D,1,Gila
+Milan,D,2,Gabbia
+Milan,D,3,Pavlovic
+Milan,C,1,Saelemaekers
+Milan,C,2,Rabiot
+Milan,C,3,Modric
+Milan,C,4,Bartesaghi
+Milan,A,1,Pulisic
+Milan,A,2,Leao|Nkunku
+Monza,P,1,Thiam
+Monza,D,1,Kouadio
+Monza,D,2,Delli Carri
+Monza,D,3,Carboni A.
+Monza,C,1,Birindelli
+Monza,C,2,Akinsanmiro|Colombo L.
+Monza,C,3,Pessina
+Monza,C,4,Mangas
+Monza,A,1,Colpani|Ciurria
+Monza,A,2,Mota|Ciurria
+Napoli,P,1,Meret
+Napoli,D,1,Di Lorenzo
+Napoli,D,2,Rrahmani
+Napoli,D,3,Marin R.|Olivera
+Napoli,D,4,Spinazzola
+Napoli,C,1,De Bruyne
+Napoli,C,2,Lobotka
+Napoli,C,3,Mctominay
+Napoli,A,1,Neres
+Napoli,A,2,Hojlund
+Napoli,A,3,Santos A.|Politano
+Parma,P,1,Corvi|Daffara
+Parma,D,1,Delprato
+Parma,D,2,Troilo
+Parma,D,3,Circati
+Parma,D,4,Valeri
+Parma,C,1,Bernabè
+Parma,C,2,Keita M.
+Parma,C,3,Nicolussi Caviglia|Sorensen O.
+Parma,A,1,Frigan|Ondrejka
+Parma,A,2,Pellegrino M.
+Parma,A,3,Tourè E.|Diallo O
+Roma,P,1,Svilar
+Roma,D,1,Mancini
+Roma,D,2,N'dicka
+Roma,D,3,Koulierakis|Hermoso
+Roma,C,1,Rensch
+Roma,C,2,Cristante
+Roma,C,3,Konè M.
+Roma,C,4,Wesley
+Roma,A,1,Soulè|Pellegrini Lo.
+Roma,A,2,Dybala|Castro S.
+Sassuolo,P,1,Muric|Turati
+Sassuolo,D,1,Missori
+Sassuolo,D,2,Walukiewicz|Candè
+Sassuolo,D,3,Idzes
+Sassuolo,D,4,Doig
+Sassuolo,C,1,Matic
+Sassuolo,C,2,Lipani|Konè I.
+Sassuolo,A,1,Berardi
+Sassuolo,A,2,Thorstvedt
+Sassuolo,A,3,Laurientè
+Torino,P,1,Paleari
+Torino,D,1,Ismajli
+Torino,D,2,Coco
+Torino,D,3,Comuzzo|Comert
+Torino,C,1,Pedersen
+Torino,C,2,Casadei
+Torino,C,3,Fitz-Jim|Gineitis
+Torino,C,4,Cacciamani
+Torino,A,1,Oristanio|Adams C.
+Torino,A,2,Vlasic
+Udinese,P,1,Okoye
+Udinese,D,1,Kabasele
+Udinese,D,2,Kristensen T.
+Udinese,D,3,Solet
+Udinese,C,1,Vojvoda
+Udinese,C,2,Piotrowski|Unai Gomez
+Udinese,C,3,Karlstrom
+Udinese,C,4,Kamara H.
+Udinese,A,1,Zaniolo
+Udinese,A,2,Ekkelenkamp
+Venezia,P,1,Stankovic F.
+Venezia,D,1,Schingtienne
+Venezia,D,2,Bella-Kotchap
+Venezia,D,3,Moreno M.
+Venezia,C,1,Correia T.|Hainaut
+Venezia,C,2,Basic
+Venezia,C,3,Busio
+Venezia,C,4,Sohm
+Venezia,C,5,Haps
+Venezia,A,1,Adams A.|Rrahmani Al.
+Venezia,A,2,Yeboah J

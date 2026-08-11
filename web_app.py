@@ -220,6 +220,7 @@ def source_freshness():
         ("Giocatori/FCP", scraper.PLAYERS_FCP, 24 * 7),
         ("Formazioni", scraper.FORMAZIONI, 8),
         ("Tiratori", scraper.SET_PIECES, 24 * 7),
+        ("Panchinari", scraper.PANCHINARI, 24 * 7),
     ]
     now = datetime.now().timestamp()
     result = []
@@ -297,14 +298,16 @@ def closest_role_plan(value):
 
 def _run_scrape_job():
     jobs = [
-        ("1/4 Scaricando quotazioni Gazzetta...",
+        ("1/5 Scaricando quotazioni Gazzetta...",
          lambda: scraper.scrape_quotazioni(progress_cb=None)),
-        ("2/4 Scaricando lista giocatori FCP (può richiedere alcuni minuti)...",
+        ("2/5 Scaricando lista giocatori FCP (può richiedere alcuni minuti)...",
          lambda: scraper.scrape_fantacalciopedia(progress_cb=None)),
-        ("3/4 Aggiornando formazioni, ballottaggi e indisponibili...",
+        ("3/5 Aggiornando formazioni, ballottaggi e indisponibili...",
          lambda: scraper.scrape_lineups(progress_cb=None)),
-        ("4/4 Aggiornando rigoristi e tiratori...",
+        ("4/5 Aggiornando rigoristi e tiratori...",
          lambda: scraper.scrape_set_pieces(progress_cb=None)),
+        ("5/5 Aggiornando probabili panchinari (sosfanta)...",
+         lambda: scraper.scrape_panchinari(progress_cb=None)),
     ]
     total = float(len(jobs))
     try:
