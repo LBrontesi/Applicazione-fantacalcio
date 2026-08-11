@@ -433,20 +433,34 @@ function renderAuctionSearch() {
 function renderAuctionAdvice() {
   const advice = state.auction.advice;
   const session = state.session;
-  if (!advice) {
+  if (!advice || !session) {
     setHTML("#auction-advice", `<p class="note">Scrivi almeno due lettere e seleziona il giocatore chiamato per vedere il consiglio.</p>`);
     return;
   }
+  setHTML("#auction-advice", `
+    <div class="form-row price-row">
+      <label for="auction-current-price">Prezzo attuale</label>
+      <input class="input" id="auction-current-price" type="number" min="1" max="${int(session.budget)}" step="1" value="${int(state.auction.price)}">
+      <span class="note">modifica il prezzo: il consiglio si aggiorna subito</span>
+    </div>
+    <div id="advice-core">${adviceCoreHtml()}</div>
+  `);
+}
+
+function adviceCoreHtml() {
+  const advice = state.auction.advice;
+  if (!advice) return "";
   const player = advice.player;
   const a = advice.advice;
+  const session = state.session;
+  const explanations = state.app.watchlist_explanations || {};
   const verdictClass =
     a.verdict === "PUNTA" ? "verdict-punta"
     : a.verdict === "SOLO SE È UNA PRIORITÀ" ? "verdict-warn"
     : "verdict-leave";
-  const explanations = state.app.watchlist_explanations || {};
   const watchTier = a.watch_tier ? `<div class="alert alert-info">Watchlist ${esc(a.watch_tier)}: ${esc(explanations[a.watch_tier] || "")}</div>` : "";
 
-  setHTML("#auction-advice", `
+  return `
     <div class="bid-card">
       <div>
         <div class="bid-label">Massimo da offrire (STOP)</div>
@@ -464,8 +478,8 @@ function renderAuctionAdvice() {
       ${esc(a.verdict)} — prezzo consigliato fino a ${int(a.recommended)} crediti.
     </div>
     <p class="note">
-      ${int(a.role_left)} slot ${esc(player.Ruolo)} da riempire · riserva ${int(a.reserve)} crediti per gli altri slot ·
-      ${int(a.alternatives)} alternative comparabili disponibili.
+      Prezzo attuale ${int(state.auction.price)} cr · ${int(a.role_left)} slot ${esc(player.Ruolo)} da riempire ·
+      riserva ${int(a.reserve)} crediti per gli altri slot · ${int(a.alternatives)} alternative comparabili disponibili.
     </p>
     <p class="note"><strong>Perché:</strong> qualità nel cluster ${pct(a.quality)} · necessità reparto ${pct(a.need)} · strategia ${esc(advice.plan_label)}.</p>
     ${watchTier}
@@ -501,7 +515,7 @@ function renderAuctionAdvice() {
       <label>Prezzo finale</label>
       <input class="input" id="auction-final-price" type="number" min="1" max="${int(session.budget)}" step="1" value="${state.auction.finalPrice}">
       <button class="btn btn-primary" data-action="record-purchase">✅ Registra acquisto</button>
-    </div>`);
+    </div>`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -1092,6 +1106,26 @@ async function undoPurchase() {
   }
 }
 
+async function refreshAuctionAdvice(price) {
+  if (!state.auction.advice) return;
+  const p = Math.max(1, parseInt(price, 10) || 1);
+  state.auction.price = p;
+  state.auction.finalPrice = p;
+  try {
+    const data = await postJSON("/api/advice", {
+      name: state.auction.advice.player.Nome,
+      current_price: p,
+    });
+    state.auction.advice = data;
+    const core = $("#advice-core");
+    if (core) core.innerHTML = adviceCoreHtml();
+  } catch (err) {
+    toast(err.message, "err");
+  }
+}
+
+const updateAuctionPrice = debounce((value) => refreshAuctionAdvice(value), 400);
+
 async function pickAuctionPlayer(name) {
   state.auction.selected = name;
   state.auction.query = name;
@@ -1178,6 +1212,17 @@ function bindEvents() {
       if (matches.length) pickAuctionPlayer(matches[0].Nome);
     }
     if (event.key === "Escape") $("#auction-suggestions").hidden = true;
+  });
+
+  $("#auction-workspace").addEventListener("input", (event) => {
+    if (event.target.id === "auction-current-price") {
+      updateAuctionPrice(event.target.value);
+    }
+  });
+  $("#auction-workspace").addEventListener("keydown", (event) => {
+    if (event.target.id === "auction-current-price" && event.key === "Enter") {
+      refreshAuctionAdvice(event.target.value);
+    }
   });
 
   const playersQuery = $("#players-query");

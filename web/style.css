@@ -321,6 +321,22 @@ input[type="range"] { accent-color: var(--accent-strong); }
 .spacer { flex: 1; }
 .action-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 12px 0; }
 
+.price-row {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-bottom: 6px;
+}
+.price-row .input {
+  width: 120px;
+  font-size: 17px;
+  font-weight: 750;
+  border-color: var(--accent);
+  text-align: center;
+}
+.price-row label { color: var(--text); }
+
 .slider-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px 22px; margin: 12px 0; }
 .slider-row { display: flex; flex-direction: column; gap: 5px; }
 .slider-row .slider-top { display: flex; justify-content: space-between; font-size: 12.5px; }
