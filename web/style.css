@@ -545,12 +545,25 @@ body.light .badge-error { color: #b91c1c; }
 .kv .kv-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
 .kv .kv-value { font-weight: 700; margin-top: 2px; font-size: 13.5px; }
 
-.breakdown-bar { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
-.breakdown-bar .bb-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.breakdown-bar { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.breakdown-bar .bb-row { display: flex; align-items: center; gap: 10px; font-size: 12px; }
 .breakdown-bar .bb-row .bb-label { width: 190px; color: var(--muted); flex: none; text-align: right; }
-.breakdown-bar .bb-track { flex: 1; height: 10px; background: var(--panel-2); border-radius: 999px; overflow: hidden; }
-.breakdown-bar .bb-fill { height: 100%; background: var(--grad); border-radius: 999px; }
-.breakdown-bar .bb-val { width: 42px; text-align: right; font-variant-numeric: tabular-nums; flex: none; }
+.breakdown-bar .bb-track {
+  flex: 1;
+  height: 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--grid);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.breakdown-bar .bb-fill {
+  height: 100%;
+  min-width: 2%;
+  background: linear-gradient(90deg, var(--accent-strong), var(--accent));
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+.breakdown-bar .bb-val { width: 46px; text-align: right; font-variant-numeric: tabular-nums; flex: none; font-weight: 650; }
 
 /* ---------- Responsive ---------- */
 
