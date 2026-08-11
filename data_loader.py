@@ -31,6 +31,8 @@ DEFAULT_RANK_WEIGHTS = {
     "Presenze": 0.3,
     "Rigori": 0.4,
     "Produttivita": 0.3,
+    "TeamContext": 0.15,
+    "Confidence": 0.20,
 }
 
 DEFAULT_METHOD = "blend"
@@ -199,9 +201,15 @@ def load_advanced_stats():
 def load_statistiche():
     """Season stats tables from fantacalcio.it (one CSV per season)."""
     frames = []
-    for path in sorted(DATA_DIR.glob("statistiche_*.csv")):
+    paths = sorted(DATA_DIR.glob("statistiche_*.csv"))
+    for index, path in enumerate(paths):
         try:
-            frames.append(pd.read_csv(path))
+            frame = pd.read_csv(path)
+            # The newest season receives full weight; older seasons decay so
+            # that a player's current level matters more than distant form.
+            frame["Stagione"] = path.stem.removeprefix("statistiche_")
+            frame["PesoRecenza"] = 0.70 ** (len(paths) - index - 1)
+            frames.append(frame)
         except (OSError, ValueError):
             continue
     if not frames:
@@ -244,8 +252,9 @@ def _apply_season_stats(players):
     is an outfield row. Totals (goals, assists, appearances, penalties) are
     summed across the scraped seasons and MediaVoto is averaged weighted by
     appearances; a player who switched clubs is matched by name. For keepers
-    with a meaningful sample (10+ appearances) GolSubiti90 is also derived
-    from goals conceded. Rows without a match stay NaN (not in Serie A).
+    with a meaningful sample (10+ appearances) a goals-conceded-per-
+    appearance rate is also derived. Rows without a match stay NaN (not in
+    Serie A).
     """
     stats = load_statistiche()
     if stats.empty:
@@ -266,34 +275,61 @@ def _apply_season_stats(players):
     def aggregate(frame):
         if frame.empty:
             return pd.DataFrame()
-        out = frame.groupby("Nome", as_index=False).agg(
+        frame = frame.copy()
+        frame["PesoRecenza"] = pd.to_numeric(
+            frame.get("PesoRecenza", 1.0), errors="coerce"
+        ).fillna(1.0)
+        for col in ["Gol", "Assist", "Presenze", "RigoriSegnati", "GolSubiti", "RigoriParati"]:
+            frame[col] = pd.to_numeric(frame[col], errors="coerce").fillna(0.0)
+        # Group on a case-insensitive key: the same player can appear as
+        # "Ederson D.s." in one season and "Ederson D.S." in another, and a
+        # case-sensitive split would drop whole seasons from the sample.
+        frame["_NomeKey"] = frame["Nome"].astype(str).str.strip().str.lower()
+        out = frame.groupby("_NomeKey", as_index=False).agg(
+            Nome=("Nome", "first"),
             Gol=("Gol", "sum"),
             Assist=("Assist", "sum"),
             Presenze=("Presenze", "sum"),
             RigoriSegnati=("RigoriSegnati", "sum"),
+            GolSubiti=("GolSubiti", "sum"),
+            RigoriParati=("RigoriParati", "sum"),
+            StatSeasons=("Stagione", "nunique"),
+            StatTeams=("Squadra", lambda values: "|".join(sorted(set(
+                str(value) for value in values if str(value).strip()
+            )))),
         )
-        mv = frame.groupby("Nome").apply(
-            lambda g: float(np.average(
-                pd.to_numeric(g["MediaVoto"], errors="coerce").fillna(0.0),
-                weights=pd.to_numeric(g["Presenze"], errors="coerce").fillna(0.0).clip(lower=0),
-            )) if g["Presenze"].sum() > 0 else float("nan"),
-            include_groups=False,
-        ).reset_index(name="MediaVoto")
-        return out.merge(mv, on="Nome")
+        def weighted_rates(group):
+            exposure = group["Presenze"] * group["PesoRecenza"]
+            denominator = float(exposure.sum())
+            if denominator <= 0:
+                return pd.Series({
+                    "MediaVoto": float("nan"), "GolRate": float("nan"),
+                    "AssistRate": float("nan"), "GolSubitiRate": float("nan"),
+                })
+            return pd.Series({
+                "MediaVoto": float(np.average(
+                    pd.to_numeric(group["MediaVoto"], errors="coerce").fillna(0.0),
+                    weights=exposure,
+                )),
+                "GolRate": float((group["Gol"] * group["PesoRecenza"]).sum() / denominator),
+                "AssistRate": float((group["Assist"] * group["PesoRecenza"]).sum() / denominator),
+                "GolSubitiRate": float((group["GolSubiti"] * group["PesoRecenza"]).sum() / denominator),
+            })
+        weighted = frame.groupby("_NomeKey").apply(
+            weighted_rates, include_groups=False
+        ).reset_index()
+        return out.merge(weighted, on="_NomeKey")
 
     agg_keeper = aggregate(keeper_rows)
     agg_outfield = aggregate(outfield_rows)
-    for col in ["Gol", "Assist", "Presenze", "RigoriSegnati"]:
+    for col in ["Gol", "Assist", "Presenze", "RigoriSegnati", "GolSubiti", "RigoriParati"]:
         for frame in [agg_keeper, agg_outfield]:
             frame[col] = pd.to_numeric(frame[col], errors="coerce").fillna(0.0)
 
     def match_candidates(name, candidates):
         best, best_score = None, 0.0
         for _, candidate in candidates.iterrows():
-            score = max(
-                _keeper_name_score(name, str(candidate["Nome"])),
-                _keeper_name_score(name, str(candidate["Nome"])),
-            )
+            score = _keeper_name_score(name, str(candidate["Nome"]))
             if score > best_score:
                 best, best_score = candidate, score
         return best, best_score
@@ -311,18 +347,28 @@ def _apply_season_stats(players):
         players.at[index, "HistPresenze"] = float(candidate["Presenze"])
         players.at[index, "HistRigori"] = float(candidate["RigoriSegnati"])
         players.at[index, "HistMV"] = float(candidate["MediaVoto"]) if pd.notna(candidate["MediaVoto"]) else float("nan")
+        players.at[index, "StatSeasons"] = float(candidate["StatSeasons"])
+        historical_teams = {
+            normalize_name(team) for team in str(candidate.get("StatTeams", "")).split("|")
+            if team
+        }
+        players.at[index, "CurrentClubSeen"] = float(
+            normalize_name(str(row.get("Squadra", ""))) in historical_teams
+        ) if historical_teams else float("nan")
         presenze = float(candidate["Presenze"])
         if presenze > 0:
-            players.at[index, "HistGol90"] = float(candidate["Gol"]) / presenze * 90.0
-            players.at[index, "HistAss90"] = float(candidate["Assist"]) / presenze * 90.0
+            # The source publishes appearances but not minutes.  Keep these
+            # features as per-appearance rates rather than claiming a false
+            # per-90 calculation.
+            players.at[index, "HistGol90"] = float(candidate["GolRate"])
+            players.at[index, "HistAss90"] = float(candidate["AssistRate"])
         else:
             players.at[index, "HistGol90"] = float("nan")
             players.at[index, "HistAss90"] = float("nan")
         if row["Ruolo"] == "P" and presenze >= 10:
             players.at[index, "GolSubiti"] = float(candidate["GolSubiti"]) \
                 if "GolSubiti" in candidate else float("nan")
-            players.at[index, "GolSubiti90"] = float(candidate["GolSubiti"]) / presenze \
-                if "GolSubiti" in candidate else float("nan")
+            players.at[index, "GolSubiti90"] = float(candidate["GolSubitiRate"])
             players.at[index, "RigoriParati"] = float(candidate["RigoriParati"]) \
                 if "RigoriParati" in candidate else float("nan")
     return players
@@ -621,6 +667,18 @@ def build_players(progress_cb=None, weights=None):
     # presenze, media voto, rigori) + gol subiti/90 per i portieri. Le nuove
     # componenti C_* vengono calcolate nel loop di ranking qui sotto.
     df = _apply_season_stats(df)
+    stat_seasons = pd.to_numeric(df.get("StatSeasons"), errors="coerce").fillna(0.0)
+    stat_appearances = pd.to_numeric(df.get("HistPresenze"), errors="coerce").fillna(0.0)
+    df["StatsConfidence"] = (
+        0.55 * (stat_seasons / 3.0).clip(0.0, 1.0)
+        + 0.45 * (stat_appearances / 90.0).clip(0.0, 1.0)
+    )
+    # A move to a new club can change role, coach and competition. Historical
+    # production remains useful, but carries slightly less certainty until
+    # current-team data has accumulated.
+    club_seen = pd.to_numeric(df.get("CurrentClubSeen"), errors="coerce")
+    df["TransferUncertainty"] = (1.0 - club_seen).where(club_seen.notna(), 0.0)
+    df["StatsConfidence"] *= (1.0 - 0.15 * df["TransferUncertainty"])
 
     if weights is None:
         weights = load_ranking_weights()
@@ -672,10 +730,23 @@ def build_players(progress_cb=None, weights=None):
     )
     advanced_coverage = df[["Minuti", "Titolarita", "xG", "xA", "xGI90"]].notna().sum(axis=1) / 5.0
     df["DataConfidence"] = (
-        0.55 * df["HistoryStrength"] + 0.20 * source_coverage
-        + 0.10 * (~df["FMImputed"]).astype(float) + 0.15 * advanced_coverage
+        0.35 * df["HistoryStrength"] + 0.20 * df["StatsConfidence"]
+        + 0.20 * source_coverage + 0.10 * (~df["FMImputed"]).astype(float)
+        + 0.15 * advanced_coverage
     ).clip(0.0, 1.0)
     df["ConfidenceLabel"] = df["DataConfidence"].apply(_confidence_label)
+
+    # Current club context: a robust team-level signal from current FVM and
+    # the source algorithm. It is deliberately small, so it contextualises a
+    # player without turning a team ranking into a player ranking.
+    current_quality = (
+        0.60 * _rank_norm(df["FVM"].fillna(0.0))
+        + 0.40 * _rank_norm(df["ALGnum"].fillna(0.0))
+    )
+    df["_CurrentQuality"] = current_quality
+    team_quality = df.groupby("Squadra")["_CurrentQuality"].mean()
+    df["TeamContext"] = df["Squadra"].map(_rank_norm(team_quality)).fillna(0.5)
+    df = df.drop(columns=["_CurrentQuality"])
 
     df["PredFM"] = float("nan")
     ranks = []
@@ -700,7 +771,9 @@ def build_players(progress_cb=None, weights=None):
         sub["C_Availability"] = weights["Availability"] * sub["Availability"]
         xgi_n = _rank_norm(sub["xGI90"].fillna(0))
         sub["C_ExpectedOutput"] = weights["ExpectedOutput"] * xgi_n
-        # Storico stagionale (fantacalcio.it): gol subiti per i portieri,
+        sub["C_TeamContext"] = weights.get("TeamContext", 0.0) * sub["TeamContext"]
+        sub["C_Confidence"] = weights.get("Confidence", 0.0) * sub["DataConfidence"]
+        # Storico stagionale (fantacalcio.it): gol subiti per presenza per i portieri,
         # media voto / presenze / produttività / rigori per tutti.
         sub["C_GolSubiti"] = 0.0
         ga_active = False
@@ -732,6 +805,7 @@ def build_players(progress_cb=None, weights=None):
             + sub["C_ExpectedOutput"] + sub["C_GolSubiti"]
             + sub["C_MediaVoto"] + sub["C_Presenze"]
             + sub["C_Rigori"] + sub["C_Produttivita"]
+            + sub["C_TeamContext"] + sub["C_Confidence"]
         )
         manual_scale = (
             abs(weights["FM"]) + abs(weights["FVM"]) + abs(weights["ALG"])
@@ -746,6 +820,8 @@ def build_players(progress_cb=None, weights=None):
             + abs(weights.get("Presenze", 0.0))
             + abs(weights.get("Rigori", 0.0))
             + abs(weights.get("Produttivita", 0.0))
+            + abs(weights.get("TeamContext", 0.0))
+            + abs(weights.get("Confidence", 0.0))
         )
         manual_n = manual / manual_scale if manual_scale else manual * 0.0
         model = _role_model(sub)
@@ -767,6 +843,7 @@ def build_players(progress_cb=None, weights=None):
             sub["Score"] = manual_n
         quality = pred_n if model is not None else fm_n
         sub["SeasonValue"] = (0.75 * quality + 0.25 * sub["Availability"])
+        sub["QualityScore"] = quality
         sub["Upside"] = (
             0.35 * sub["ALGnum"] + 0.25 * sub["SetPieces"]
             + 0.20 * ((sub["TagScore"] + 2.0) / 4.0) + 0.20 * xgi_n
