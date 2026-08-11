@@ -628,12 +628,15 @@ function renderPlayerCard() {
       <summary>🧮 Breakdown punteggio (totale ${num(p.Score, 3)})</summary>
       <div class="accordion-body">
         <div class="breakdown-bar">
-          ${components.map(([label, value]) => `
-            <div class="bb-row">
-              <span class="bb-label">${esc(label)}</span>
-              <span class="bb-track"><span class="bb-fill" style="width:${Math.max(2, (Number(value) / maxC) * 100)}%"></span></span>
-              <span class="bb-val">${num(value, 3)}</span>
-            </div>`).join("")}
+          ${components.map(([label, value]) => {
+            const share = Math.max(2, (Number(value) / maxC) * 100);
+            return `
+              <div class="bb-row">
+                <span class="bb-label" title="${esc(label)}">${esc(label)}</span>
+                <span class="bb-track"><span class="bb-fill" style="width:${share}%"></span></span>
+                <span class="bb-val">${num(value, 3)}<small>${share.toFixed(0)}%</small></span>
+              </div>`;
+          }).join("")}
         </div>
       </div>
     </details>

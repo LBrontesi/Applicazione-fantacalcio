@@ -553,14 +553,14 @@ body.light .badge-error { color: #b91c1c; }
 .kv .kv-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
 .kv .kv-value { font-weight: 700; margin-top: 2px; font-size: 13.5px; }
 
-.breakdown-bar { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.breakdown-bar { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
 .breakdown-bar .bb-row { display: flex; align-items: center; gap: 10px; font-size: 12px; }
-.breakdown-bar .bb-row .bb-label { width: 190px; color: var(--muted); flex: none; text-align: right; }
+.breakdown-bar .bb-row .bb-label { width: 190px; color: var(--muted); flex: none; text-align: right; font-weight: 600; }
 .breakdown-bar .bb-track {
   flex: 1;
-  height: 12px;
+  height: 16px;
   background: var(--panel-2);
-  border: 1px solid var(--grid);
+  border: 1px solid var(--border);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -569,9 +569,19 @@ body.light .badge-error { color: #b91c1c; }
   min-width: 2%;
   background: linear-gradient(90deg, var(--accent-strong), var(--accent));
   border-radius: 999px;
-  transition: width 0.3s ease;
+  box-shadow: 0 0 10px rgba(52, 211, 153, 0.45);
+  transition: width 0.35s ease;
 }
-.breakdown-bar .bb-val { width: 46px; text-align: right; font-variant-numeric: tabular-nums; flex: none; font-weight: 650; }
+.breakdown-bar .bb-val {
+  width: 58px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  flex: none;
+  font-weight: 750;
+  color: var(--accent);
+  font-size: 13px;
+}
+.breakdown-bar .bb-val small { color: var(--muted); font-weight: 500; font-size: 11px; }
 
 /* ---------- Responsive ---------- */
 
