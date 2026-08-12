@@ -287,23 +287,17 @@ def _apply_season_stats(players):
     stats["GolSubiti"] = pd.to_numeric(stats["GolSubiti"], errors="coerce").fillna(0.0)
     stats["RigoriParati"] = pd.to_numeric(stats["RigoriParati"], errors="coerce").fillna(0.0)
     # The stats source has no role column.  A goalkeeper can nevertheless
-    # have a season with appearances and zero goals conceded, so classify all
-    # rows matching a current goalkeeper as keeper rows as well.
-    current_keepers = players[players["Ruolo"] == "P"]
-    keeper_names = [
-        str(name) for col in ["NomeGaz", "Nome"] if col in current_keepers
-        for name in current_keepers[col].dropna().unique()
-    ]
-    name_is_current_keeper = {
-        stat_name: any(
-            _keeper_name_score(name, stat_name) >= 0.90
-            for name in keeper_names
-        )
-        for stat_name in stats["Nome"].astype(str).unique()
-    }
+    # have a season with appearances and zero goals conceded, so a stat name
+    # counts as a keeper as soon as ANY of its seasons concedes goals or
+    # saves penalties.  Grouping case-insensitively also keeps name-variant
+    # seasons together.  This retains a keeper's zero-conceded seasons without
+    # misclassifying same-surname outfielders (e.g. "Martinez L." the striker
+    # vs "Martinez Jo." the keeper, which a name-only rule merges at 0.95).
+    nome_key = stats["Nome"].astype(str).str.strip().str.lower()
     is_keeper = (
-        (stats["GolSubiti"] > 0) | (stats["RigoriParati"] > 0)
-        | stats["Nome"].astype(str).map(name_is_current_keeper).fillna(False)
+        stats.groupby(nome_key)["GolSubiti"].transform("max") > 0
+    ) | (
+        stats.groupby(nome_key)["RigoriParati"].transform("max") > 0
     )
     keeper_rows = stats[is_keeper].copy()
     outfield_rows = stats[~is_keeper].copy()

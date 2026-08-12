@@ -159,6 +159,10 @@ def main():
     check("keeper zero-conceded seasons stay in history",
           len(terracciano) == 1 and terracciano.iloc[0]["HistPresenze"] == 38 and
           terracciano.iloc[0]["StatSeasons"] == 3)
+    lauto = players[players["Nome"] == "Martinez Lautaro"]
+    check("same-surname outfielders are not absorbed as keepers",
+          len(lauto) == 1 and lauto.iloc[0]["HistPresenze"] == 94 and
+          lauto.iloc[0]["StatSeasons"] == 3)
 
     # Neutral-missing ranking: players who never took a penalty or have no
     # xGI90 contribute zero instead of receiving a percentile-tie boost.
