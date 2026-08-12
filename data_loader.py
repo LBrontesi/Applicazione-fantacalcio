@@ -769,7 +769,10 @@ def build_players(progress_cb=None, weights=None):
         sub["C_Tags"] = weights["Tags"] * (sub["TagScore"] + 2.0) / 4.0
         sub["C_Injury"] = weights["Injury"] * sub["InjuryP"]
         sub["C_Availability"] = weights["Availability"] * sub["Availability"]
-        xgi_n = _rank_norm(sub["xGI90"].fillna(0))
+        # xGI90 is neutral when missing, like every other historical column:
+        # only observed values are ranked, missing entries contribute zero.
+        xgi = pd.to_numeric(sub.get("xGI90"), errors="coerce")
+        xgi_n = _rank_norm(xgi)
         sub["C_ExpectedOutput"] = weights["ExpectedOutput"] * xgi_n
         sub["C_TeamContext"] = weights.get("TeamContext", 0.0) * sub["TeamContext"]
         sub["C_Confidence"] = weights.get("Confidence", 0.0) * sub["DataConfidence"]
@@ -797,7 +800,9 @@ def build_players(progress_cb=None, weights=None):
         )
         sub["C_MediaVoto"] = weights.get("MediaVoto", 0.0) * _rank_norm(hist_mv)
         sub["C_Presenze"] = weights.get("Presenze", 0.0) * _rank_norm(hist_apps)
-        sub["C_Rigori"] = weights.get("Rigori", 0.0) * _rank_norm(hist_penalties)
+        sub["C_Rigori"] = weights.get("Rigori", 0.0) * _rank_norm(
+            hist_penalties.where(hist_penalties > 0)
+        )
         sub["C_Produttivita"] = weights.get("Produttivita", 0.0) * _rank_norm(hist_output)
         manual = (
             sub["C_FM"] + sub["C_FVM"] + sub["C_ALG"]
@@ -815,11 +820,12 @@ def build_players(progress_cb=None, weights=None):
             + abs(weights["Tags"]) + abs(weights["Injury"])
             + abs(weights["Availability"])
             + (abs(weights["ExpectedOutput"])
-               if sub["xGI90"].notna().any() else 0.0)
+               if bool(xgi.notna().any()) else 0.0)
             + (abs(weights.get("GolSubiti", 0.0)) if ga_active else 0.0)
             + abs(weights.get("MediaVoto", 0.0))
             + abs(weights.get("Presenze", 0.0))
-            + abs(weights.get("Rigori", 0.0))
+            + (abs(weights.get("Rigori", 0.0))
+               if bool((hist_penalties > 0).any()) else 0.0)
             + abs(weights.get("Produttivita", 0.0))
             + abs(weights.get("TeamContext", 0.0))
             + abs(weights.get("Confidence", 0.0))

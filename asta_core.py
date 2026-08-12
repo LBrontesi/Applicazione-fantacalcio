@@ -218,7 +218,7 @@ def auction_advice(session, player, available_players, current_price=None):
     recommended = min(target, personal_max) if personal_max else 0
     price = _number(current_price, 0)
     price_pressure = price / personal_max if personal_max else 1.0
-    opportunity = (quality + replacement_gap) * max(0.0, 1.0 - price_pressure)
+    opportunity = min(1.0, quality + replacement_gap) * max(0.0, 1.0 - price_pressure)
     if not role_left or not personal_max:
         verdict = "NON COMPRARE"
     elif price and price > personal_max:

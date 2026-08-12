@@ -50,6 +50,17 @@ class AuctionSessionTests(unittest.TestCase):
         self.assertEqual(removed["name"], "Portiere")
         self.assertEqual(asta_core.team_summary(self.session, "bro")["spent"], 0)
 
+    def test_opportunity_stays_in_unit_range(self):
+        advice = asta_core.auction_advice(
+            self.session,
+            {**player("Top", "A"), "SeasonValue": 0.99, "Score": 0.9, "DataConfidence": 0.9},
+            [{"Nome": "Debole", "Squadra": "Test FC", "Ruolo": "A",
+              "Cluster": 1, "Score": 0.9, "SeasonValue": 0.05}],
+            current_price=0,
+        )
+        self.assertGreaterEqual(advice["opportunity"], 0.0)
+        self.assertLessEqual(advice["opportunity"], 1.0)
+
     def test_old_saved_session_is_upgraded(self):
         old = {"meta": {"budget": 100, "fair": {"P": [1], "D": [1],
                                                      "C": [1], "A": [1]}}}

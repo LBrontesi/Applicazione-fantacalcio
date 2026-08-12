@@ -156,6 +156,15 @@ def main():
     ])
     check("blend score normalized", players["Score"].between(0.0, 1.0).all())
 
+    # Neutral-missing ranking: players who never took a penalty or have no
+    # history contribute zero instead of a percentile-tie boost, and a fully
+    # missing xGI90 source stays at zero rather than a constant 0.5 tie.
+    no_pen = players["HistRigori"].fillna(0.0) <= 0
+    check("penalty-less players get zero C_Rigori",
+          players.loc[no_pen, "C_Rigori"].abs().max() < 1e-9)
+    check("missing xGI90 source is neutral",
+          players["C_ExpectedOutput"].abs().max() < 1e-9)
+
     rho = backtest_predictor(players)
     ok_roles = {r: v for r, v in rho.items() if pd.notna(v)}
     check("backtest model (Spearman > 0.2)", len(ok_roles) >= 3 and
