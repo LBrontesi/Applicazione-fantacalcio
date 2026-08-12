@@ -92,8 +92,10 @@ const state = {
     role: "Tutti",
     cluster: "Tutti",
     checked: new Set(),
+    sort: { key: "Rank", dir: 1 },
   },
   lineupsTab: { team: "Tutte", focus: "Tutte", query: "" },
+  motivation: { quoteIndex: 0 },
   setup: { budget: 500, fair: null, weights: null, method: "blend" },
 };
 
@@ -129,6 +131,13 @@ async function loadLineups() {
   state.lineups = data;
 }
 
+function hideSplash() {
+  const splash = $("#boot-splash");
+  if (!splash) return;
+  splash.classList.add("is-done");
+  setTimeout(() => splash.remove(), 600);
+}
+
 async function loadAll() {
   try {
     const [stateData] = await Promise.all([loadState(), loadPlayers(), loadLineups()]);
@@ -137,6 +146,8 @@ async function loadAll() {
   } catch (err) {
     setConnection(false);
     toast(err.message, "err");
+  } finally {
+    hideSplash();
   }
 }
 
@@ -160,6 +171,11 @@ function setConnection(ok) {
 /* ------------------------------------------------------------------ */
 
 const ROLE_ORDER = ["P", "D", "C", "A"];
+const ROLE_NAMES = { P: "Portiere", D: "Difensore", C: "Centrocampista", A: "Attaccante" };
+
+function rolePill(role) {
+  return `<span class="role-pill role-${esc(role)}" title="${esc(ROLE_NAMES[role] || "")}">${esc(role)}</span>`;
+}
 
 function availablePlayers() {
   const unavailable = new Set([...state.excluded, ...state.purchased]);
@@ -210,7 +226,7 @@ function suggestionsHtml(items, activeIndex, action = "pick") {
       (p, i) =>
         `<div class="suggestion-item${i === activeIndex ? " is-active" : ""}" data-action="${action}" data-name="${esc(p.Nome)}" data-index="${i}">
           <span><b>${esc(p.Nome)}</b> <span class="s-meta">${esc(p.Squadra)}</span></span>
-          <span class="s-meta"><span class="s-tag">${esc(p.Ruolo)}</span> FM ${num(p.FM)}</span>
+          <span class="s-meta">${rolePill(p.Ruolo)} FM ${num(p.FM)}</span>
         </div>`,
     )
     .join("");
@@ -260,7 +276,7 @@ function renderAuction() {
 
   const progress = roleProgress(own, session.slots);
   setHTML("#role-progress", progress.map((r) => `
-    <div class="role-prog">
+    <div class="role-prog role-${esc(r.role)}">
       <div class="rp-top"><span>${esc(r.role)}</span><strong>${r.filled}/${r.total}</strong></div>
       <div class="progress-track"><span style="width:${Math.round(r.ratio * 100)}%"></span></div>
     </div>`).join(""));
@@ -314,7 +330,7 @@ function renderWatchlist() {
   const watchlist = session?.watchlist || [];
   const explanations = state.app.watchlist_explanations || {};
   if (!watchlist.length) {
-    setHTML("#watchlist-panel", `<p class="note">Nessun obiettivo salvato: aggiungine uno dalla scheda del giocatore chiamato.</p>`);
+    setHTML("#watchlist-panel", `<div class="empty-state"><span class="es-icon">⭐</span>Nessun obiettivo salvato: aggiungine uno dalla scheda del giocatore chiamato.</div>`);
     return;
   }
   setHTML("#watchlist-panel", `
@@ -322,7 +338,7 @@ function renderWatchlist() {
       <thead><tr><th>Giocatore</th><th>Squadra</th><th>Ruolo</th><th>Priorità</th><th>Nota</th></tr></thead>
       <tbody>${watchlist.map((w) => `
         <tr>
-          <td>${esc(w.name)}</td><td>${esc(w.club)}</td><td>${esc(w.role)}</td>
+          <td><b>${esc(w.name)}</b></td><td>${esc(w.club)}</td><td>${rolePill(w.role)}</td>
           <td><span class="s-tag">${esc(w.tier)}</span> ${esc(explanations[w.tier] || "")}</td><td>${esc(w.note)}</td>
         </tr>`).join("")}
       </tbody>
@@ -396,12 +412,12 @@ function renderRoster() {
   const team = $("#roster-team-select")?.value || state.session.teams[0];
   const purchases = purchasesByTeam()[team] || [];
   if (!purchases.length) {
-    setHTML("#roster-view", `<p class="note">${esc(team)} non ha ancora acquisti registrati.</p>`);
+    setHTML("#roster-view", `<div class="empty-state"><span class="es-icon">🛒</span>${esc(team)} non ha ancora acquisti registrati.</div>`);
     return;
   }
   const rows = [...purchases].reverse().map((p) => `
     <tr>
-      <td>${esc(p.name)}</td><td>${esc(p.club)}</td><td>${esc(p.role)}</td>
+      <td><b>${esc(p.name)}</b></td><td>${esc(p.club)}</td><td>${rolePill(p.role)}</td>
       <td class="num">${int(p.price)}</td><td class="num">${int(p.cap)}</td>
       <td class="num">${int(p.cluster)}</td><td>${esc((p.created || "").replace("T", " "))}</td>
     </tr>`).join("");
@@ -427,6 +443,21 @@ function renderAuctionSearch() {
   box.hidden = !(query.length >= 2);
   if (query.length >= 2) {
     box.innerHTML = suggestionsHtml(matches, -1, "pick-auction");
+  }
+}
+
+async function suggestNomination() {
+  try {
+    const role = $("#nomination-role").value;
+    const data = await postJSON("/api/nomination", { role });
+    const choices = data.choices || [];
+    setHTML("#nomination-suggestions", `
+      <div class="alert alert-info"><b>Da nominare ora — ${esc(data.role)}</b> · ${int(data.available_count)} disponibili nel reparto.</div>
+      <div class="chips-row">${choices.map((p) =>
+        `<button class="chip" data-action="pick-auction" data-name="${esc(p.name)}">🎙️ <b>${esc(p.name)}</b> · ${esc(p.team)} · ${rolePill(p.role)} · cap ${int(p.fair_cap)} · ${esc(p.reason)}</button>`
+      ).join("")}</div>`);
+  } catch (err) {
+    toast(err.message, "err");
   }
 }
 
@@ -553,18 +584,44 @@ function renderPlayers() {
       ...clusters.map((c) => `<option value="${c}" ${String(c) === String(clusterFilter) ? "selected" : ""}>${c}</option>`)].join("");
   $("#players-count-note").textContent = `${view.length} giocatori visibili · budget ${int(state.setup.budget)}`;
 
-  const maxScore = view.length ? Math.max(...view.map((p) => Number(p.Score) || 0)) : null;
+  const sort = state.playersTab.sort;
+  if (sort.key !== "Rank") {
+    const sortValue = (p) => {
+      switch (sort.key) {
+        case "Nome": return String(p.Nome);
+        case "Squadra": return String(p.Squadra);
+        case "Ruolo": return ROLE_ORDER.indexOf(p.Ruolo);
+        case "cap": return fairValue(p.Ruolo, p.Cluster);
+        default: return Number(p[sort.key]) || 0;
+      }
+    };
+    view = [...view].sort((a, b) => {
+      const va = sortValue(a);
+      const vb = sortValue(b);
+      if (typeof va === "string") return sort.dir * String(va).localeCompare(String(vb), "it");
+      return sort.dir * (va - vb);
+    });
+  }
+
+  const th = (key, label, cls = "") => {
+    const active = sort.key === key;
+    const arrow = active ? (sort.dir === 1 ? " sort-asc" : " sort-desc") : "";
+    return `<th class="${cls} sortable${arrow}" data-sort="${key}">${label}</th>`;
+  };
   setHTML("#players-table-wrap", `
     <table class="data">
     <thead><tr>
-      <th></th><th>Nome</th><th>Squadra</th><th>Ruolo</th><th class="num">FM</th><th class="num">QA</th>
-      <th class="num">Cluster</th><th class="num">Score</th><th>Valore stag.</th><th>Confidenza</th><th class="num">Max da offrire</th>
+      <th></th>
+      ${th("Nome", "Nome")}${th("Squadra", "Squadra")}${th("Ruolo", "Ruolo")}
+      ${th("FM", "FM", "num")}${th("QA", "QA", "num")}${th("Cluster", "Cluster", "num")}
+      ${th("Score", "Score", "num")}${th("SeasonValue", "Valore stag.")}${th("DataConfidence", "Confidenza")}
+      ${th("cap", "Max da offrire", "num")}
     </tr></thead>
     <tbody>${view.map((p) => `
       <tr>
         <td><input type="checkbox" class="exclude-check" data-name="${esc(p.Nome)}" ${state.playersTab.checked.has(p.Nome) ? "checked" : ""}></td>
         <td><button class="link-inline" data-action="pick-player" data-name="${esc(p.Nome)}">${esc(p.Nome)}</button></td>
-        <td>${esc(p.Squadra)}</td><td>${esc(p.Ruolo)}</td>
+        <td>${esc(p.Squadra)}</td><td>${rolePill(p.Ruolo)}</td>
         <td class="num">${num(p.FM)}</td><td class="num">${int(p.QA)}</td>
         <td class="num">${int(p.Cluster)}</td><td class="num">${num(p.Score, 3)}</td>
         <td>${pct(p.SeasonValue)}</td><td>${pct(p.DataConfidence)}</td>
@@ -573,7 +630,7 @@ function renderPlayers() {
     </tbody>
     </table>`);
 
-  if (!view.length) setHTML("#players-table-wrap", `<p class="note">Nessun giocatore corrisponde ai filtri.</p>`);
+  if (!view.length) setHTML("#players-table-wrap", `<div class="empty-state"><span class="es-icon">🔍</span>Nessun giocatore corrisponde ai filtri selezionati.</div>`);
 
   setHTML("#restore-panel", `
     <details class="accordion panel" style="box-shadow:none;margin:12px 0 0">
@@ -592,7 +649,6 @@ function renderPlayers() {
       ${(state.setup.fair?.[r] || []).map((value, i) => `
         <div class="fair-row"><label>Cluster ${i + 1}</label><span>${int(value)}</span></div>`).join("")}
     </div>`).join(""));
-  void maxScore;
 }
 
 function renderPlayerCard() {
@@ -624,7 +680,7 @@ function renderPlayerCard() {
         <div class="bid-value">${int(cap)} crediti</div>
         <div class="bid-meta">Cluster ${int(p.Cluster)} dei ${esc(p.Ruolo)} · STOP oltre ${int(cap)}</div>
       </div>
-      <div class="bid-stop">${esc(p.Ruolo)}</div>
+      <div class="bid-stop">${rolePill(p.Ruolo)}</div>
     </div>
     <div class="kv-list">
       <div class="kv"><div class="kv-label">FantaMedia</div><div class="kv-value">${fmDisp}</div></div>
@@ -753,6 +809,53 @@ function renderLineups() {
   }
 
   setHTML("#lineups-list", `<div class="team-grid">${shown.map((team) => renderTeamCard(team, byTeam.get(team) || [])).join("")}</div>`);
+}
+
+const TOTTI_QUOTES = [
+  {
+    text: "«Nun te preoccupà, mo je faccio er cucchiaio.»",
+    context: "A Di Biagio e Maldini prima del rigore contro l’Olanda a Euro 2000.",
+    source: "https://www.repubblica.it/sport/2017/05/28/news/_mo_je_faccio_er_cucchiaio_quando_con_una_battuta_gelo_maldini_e_di_biagio-164123599/",
+  },
+  {
+    text: "«Mo je faccio er cucchiaio.»",
+    context: "La frase che ha trasformato un rigore in una lezione di coraggio.",
+    source: "https://www.sportmediaset.mediaset.it/calcio/Nazionale/totti-15-anni-fa-il-celebre-mo-je-faccio-er-cucchiaio-_1069817-201502a.shtml",
+  },
+  {
+    text: "«Vi ho purgato ancora.»",
+    context: "La celebre scritta mostrata nel derby del 1999: fiducia, carattere, Roma.",
+    source: "https://www.repubblica.it/sport/2017/05/28/news/_mo_je_faccio_er_cucchiaio_quando_con_una_battuta_gelo_maldini_e_di_biagio-164123599/",
+  },
+];
+
+function renderMotivation() {
+  const quote = TOTTI_QUOTES[state.motivation.quoteIndex % TOTTI_QUOTES.length];
+  $("#totti-quote").textContent = quote.text;
+  $("#totti-context").textContent = quote.context;
+  $("#totti-source").href = quote.source;
+}
+
+function playTottiAudio() {
+  const clips = [
+    {
+      src: "https://www.youtube-nocookie.com/embed/F7i0Co-hAAc?autoplay=1&start=9&end=15&rel=0&playsinline=1",
+      title: "Audio: estratto Francesco Totti, dal secondo 9 al 15",
+    },
+    {
+      src: "https://www.youtube-nocookie.com/embed/DsSGr6mhEmU?autoplay=1&start=79&end=83&rel=0&playsinline=1",
+      title: "Audio: Francesco Totti dice daje",
+    },
+    {
+      src: "https://www.youtube-nocookie.com/embed/EBK3_fzuxmI?autoplay=1&start=47&end=49&rel=0&playsinline=1",
+      title: "Audio: estratto Francesco Totti, dal secondo 47 al 49",
+    },
+  ];
+  const clip = clips[Math.floor(Math.random() * clips.length)];
+  setHTML("#totti-audio-player", `
+    <iframe src="${clip.src}"
+      title="${clip.title}"
+      allow="autoplay; encrypted-media" referrerpolicy="strict-origin-when-cross-origin"></iframe>`);
 }
 
 function renderTeamCard(team, rows) {
@@ -899,6 +1002,7 @@ function renderAll(data) {
     case "auction": renderAuction(); break;
     case "players": renderPlayers(); renderPlayerCard(); break;
     case "lineups": renderLineups(); break;
+    case "motivation": renderMotivation(); break;
     case "setup": renderSetup(); break;
   }
 }
@@ -1203,7 +1307,14 @@ function bindEvents() {
     const name = actionEl.dataset.name;
     switch (action) {
       case "goto-setup": switchTab("setup"); break;
+      case "goto-auction": switchTab("auction"); break;
+      case "next-quote":
+        state.motivation.quoteIndex = (state.motivation.quoteIndex + 1) % TOTTI_QUOTES.length;
+        renderMotivation();
+        break;
+      case "play-totti-audio": playTottiAudio(); break;
       case "pick-auction": await pickAuctionPlayer(name); break;
+      case "suggest-nomination": await suggestNomination(); break;
       case "pick-player": await pickPlayer(name); break;
       case "pick": await pickPlayer(name); break;
       case "run-scrape": await runScrape(); break;
@@ -1275,6 +1386,16 @@ function bindEvents() {
     if (!box) return;
     if (box.checked) state.playersTab.checked.add(box.dataset.name);
     else state.playersTab.checked.delete(box.dataset.name);
+  });
+
+  $("#players-table-wrap").addEventListener("click", (event) => {
+    const head = event.target.closest("th.sortable");
+    if (!head) return;
+    const key = head.dataset.sort;
+    const sort = state.playersTab.sort;
+    if (sort.key === key) sort.dir = -sort.dir;
+    else { sort.key = key; sort.dir = 1; }
+    renderPlayers();
   });
 
   $("#lineups-team").addEventListener("change", (event) => {

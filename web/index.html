@@ -5,9 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Asta Coach — Assistente asta fantacalcio</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="style.css?v=4">
+  <link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
+  <div class="boot-splash" id="boot-splash" aria-hidden="true">
+    <div class="splash-mark">⚽</div>
+    <div class="splash-spinner"></div>
+    <p class="note">Caricamento Asta Coach…</p>
+  </div>
   <div class="scroll-progress" aria-hidden="true"><span id="scroll-progress-bar"></span></div>
   <div class="bg-glow bg-glow-1" aria-hidden="true"></div>
   <div class="bg-glow bg-glow-2" aria-hidden="true"></div>
@@ -21,10 +26,11 @@
       </div>
     </div>
     <nav class="tabs" id="tab-nav" aria-label="Sezioni">
-      <button class="tab is-active" data-tab="auction">Asta live</button>
-      <button class="tab" data-tab="players">Giocatori</button>
-      <button class="tab" data-tab="lineups">Formazioni</button>
-      <button class="tab" data-tab="setup">Setup</button>
+      <button class="tab is-active" data-tab="auction">⚡ Asta live</button>
+      <button class="tab" data-tab="players">👥 Giocatori</button>
+      <button class="tab" data-tab="lineups">🧩 Formazioni</button>
+      <button class="tab" data-tab="motivation">🔥 Motivazione</button>
+      <button class="tab" data-tab="setup">⚙️ Setup</button>
     </nav>
     <div class="header-actions">
       <div id="budget-chip" class="chip chip-muted">—</div>
@@ -33,20 +39,12 @@
     </div>
   </header>
 
-  <section class="hero" aria-labelledby="hero-title">
-    <div class="hero-copy">
-      <span class="section-index">Auction day · Serie A</span>
-      <h2 id="hero-title">Decidi in fretta, <em>senza inseguire il prezzo.</em></h2>
-      <p>
-        Ranking per ruolo, cluster fissi da 10, fair value come cap invalicabile
-        e un consiglio personale che si adatta alla tua rosa.
-      </p>
-    </div>
+  <section class="hero hero-stats-only" aria-label="Riepilogo asta">
     <div class="hero-stats" id="hero-stats">
-      <div class="stat-card"><span class="stat-label">Giocatori</span><strong class="stat-value" data-stat="players">—</strong></div>
-      <div class="stat-card"><span class="stat-label">Budget attivo</span><strong class="stat-value" data-stat="budget">—</strong></div>
-      <div class="stat-card"><span class="stat-label">Crediti rimasti</span><strong class="stat-value" data-stat="remaining">—</strong></div>
-      <div class="stat-card"><span class="stat-label">Acquisti</span><strong class="stat-value" data-stat="bought">—</strong></div>
+      <div class="stat-card"><div class="stat-top"><span class="stat-label">Giocatori</span><span class="stat-icon" aria-hidden="true">👥</span></div><strong class="stat-value" data-stat="players">—</strong></div>
+      <div class="stat-card"><div class="stat-top"><span class="stat-label">Budget attivo</span><span class="stat-icon" aria-hidden="true">💰</span></div><strong class="stat-value" data-stat="budget">—</strong></div>
+      <div class="stat-card"><div class="stat-top"><span class="stat-label">Crediti rimasti</span><span class="stat-icon" aria-hidden="true">🪙</span></div><strong class="stat-value" data-stat="remaining">—</strong></div>
+      <div class="stat-card"><div class="stat-top"><span class="stat-label">Acquisti</span><span class="stat-icon" aria-hidden="true">🛒</span></div><strong class="stat-value" data-stat="bought">—</strong></div>
     </div>
   </section>
 
@@ -100,6 +98,18 @@
           <h3>⚡ Giocatore chiamato ora</h3>
           <span class="panel-note">cerca il chiamato per ottenere prezzo, STOP e piano B</span>
         </div>
+        <div class="action-row">
+          <label for="nomination-role">Ruolo da chiamare</label>
+          <select class="select" id="nomination-role">
+            <option value="P">P — Portieri</option>
+            <option value="D">D — Difensori</option>
+            <option value="C" selected>C — Centrocampisti</option>
+            <option value="A">A — Attaccanti</option>
+          </select>
+          <button class="btn btn-ghost" data-action="suggest-nomination">🎙️ Chi chiamo io?</button>
+          <span class="note">Genera una lista per il ruolo scelto.</span>
+        </div>
+        <div id="nomination-suggestions"></div>
         <div id="auction-available-note"></div>
         <div class="search-box" id="auction-search-wrap">
           <input class="input search-input" id="auction-query" type="text"
@@ -182,6 +192,29 @@
       </div>
     </section>
 
+    <!-- =========================== MOTIVAZIONE ========================== -->
+    <section class="tab-panel" id="tab-motivation" data-panel="motivation">
+      <div class="motivation-hero">
+        <div class="motivation-photo-wrap">
+          <img src="assets/totti-user.jpeg" alt="Francesco Totti con la maglia della Roma" class="motivation-image">
+        </div>
+        <div class="motivation-copy">
+          <div>
+            <span class="section-index">La carica prima dell'asta</span>
+            <h2 class="motivation-title">Il Capitano</h2>
+          </div>
+          <blockquote class="totti-quote" id="totti-quote">«Nun te preoccupà, mo je faccio er cucchiaio.»</blockquote>
+          <p class="totti-context" id="totti-context">Caricamento…</p>
+          <div class="motivation-actions">
+            <button class="btn btn-primary" data-action="play-totti-audio">▶️ Ascolta Totti</button>
+            <button class="btn btn-ghost" data-action="next-quote">🎲 Un'altra frase</button>
+          </div>
+          <a class="totti-source" id="totti-source" href="#" target="_blank" rel="noopener">📰 Leggi la fonte</a>
+          <div id="totti-audio-player" class="totti-audio-player" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
     <!-- ============================= SETUP ============================= -->
     <section class="tab-panel" id="tab-setup" data-panel="setup">
       <div class="panel">
@@ -256,6 +289,6 @@
 
   <div class="toast-wrap" id="toast-wrap" aria-live="polite"></div>
 
-  <script type="module" src="app.js?v=4"></script>
+  <script type="module" src="app.js?v=5"></script>
 </body>
 </html>

@@ -523,6 +523,45 @@ def advice_payload(players, session, name, current_price):
     }
 
 
+def nomination_payload(players, session, role):
+    """Suggest appealing players still available for the chosen role."""
+    role = str(role or "").upper()
+    if role not in ROLE_ORDER:
+        raise ValueError("Seleziona un ruolo valido: P, D, C o A.")
+    unavailable = load_excluded() | asta_core.purchased_names(session)
+    available = players[
+        ~players["Nome"].isin(unavailable) & (players["Ruolo"] == role)
+    ].copy()
+    if available.empty:
+        raise ValueError(f"Non ci sono più {role} disponibili da nominare.")
+    appeal = (
+        0.50 * pd.to_numeric(available["SeasonValue"], errors="coerce").fillna(0.0)
+        + 0.20 * pd.to_numeric(available["Starter"], errors="coerce").fillna(0.0)
+        + 0.15 * pd.to_numeric(available["SetPieces"], errors="coerce").fillna(0.0)
+        + 0.15 * pd.to_numeric(available["DataConfidence"], errors="coerce").fillna(0.0)
+    )
+    available["_appeal"] = appeal
+    choices = available.sort_values(
+        ["_appeal", "QA", "Rank"], ascending=[False, False, True]
+    ).head(3)
+    rows = []
+    for _, player in choices.iterrows():
+        cap = asta_core.coach(session, player)["cap"]
+        reasons = []
+        if float(player.get("Starter", 0) or 0) >= 0.5:
+            reasons.append("titolare probabile")
+        if float(player.get("SetPieces", 0) or 0) >= 0.3:
+            reasons.append("batte piazzati")
+        reasons.append(f"cluster {int(player.get('Cluster', 0) or 0)}")
+        rows.append({
+            "name": player["Nome"], "team": player["Squadra"],
+            "role": player["Ruolo"], "cluster": int(player.get("Cluster", 0) or 0),
+            "fair_cap": int(cap), "appeal": float(player["_appeal"]),
+            "reason": " · ".join(reasons),
+        })
+    return {"role": role, "available_count": int(len(available)), "choices": rows}
+
+
 def _comparison_row(label, player, advice):
     starter = "Sì" if float(player.get("Starter", 0) or 0) >= 0.5 else "No / dubbio"
     return {
@@ -701,6 +740,17 @@ class WebHandler(BaseHTTPRequestHandler):
             self._send_json(200, {
                 "ok": True,
                 **advice_payload(players, session, name, current_price),
+            })
+            return
+
+        if path == "/api/nomination":
+            session = active_session()
+            if not session:
+                raise ValueError("Crea prima una configurazione per usare i suggerimenti di chiamata.")
+            asta_core.ensure_session(session)
+            self._send_json(200, {
+                "ok": True,
+                **nomination_payload(get_players(), session, payload.get("role")),
             })
             return
 
