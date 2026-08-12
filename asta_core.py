@@ -15,12 +15,32 @@ DEFAULT_ROLE_PRIORITIES = {"P": 0.8, "D": 1.0, "C": 1.0, "A": 1.2}
 WATCHLIST_ADJUSTMENTS = {"A": 0.04, "B": 0.0, "C": -0.06}
 
 
+def validate_fair(fair):
+    """Return a safe fair-value table for every role."""
+    if not isinstance(fair, dict):
+        raise ValueError("I fair value devono essere una tabella per ruolo.")
+    clean = {}
+    for role in ROLE_ORDER:
+        values = fair.get(role)
+        if not isinstance(values, (list, tuple)) or not values:
+            raise ValueError(f"Inserisci almeno un fair value valido per il ruolo {role}.")
+        try:
+            parsed = [int(value) for value in values]
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Fair value non valido per il ruolo {role}.") from exc
+        if any(value < 1 for value in parsed):
+            raise ValueError(f"I fair value del ruolo {role} devono essere almeno 1.")
+        clean[role] = parsed
+    return clean
+
+
 def new_session(budget=500, fair=None, slots=None, created=None, teams=None):
     if slots is None:
         from data_loader import DEFAULT_SLOTS
         slots = dict(DEFAULT_SLOTS)
     if fair is None:
         fair = fair_values_scaled(budget)
+    fair = validate_fair(fair)
     teams = list(teams or DEFAULT_TEAMS)
     if len(teams) != 10 or len(set(teams)) != 10 or any(not name.strip() for name in teams):
         raise ValueError("Servono esattamente 10 partecipanti con nomi distinti.")
@@ -55,6 +75,10 @@ def ensure_session(session):
     if meta["my_team"] not in teams:
         meta["my_team"] = teams[0]
     meta.setdefault("slots", {"P": 3, "D": 8, "C": 8, "A": 6})
+    try:
+        meta["fair"] = validate_fair(meta.get("fair"))
+    except ValueError:
+        meta["fair"] = fair_values_scaled(max(1, int(meta.get("budget", 500))))
     priorities = meta.setdefault("role_priorities", dict(DEFAULT_ROLE_PRIORITIES))
     meta["role_priorities"] = {
         role: min(1.5, max(0.5, _number(priorities.get(role), 1.0)))

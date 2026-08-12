@@ -706,8 +706,13 @@ class WebHandler(BaseHTTPRequestHandler):
 
         if path == "/api/session/save":
             budget = int(payload.get("budget", 500))
-            fair = payload.get("fair") or fair_values_scaled(budget)
-            fair = {role: [int(v) for v in fair.get(role, [])] for role in ROLE_ORDER}
+            if not 10 <= budget <= 5000:
+                raise ValueError("Il budget deve essere compreso tra 10 e 5000.")
+            fair = payload.get("fair")
+            if fair is None:
+                fair = fair_values_scaled(budget)
+            else:
+                fair = asta_core.validate_fair(fair)
             session = asta_core.new_session(budget=budget, fair=fair)
             asta_core.save_session(session)
             set_active_session(session)
@@ -826,7 +831,10 @@ class WebHandler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/weights":
-            weights = {k: float(v) for k, v in payload.get("weights", {}).items()}
+            weights = payload.get("weights", {})
+            if not isinstance(weights, dict):
+                raise ValueError("I pesi classifica devono essere un oggetto.")
+            weights = dict(weights)
             method = payload.get("method", DEFAULT_METHOD)
             weights["_method"] = method
             save_ranking_weights(weights)

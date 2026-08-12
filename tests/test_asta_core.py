@@ -1,6 +1,7 @@
 import unittest
 
 import asta_core
+import data_loader
 
 
 def player(name, role, cluster=1):
@@ -67,6 +68,19 @@ class AuctionSessionTests(unittest.TestCase):
         upgraded = asta_core.ensure_session(old)
         self.assertEqual(upgraded["purchases"], [])
         self.assertIn("slots", upgraded["meta"])
+
+    def test_invalid_fair_values_are_rejected_or_repaired(self):
+        with self.assertRaises(ValueError):
+            asta_core.new_session(fair={"P": [], "D": [1], "C": [1], "A": [1]})
+        with self.assertRaises(ValueError):
+            asta_core.new_session(fair={"P": [0], "D": [1], "C": [1], "A": [1]})
+        corrupted = {"meta": {"budget": 100, "fair": {"P": [], "D": [], "C": [], "A": []}}}
+        self.assertTrue(all(asta_core.ensure_session(corrupted)["meta"]["fair"].values()))
+
+    def test_invalid_ranking_weights_are_rejected(self):
+        for value in (float("nan"), float("inf"), -0.1, 2.1):
+            with self.assertRaises(ValueError):
+                data_loader.validate_ranking_weights({"FM": value})
 
 
 if __name__ == "__main__":

@@ -88,18 +88,36 @@ def load_ranking_weights():
         out = {k: float(saved.get(k, DEFAULT_RANK_WEIGHTS[k]))
                for k in DEFAULT_RANK_WEIGHTS}
         out["_method"] = saved.get("_method", DEFAULT_METHOD)
-        return out
+        return validate_ranking_weights(out)
     except (OSError, ValueError, KeyError):
         return {**DEFAULT_RANK_WEIGHTS, "_method": DEFAULT_METHOD}
 
 
 def save_ranking_weights(weights):
     DATA_DIR.mkdir(exist_ok=True)
-    data = {k: float(weights.get(k, DEFAULT_RANK_WEIGHTS[k]))
-            for k in DEFAULT_RANK_WEIGHTS}
-    data["_method"] = weights.get("_method", DEFAULT_METHOD)
+    data = validate_ranking_weights(weights)
     with open(RANK_WEIGHTS_FILE, "w") as fh:
         json.dump(data, fh, indent=2)
+
+
+def validate_ranking_weights(weights):
+    """Reject values that would make ranking scores non-finite or inverted."""
+    if not isinstance(weights, dict):
+        raise ValueError("I pesi classifica devono essere un oggetto.")
+    data = {}
+    for key, default in DEFAULT_RANK_WEIGHTS.items():
+        try:
+            value = float(weights.get(key, default))
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Peso non valido: {key}.") from exc
+        if not np.isfinite(value) or not 0.0 <= value <= 2.0:
+            raise ValueError(f"Il peso {key} deve essere compreso tra 0 e 2.")
+        data[key] = value
+    method = weights.get("_method", DEFAULT_METHOD)
+    if method not in {"blend", "model", "manual"}:
+        raise ValueError("Metodo ranking non valido.")
+    data["_method"] = method
+    return data
 
 DEFAULT_FAIR = {
     "P": [56, 1, 1],
@@ -268,7 +286,25 @@ def _apply_season_stats(players):
             stats[col] = 0.0
     stats["GolSubiti"] = pd.to_numeric(stats["GolSubiti"], errors="coerce").fillna(0.0)
     stats["RigoriParati"] = pd.to_numeric(stats["RigoriParati"], errors="coerce").fillna(0.0)
-    is_keeper = (stats["GolSubiti"] > 0) | (stats["RigoriParati"] > 0)
+    # The stats source has no role column.  A goalkeeper can nevertheless
+    # have a season with appearances and zero goals conceded, so classify all
+    # rows matching a current goalkeeper as keeper rows as well.
+    current_keepers = players[players["Ruolo"] == "P"]
+    keeper_names = [
+        str(name) for col in ["NomeGaz", "Nome"] if col in current_keepers
+        for name in current_keepers[col].dropna().unique()
+    ]
+    name_is_current_keeper = {
+        stat_name: any(
+            _keeper_name_score(name, stat_name) >= 0.90
+            for name in keeper_names
+        )
+        for stat_name in stats["Nome"].astype(str).unique()
+    }
+    is_keeper = (
+        (stats["GolSubiti"] > 0) | (stats["RigoriParati"] > 0)
+        | stats["Nome"].astype(str).map(name_is_current_keeper).fillna(False)
+    )
     keeper_rows = stats[is_keeper].copy()
     outfield_rows = stats[~is_keeper].copy()
 
