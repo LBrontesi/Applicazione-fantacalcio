@@ -113,9 +113,9 @@ def main():
         sub = players_fm[players_fm["Ruolo"] == role]
         order = sub.sort_values(
             ["FMEst", "QA", "Nome"], ascending=[False, False, True],
-            na_position="last")["Rank"].tolist()
-        regress = regress and order == list(range(1, len(sub) + 1))
-    check("FM-only weights reproduce FM ordering", regress)
+            na_position="last")
+        regress = regress and order["RawQuality"].is_monotonic_decreasing
+    check("FM-only weights drive raw quality", regress)
 
     partial = players[players["FM1"].isna() & (
         players["FM2"].notna() | players["FM3"].notna()
@@ -164,14 +164,16 @@ def main():
           len(lauto) == 1 and lauto.iloc[0]["HistPresenze"] == 94 and
           lauto.iloc[0]["StatSeasons"] == 3)
 
-    # Neutral-missing ranking: players who never took a penalty or have no
-    # xGI90 contribute zero instead of receiving a percentile-tie boost.
+    # Missing verifiable bonuses stay at zero; missing continuous data use
+    # the neutral role value and are then handled by confidence shrinkage.
     no_pen = players["HistRigori"].fillna(0.0) <= 0
     check("penalty-less players get zero C_Rigori",
           players.loc[no_pen, "C_Rigori"].abs().max() < 1e-9)
     missing_xgi = players["xGI90"].isna()
-    check("missing xGI90 players are neutral",
-          players.loc[missing_xgi, "C_ExpectedOutput"].abs().max() < 1e-9)
+    expected_output_neutral = DEFAULT_RANK_WEIGHTS["ExpectedOutput"] * 0.5
+    check("missing xGI90 players receive role-neutral value",
+          (players.loc[missing_xgi, "C_ExpectedOutput"]
+           - expected_output_neutral).abs().max() < 1e-9)
 
     rho = backtest_predictor(players)
     ok_roles = {r: v for r, v in rho.items() if pd.notna(v)}

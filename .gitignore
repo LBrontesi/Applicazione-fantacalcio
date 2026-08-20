@@ -1,10 +1,12 @@
 .idea/
 .venv/
+node_modules/
 __pycache__/
 data/sessions/
 data/benchmark/
 data/webrtc_debug.log
 data/ranking_weights.json
+data/guida_import.json
 *.xlsx
 ~$*.xlsx
 *.pyc

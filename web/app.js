@@ -94,8 +94,7 @@ const state = {
     checked: new Set(),
     sort: { key: "Rank", dir: 1 },
   },
-  lineupsTab: { team: "Tutte", focus: "Tutte", query: "" },
-  motivation: { quoteIndex: 0 },
+  lineupsTab: { team: "Tutte", focus: "Tutte", query: "", expandAll: false },
   setup: { budget: 500, fair: null, weights: null, method: "blend" },
 };
 
@@ -266,6 +265,13 @@ function renderAuction() {
   const market = state.app.market || [];
 
   $("#auction-session-name").textContent = `configurazione ${esc(session.name || "")} · ${esc(session.created.replace("T", " "))}`;
+  const completionButton = $("#session-complete-button");
+  completionButton.dataset.completed = session.completed ? "true" : "false";
+  completionButton.textContent = session.completed
+    ? "✅ Asta usata per calibrazione"
+    : "🏁 Segna asta completata";
+  completionButton.classList.toggle("btn-primary", !session.completed);
+  completionButton.classList.toggle("btn-ghost", session.completed);
 
   setHTML("#own-metrics", `
     <div class="metric-card"><div class="metric-label">La mia squadra</div><div class="metric-value">${esc(own.team)}</div></div>
@@ -476,6 +482,7 @@ function renderAuctionAdvice() {
     </div>
     <div id="advice-core">${adviceCoreHtml()}</div>
   `);
+  animateStopMeter();
 }
 
 function adviceCoreHtml() {
@@ -503,19 +510,31 @@ function adviceCoreHtml() {
       </div>
       <div class="bid-stop">STOP oltre ${int(a.fixed_cap)}</div>
     </div>
+    ${renderStopMeter(a)}
     <div class="grid cols-3">
       <div class="metric-card"><div class="metric-label">Punta fino a</div><div class="metric-value">${int(a.recommended)} cr</div></div>
       <div class="metric-card"><div class="metric-label">Massimo personale</div><div class="metric-value">${int(a.personal_max)} cr</div></div>
-      <div class="metric-card"><div class="metric-label">Crediti rimasti</div><div class="metric-value">${int(state.app.own.remaining)} cr</div><div class="metric-sub">di cui ${int(a.reserve)} riservati agli altri slot</div></div>
+      <div class="metric-card"><div class="metric-label">Crediti rimasti</div><div class="metric-value">${int(state.app.own.remaining)} cr</div><div class="metric-sub">${int(a.planned_reserve)} pianificati sugli altri slot · minimo protetto ${int(a.reserve)}</div></div>
     </div>
-    <div class="alert ${verdictClass}">
+    <div class="alert verdict ${verdictClass}">
       ${esc(a.verdict)} — prezzo consigliato fino a ${int(a.recommended)} crediti.
     </div>
     <p class="note">
       Prezzo attuale ${int(state.auction.price)} cr · ${int(a.role_left)} slot ${esc(player.Ruolo)} da riempire ·
-      riserva ${int(a.reserve)} crediti per gli altri slot · ${int(a.alternatives)} alternative comparabili disponibili.
+      piano sugli altri slot ${int(a.planned_reserve)} cr · minimo intoccabile ${int(a.reserve)} cr · ${int(a.alternatives)} alternative comparabili disponibili.
     </p>
     <p class="note"><strong>Perché:</strong> qualità ${pct(a.quality)} · confidenza dati ${pct(a.confidence)} · vantaggio sul miglior piano B ${pct(a.replacement_gap)} · opportunità al prezzo attuale ${pct(a.opportunity)} · necessità reparto ${pct(a.need)} · strategia ${esc(advice.plan_label)}.</p>
+    <div class="chips-row algorithm-breakdown" aria-label="Composizione prezzo consigliato">
+      <span class="chip chip-muted">Algoritmo v${esc(a.advice_version || "1")}</span>
+      <span class="chip chip-muted">Quota piano ${num(a.slot_envelope, 1)} cr</span>
+      <span class="chip chip-muted">Giocatore ×${num(a.player_factor, 2)}</span>
+      <span class="chip chip-muted">Rischio ×${num(a.risk_factor, 2)}</span>
+      <span class="chip ${Number(a.market_factor) > 1 ? "chip-amber" : "chip-muted"}">Mercato ×${num(a.market_factor, 2)}</span>
+      <span class="chip chip-muted">Domanda ×${num(a.demand_factor, 2)} · ${int(a.eligible_bidders)}/9</span>
+      <span class="chip chip-muted">Storico ×${num(a.historical_factor, 2)}</span>
+      ${a.watch_tier ? `<span class="chip chip-muted">Watchlist ${esc(a.watch_tier)} ×${num(a.watch_factor, 2)}</span>` : ""}
+      ${Number(a.club_factor) < 1 ? `<span class="chip chip-amber">Stessa squadra ×${num(a.club_factor, 2)}</span>` : ""}
+    </div>
     ${watchTier}
     ${stackWarning}
 
@@ -551,6 +570,64 @@ function adviceCoreHtml() {
       <input class="input" id="auction-final-price" type="number" min="1" max="${int(session.budget)}" step="1" value="${state.auction.finalPrice}">
       <button class="btn btn-primary" data-action="record-purchase">✅ Registra acquisto</button>
     </div>`;
+}
+
+let meterPrevPct = null;
+
+function renderStopMeter(a) {
+  const cap = Math.max(1, Number(a.fixed_cap) || 1);
+  const rec = Math.min(cap, Math.max(0, Number(a.recommended) || 0));
+  const price = Math.max(0, Number(state.auction.price) || 0);
+  const scale = Math.max(cap * 1.25, price, rec, Number(a.personal_max) || 0);
+  const capPct = Math.min(100, (cap / scale) * 100);
+  const recPct = Math.min(capPct, (rec / scale) * 100);
+  const labelsAreClose = capPct - recPct < 30;
+  const pricePct = Math.min(100, (price / scale) * 100);
+  const meterState = price > cap ? "is-over" : price > rec ? "is-warn" : "is-ok";
+  const zones = [];
+  if (recPct > 0.5) zones.push(`<span class="stop-meter-zone zone-green" style="width:${recPct.toFixed(2)}%"></span>`);
+  if (capPct - recPct > 0.5) zones.push(`<span class="stop-meter-zone zone-amber" style="left:${recPct.toFixed(2)}%;width:${(capPct - recPct).toFixed(2)}%"></span>`);
+  zones.push(`<span class="stop-meter-zone zone-red" style="left:${capPct.toFixed(2)}%"></span>`);
+  const labels = [
+    `<span style="left:2px;transform:none">0</span>`,
+    recPct > 8 ? `<span class="rec-label${labelsAreClose ? " is-close" : ""}" style="left:${recPct.toFixed(2)}%">Consigliato ${int(rec)}</span>` : "",
+    `<span class="cap-label${labelsAreClose ? " is-close" : ""}" style="left:${capPct.toFixed(2)}%">STOP ${int(cap)}</span>`,
+  ].join("");
+  const stateText =
+    meterState === "is-over" ? "oltre lo STOP"
+    : meterState === "is-warn" ? "sopra il consigliato"
+    : "entro il consigliato";
+  return `
+    <div class="stop-meter" role="img" aria-label="Prezzo attuale ${int(price)} crediti su un massimo di ${int(cap)}: ${stateText}">
+      <span class="stop-meter-price ${meterState}" style="left:${pricePct.toFixed(2)}%">${int(price)} cr</span>
+      <div class="stop-meter-track" data-price-pct="${pricePct.toFixed(2)}">
+        ${zones.join("")}
+        <span class="stop-meter-marker ${meterState}" style="left:0%"></span>
+      </div>
+      <div class="stop-meter-labels">${labels}</div>
+    </div>`;
+}
+
+function animateStopMeter() {
+  const track = $("#advice-core .stop-meter-track");
+  const marker = $("#advice-core .stop-meter-marker");
+  const bubble = $("#advice-core .stop-meter-price");
+  if (!track || !marker || !bubble) return;
+  const target = Number(track.dataset.pricePct || 0);
+  const prev = meterPrevPct == null ? target : meterPrevPct;
+  marker.style.transition = "none";
+  bubble.style.transition = "none";
+  marker.style.left = `${prev}%`;
+  bubble.style.left = `${prev}%`;
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      marker.style.transition = "left 0.35s ease";
+      bubble.style.transition = "left 0.35s ease";
+      marker.style.left = `${target}%`;
+      bubble.style.left = `${target}%`;
+    }),
+  );
+  meterPrevPct = target;
 }
 
 /* ------------------------------------------------------------------ */
@@ -760,15 +837,16 @@ function renderLineups() {
     setHTML("#lineups-list", `<div class="alert alert-info">Nessuna formazione — usa 'Aggiorna tutto per l'asta' nella tab Setup.</div>`);
     return;
   }
-  $("#lineups-updated").textContent = data.updated_at ? `Ultimo aggiornamento: ${esc(data.updated_at)}` : "";
+  $("#lineups-updated").textContent = data.updated_at ? `● Aggiornate ${esc(data.updated_at)}` : "Data aggiornamento non disponibile";
 
   setHTML("#lineups-legend", `
     <span><span class="dot" style="background:#c62828"></span>⚽ Rigorista</span>
     <span><span class="dot" style="background:#1565c0"></span>🚩 Angoli</span>
     <span><span class="dot" style="background:#b8860b"></span>🎯 Piazzati</span>
-    <span>il numero indica la posizione nella gerarchia</span>
-    <span>⭐ = nome da monitorare per bonus</span>
+    <span>1°, 2°, 3° = gerarchia del battitore</span>
+    <span>⭐ = possibile fonte bonus</span>
     <span>* = fantamedia stimata</span>
+    <span>⬇ = alternativa al titolare</span>
   `);
 
   const teams = data.teams;
@@ -788,6 +866,11 @@ function renderLineups() {
     [["Tutte", "Tutte"], ["bonus", "Solo bonus"], ["monitor", "Solo da monitorare"]]
       .map(([value, label]) => `<option value="${value}" ${value === state.lineupsTab.focus ? "selected" : ""}>${esc(label)}</option>`).join("");
   $("#lineups-query").value = state.lineupsTab.query;
+  setHTML("#lineups-team-nav", ["Tutte", ...teams].map((team) => `
+    <button class="team-nav-chip${state.lineupsTab.team === team ? " is-active" : ""}"
+      data-action="filter-lineup-team" data-team="${esc(team)}">
+      ${team === "Tutte" ? "Tutte" : esc(team)}
+    </button>`).join(""));
 
   const byTeam = new Map();
   for (const row of data.lineups) {
@@ -802,38 +885,15 @@ function renderLineups() {
   const q = normalize(state.lineupsTab.query);
   if (q) shown = shown.filter((t) => (byTeam.get(t) || []).some((r) => normalize(r.Nome || r.NomeLineup).includes(q)));
 
-  $("#lineups-count-note").textContent = `${shown.length} squadre visibili · aggiorna i dati dalla tab Setup il giorno dell'asta`;
+  $("#lineups-count-note").innerHTML = `<strong>${shown.length}</strong> ${shown.length === 1 ? "squadra visibile" : "squadre visibili"} · clicca una scheda per vedere gli 11`;
+  $("#lineups-expand-button").textContent = state.lineupsTab.expandAll ? "Comprimi tutte" : "Espandi tutte";
   if (!shown.length) {
     setHTML("#lineups-list", `<div class="alert alert-info">Nessuna squadra corrisponde ai filtri selezionati.</div>`);
     return;
   }
 
-  setHTML("#lineups-list", `<div class="team-grid">${shown.map((team) => renderTeamCard(team, byTeam.get(team) || [])).join("")}</div>`);
-}
-
-const TOTTI_QUOTES = [
-  {
-    text: "«Nun te preoccupà, mo je faccio er cucchiaio.»",
-    context: "A Di Biagio e Maldini prima del rigore contro l’Olanda a Euro 2000.",
-    source: "https://www.repubblica.it/sport/2017/05/28/news/_mo_je_faccio_er_cucchiaio_quando_con_una_battuta_gelo_maldini_e_di_biagio-164123599/",
-  },
-  {
-    text: "«Mo je faccio er cucchiaio.»",
-    context: "La frase che ha trasformato un rigore in una lezione di coraggio.",
-    source: "https://www.sportmediaset.mediaset.it/calcio/Nazionale/totti-15-anni-fa-il-celebre-mo-je-faccio-er-cucchiaio-_1069817-201502a.shtml",
-  },
-  {
-    text: "«Vi ho purgato ancora.»",
-    context: "La celebre scritta mostrata nel derby del 1999: fiducia, carattere, Roma.",
-    source: "https://www.repubblica.it/sport/2017/05/28/news/_mo_je_faccio_er_cucchiaio_quando_con_una_battuta_gelo_maldini_e_di_biagio-164123599/",
-  },
-];
-
-function renderMotivation() {
-  const quote = TOTTI_QUOTES[state.motivation.quoteIndex % TOTTI_QUOTES.length];
-  $("#totti-quote").textContent = quote.text;
-  $("#totti-context").textContent = quote.context;
-  $("#totti-source").href = quote.source;
+  const forceOpen = state.lineupsTab.expandAll || shown.length === 1 || Boolean(q);
+  setHTML("#lineups-list", `<div class="team-grid">${shown.map((team) => renderTeamCard(team, byTeam.get(team) || [], forceOpen, q)).join("")}</div>`);
 }
 
 function playTottiAudio() {
@@ -858,15 +918,16 @@ function playTottiAudio() {
       allow="autoplay; encrypted-media" referrerpolicy="strict-origin-when-cross-origin"></iframe>`);
 }
 
-function renderTeamCard(team, rows) {
+function renderTeamCard(team, rows, open = false, query = "") {
   const modulo = rows[0]?.Modulo || "?";
   const sections = [];
+  const roleNames = { P: "Portieri", D: "Difensori", C: "Centrocampisti", A: "Attaccanti" };
   for (const role of ["P", "D", "C", "A", ""]) {
     const roleRows = rows.filter((r) => (r.Ruolo || "") === role);
     if (!roleRows.length) continue;
-    const title = role || "Ruolo da verificare";
-    const items = roleRows.map(playerRowHtml).join("");
-    sections.push(`<div class="role-section-title">${esc(title)}</div>${items}`);
+    const title = roleNames[role] || "Ruolo da verificare";
+    const items = roleRows.map((row) => playerRowHtml(row, query)).join("");
+    sections.push(`<section class="lineup-role role-${esc(role || "unknown")}"><div class="role-section-title"><span>${esc(title)}</span><b>${roleRows.length}</b></div>${items}</section>`);
   }
 
   const noteLabels = [
@@ -880,18 +941,28 @@ function renderTeamCard(team, rows) {
     })
     .filter(Boolean);
   const notesHtml = notes.length ? `<div class="team-notes alert alert-warn"><ul>${notes.join("")}</ul></div>` : "";
+  const bonusCount = rows.filter((row) => row.Rigorista || row.Piazzati || row.Punizioni || row.Angoli).length;
+  const benchCount = rows.filter((row) => row.Panchina).length;
 
   return `
-    <div class="team-card">
-      <div class="team-card-head"><span>${esc(team)}</span><span>${esc(modulo)} · ${rows.length} titolari attesi</span></div>
+    <details class="team-card" ${open ? "open" : ""}>
+      <summary class="team-card-head">
+        <span class="team-card-title"><b>${esc(team)}</b><small>${esc(modulo)} · ${rows.length} titolari</small></span>
+        <span class="team-card-signals">
+          ${bonusCount ? `<span class="team-signal signal-bonus">⭐ ${bonusCount} bonus</span>` : ""}
+          ${notes.length ? `<span class="team-signal signal-alert">⚠ ${notes.length}</span>` : ""}
+          ${benchCount ? `<span class="team-signal">↕ ${benchCount} alternative</span>` : ""}
+          <span class="team-card-chevron" aria-hidden="true">⌄</span>
+        </span>
+      </summary>
       <div class="team-card-body">
         ${sections.join("")}
         ${notesHtml}
       </div>
-    </div>`;
+    </details>`;
 }
 
-function playerRowHtml(row) {
+function playerRowHtml(row, query = "") {
   const flagged = !!(row.Rigorista || row.Piazzati || row.Punizioni || row.Angoli);
   let badges = "";
   if (row.Rigorista) badges += `<span class="setpiece-badge sp-rig">⚽ ${int(row.RigoristaOrdine)}° rigore</span> `;
@@ -910,7 +981,19 @@ function playerRowHtml(row) {
     const bruolo = row.PanchinaRuolo ? `${esc(row.PanchinaRuolo)} · ` : "";
     bench = `<div class="pr-bench">⬇ possibile panchinaro: <b>${esc(row.Panchina)}</b> <span class="pr-meta">${bruolo}${bfm}${bcl}</span></div>`;
   }
-  return `<div class="player-row ${flagged ? "flagged" : ""}">${cluster}<b>${esc(row.Nome || row.NomeLineup)}</b> <span class="pr-meta">${esc(row.Ruolo || "?")} · FM ${fm}</span> ${badges}${bench}</div>`;
+  const name = row.Nome || row.NomeLineup;
+  const highlighted = query && normalize(name).includes(query);
+  return `<div class="player-row ${flagged ? "flagged" : ""}${highlighted ? " is-match" : ""}">
+    <div class="player-row-main">
+      <button class="lineup-player-link" data-action="pick-lineup-player" data-name="${esc(name)}" title="Apri il consiglio d’asta per ${esc(name)}">
+        ${flagged ? '<span class="bonus-star" aria-label="Possibile fonte bonus">★</span>' : ""}<b>${esc(name)}</b>
+        <span class="pr-meta">${esc(row.Ruolo || "?")} · FM ${fm}</span>
+      </button>
+      ${cluster}
+    </div>
+    ${badges ? `<div class="player-badges">${badges}</div>` : ""}
+    ${bench}
+  </div>`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -922,6 +1005,10 @@ function renderSetup() {
   $("#setup-advanced-note").textContent = data.advanced_present
     ? "Le statistiche avanzate CSV presenti verranno mantenute e non sovrascritte dall'aggiornamento."
     : "Statistiche avanzate non presenti: verranno lasciate vuote dall'aggiornamento.";
+  const guida = data.guida_import;
+  $("#guida-import-note").textContent = guida?.imported_at
+    ? `Importato da Guida il ${new Date(guida.imported_at).toLocaleString("it-IT")}: ${int(guida.players?.length)} giocatori, ${int(guida.set_pieces?.length)} gerarchie e ${int(guida.doubts?.length)} ballottaggi. Le gerarchie web già presenti restano prioritarie.`
+    : "Legge solo il database locale dell'app Guida: statistiche, probabili titolari, ballottaggi e piazzati. Non modifica Guida.";
 
   setHTML("#setup-summary", `
     <div class="metric-card"><div class="metric-label">Giocatori</div><div class="metric-value">${int(data.summary.players)}</div></div>
@@ -949,8 +1036,13 @@ function renderSetup() {
   renderWeightsEditor();
 
   setHTML("#rho-chips", ["P", "D", "C", "A"].map((role) => {
-    const v = data.rho?.[role];
-    return `<span class="chip ${v == null ? "chip-muted" : Number(v) >= 0.3 ? "chip-green" : "chip-amber"}">${esc(role)}: ${v == null ? "n/d" : num(v, 2)}</span>`;
+    const diagnostic = data.diagnostics?.[role];
+    const v = diagnostic?.spearman ?? data.rho?.[role];
+    if (v == null) {
+      return `<span class="chip chip-muted">${esc(role)}: campione insufficiente (${int(diagnostic?.n || 0)})</span>`;
+    }
+    const guard = diagnostic?.accepted === false ? " · mantenuto blend precedente" : "";
+    return `<span class="chip ${Number(v) >= 0.3 ? "chip-green" : "chip-amber"}">${esc(role)}: ρ ${num(v, 2)} · MAE ${num(diagnostic?.mae, 2)} · n ${int(diagnostic?.n)}${guard}</span>`;
   }).join(""));
 }
 
@@ -972,10 +1064,11 @@ function renderWeightsEditor() {
   const weightKeys = Object.keys(labels);
   setHTML("#weights-editor", weightKeys.map((key) => {
     const value = Number(state.setup.weights?.[key] ?? 0);
+    const max = key === "Confidence" ? 1 : 2;
     return `
       <div class="slider-row">
         <div class="slider-top"><span>${esc(labels[key])}</span><span>${num(value, 2)}</span></div>
-        <input type="range" class="weight-slider" data-key="${esc(key)}" min="0" max="2" step="0.05" value="${value}">
+        <input type="range" class="weight-slider" data-key="${esc(key)}" min="0" max="${max}" step="0.05" value="${value}">
       </div>`;
   }).join(""));
 }
@@ -1002,7 +1095,6 @@ function renderAll(data) {
     case "auction": renderAuction(); break;
     case "players": renderPlayers(); renderPlayerCard(); break;
     case "lineups": renderLineups(); break;
-    case "motivation": renderMotivation(); break;
     case "setup": renderSetup(); break;
   }
 }
@@ -1029,6 +1121,17 @@ async function runScrape() {
   }
 }
 
+async function importGuida() {
+  try {
+    const data = await postJSON("/api/guida/import", {});
+    toast(`Guida importata: ${int(data.guida.players)} giocatori e ${int(data.guida.set_pieces)} gerarchie.`, "ok");
+    await Promise.all([loadPlayers(), loadLineups()]);
+    await refreshState();
+  } catch (err) {
+    toast(err.message, "err");
+  }
+}
+
 async function pollScrape() {
   try {
     const status = await getJSON("/api/scrape/status");
@@ -1042,7 +1145,7 @@ async function pollScrape() {
         toast(status.error, "err");
       } else {
         toast("Aggiornamento completato. Ranking e cluster ricalcolati.", "ok");
-        await loadPlayers();
+        await Promise.all([loadPlayers(), loadLineups()]);
         await refreshState();
       }
     }
@@ -1094,6 +1197,62 @@ async function savePlan() {
   }
 }
 
+async function toggleSessionComplete() {
+  const completed = !Boolean(state.session?.completed);
+  try {
+    await postJSON("/api/session/complete", { completed });
+    toast(
+      completed
+        ? "Asta completata: i prezzi potranno calibrare le aste future."
+        : "Asta riaperta: esclusa temporaneamente dalla calibrazione.",
+      "ok",
+    );
+    await refreshState();
+  } catch (err) {
+    toast(err.message, "err");
+  }
+}
+
+function exportSessionBackup() {
+  const session = state.session;
+  if (!session) {
+    toast("Nessuna asta attiva da esportare.", "err");
+    return;
+  }
+  const backup = {
+    meta: {
+      created: session.created,
+      budget: session.budget,
+      slots: session.slots,
+      fair: session.fair,
+      teams: session.teams,
+      my_team: session.my_team,
+      role_priorities: session.role_priorities,
+      scoring_profile: session.scoring_profile,
+      completed: session.completed,
+      advice_version: session.advice_version,
+    },
+    purchases: session.purchases || [],
+    watchlist: session.watchlist || [],
+    exported_at: new Date().toISOString(),
+  };
+  const date = String(session.created || new Date().toISOString())
+    .replaceAll(":", "-")
+    .replace("T", "_");
+  const blob = new Blob([JSON.stringify(backup, null, 2)], {
+    type: "application/json;charset=utf-8",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `asta-prezzi-${date}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  toast(`Backup creato: ${backup.purchases.length} prezzi salvati.`, "ok");
+}
+
 async function saveTeams() {
   const teams = $$(".team-input").map((input) => input.value.trim());
   const myTeam = $("#my-team-select").value;
@@ -1117,7 +1276,7 @@ async function saveWeights() {
     state.setup.weights = data.weights;
     state.setup.method = method;
     toast("Pesi salvati — classifica ricalcolata.", "ok");
-    await loadPlayers();
+    await Promise.all([loadPlayers(), loadLineups()]);
     await refreshState();
   } catch (err) {
     toast(err.message, "err");
@@ -1133,7 +1292,7 @@ async function importAdvanced() {
   try {
     const data = await postForm("/api/advanced", file);
     toast(`Importati ${data.imported} giocatori (${data.with_minutes} con minuti). Ranking aggiornato.`, "ok");
-    await loadPlayers();
+    await Promise.all([loadPlayers(), loadLineups()]);
     await refreshState();
   } catch (err) {
     toast(err.message, "err");
@@ -1244,6 +1403,7 @@ async function refreshAuctionAdvice(price) {
     state.auction.advice = data;
     const core = $("#advice-core");
     if (core) core.innerHTML = adviceCoreHtml();
+    animateStopMeter();
   } catch (err) {
     toast(err.message, "err");
   }
@@ -1255,6 +1415,7 @@ async function pickAuctionPlayer(name) {
   state.auction.selected = name;
   state.auction.query = name;
   state.auction.advice = null;
+  meterPrevPct = null;
   const available = availablePlayers();
   const match = available.find((p) => p.Nome === name);
   state.auction.price = 1;
@@ -1308,20 +1469,36 @@ function bindEvents() {
     switch (action) {
       case "goto-setup": switchTab("setup"); break;
       case "goto-auction": switchTab("auction"); break;
-      case "next-quote":
-        state.motivation.quoteIndex = (state.motivation.quoteIndex + 1) % TOTTI_QUOTES.length;
-        renderMotivation();
-        break;
       case "play-totti-audio": playTottiAudio(); break;
       case "pick-auction": await pickAuctionPlayer(name); break;
       case "suggest-nomination": await suggestNomination(); break;
       case "pick-player": await pickPlayer(name); break;
       case "pick": await pickPlayer(name); break;
       case "run-scrape": await runScrape(); break;
+      case "import-guida": await importGuida(); break;
       case "import-advanced": await importAdvanced(); break;
       case "save-config": await saveConfig(); break;
       case "save-weights": await saveWeights(); break;
       case "save-plan": await savePlan(); break;
+      case "filter-lineup-team":
+        state.lineupsTab.team = actionEl.dataset.team || "Tutte";
+        state.lineupsTab.expandAll = false;
+        renderLineups();
+        break;
+      case "reset-lineup-filters":
+        state.lineupsTab = { team: "Tutte", focus: "Tutte", query: "", expandAll: false };
+        renderLineups();
+        break;
+      case "toggle-lineups":
+        state.lineupsTab.expandAll = !state.lineupsTab.expandAll;
+        renderLineups();
+        break;
+      case "pick-lineup-player":
+        switchTab("auction");
+        await pickAuctionPlayer(name);
+        break;
+      case "export-session": exportSessionBackup(); break;
+      case "toggle-session-complete": await toggleSessionComplete(); break;
       case "save-teams": await saveTeams(); break;
       case "add-watch": await addWatch(); break;
       case "remove-watch": await removeWatch(); break;

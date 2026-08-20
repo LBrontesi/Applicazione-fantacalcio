@@ -30,7 +30,7 @@ Cagliari,C,1,Adopo
 Cagliari,C,2,Winks
 Cagliari,C,3,Romano
 Cagliari,A,1,Maldini
-Cagliari,A,2,Borrelli|Mendy P.
+Cagliari,A,2,Kevin Carlos|Mendy P.|Borrelli
 Cagliari,A,3,Fazzini
 Como,P,1,Butez
 Como,D,1,Couto|Smolcic I.
@@ -57,10 +57,10 @@ Frosinone,D,1,Oyono A.
 Frosinone,D,2,Akpoguma
 Frosinone,D,3,Monterisi|Calvani
 Frosinone,D,4,Bracaglia
-Frosinone,C,1,El Azzouzi A.|Gelli F.
-Frosinone,C,2,Calò
-Frosinone,C,3,Koutsoupias|Hasa
-Frosinone,A,1,Ghedjemis
+Frosinone,C,1,Masini|Koutsoupias
+Frosinone,C,2,Grillitsch|Calò
+Frosinone,C,3,El Azzouzi A.|Gelli F.
+Frosinone,A,1,Schmid|Ghedjemis
 Frosinone,A,2,Raimondo
 Frosinone,A,3,Zerbin|Kvernadze
 Genoa,P,1,Bijlow
@@ -162,7 +162,7 @@ Roma,P,1,Svilar
 Roma,D,1,Mancini
 Roma,D,2,N'dicka
 Roma,D,3,Koulierakis|Hermoso
-Roma,C,1,Rensch
+Roma,C,1,Molina N.
 Roma,C,2,Cristante
 Roma,C,3,Konè M.
 Roma,C,4,Wesley
@@ -177,7 +177,7 @@ Sassuolo,C,1,Matic
 Sassuolo,C,2,Lipani|Konè I.
 Sassuolo,A,1,Berardi
 Sassuolo,A,2,Thorstvedt
-Sassuolo,A,3,Laurientè
+Sassuolo,A,3,Laurientè|Dominguez B.
 Torino,P,1,Paleari
 Torino,D,1,Ismajli
 Torino,D,2,Coco

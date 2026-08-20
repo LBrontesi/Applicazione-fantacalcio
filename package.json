@@ -1,0 +1,10 @@
+{
+  "private": true,
+  "description": "Local reader dependency for the optional Guida importer",
+  "dependencies": {
+    "realm": "^20.2.0"
+  },
+  "allowScripts": {
+    "realm@20.2.0": true
+  }
+}

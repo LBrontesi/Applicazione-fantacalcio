@@ -10,11 +10,14 @@ from scraper import (
     ADVANCED_STATS, DATA_DIR, FORMAZIONI, PANCHINARI, PLAYERS_FCP, QUOTAZIONI,
     SET_PIECES, STAT_TEAM_CODES, normalize_name,
 )
+from guida_importer import imported_data
 
 ROLE_ORDER = ["P", "D", "C", "A"]
 CLUSTER_SIZE = 10
 
 RANK_WEIGHTS_FILE = DATA_DIR / "ranking_weights.json"
+RANK_WEIGHTS_VERSION = 2
+RANKING_VERSION = "2.0"
 
 DEFAULT_RANK_WEIGHTS = {
     "FM": 1.0,
@@ -32,7 +35,9 @@ DEFAULT_RANK_WEIGHTS = {
     "Rigori": 0.4,
     "Produttivita": 0.3,
     "TeamContext": 0.15,
-    "Confidence": 0.20,
+    # In v2 confidence is no longer an additive quality bonus.  It controls
+    # how strongly uncertain estimates are pulled back towards the role mean.
+    "Confidence": 0.65,
 }
 
 DEFAULT_METHOD = "blend"
@@ -59,11 +64,36 @@ ROLE_FACTORS = {
 # Sono coefficienti prudenti per ruolo, non una promessa di accuratezza futura.
 ROLE_BLEND_MODEL_WEIGHT = {"P": 0.35, "D": 0.55, "C": 0.60, "A": 0.65}
 
-MODEL_FEATURES = [
+LEGACY_MODEL_FEATURES = [
     "FM2", "FM3", "ALGnum", "FVM", "TagScore", "Starter", "SetPieces",
     "InjuryP", "Availability", "MinutesPct", "StartsPct", "xG90", "xA90",
     "HistMV", "HistGol90", "HistAss90", "HistRigori", "HistPresenze",
 ]
+
+ROLE_MODEL_FEATURES = {
+    "P": [
+        "FM2", "FM3", "ALGnum", "FVM", "Starter", "InjuryP",
+        "Availability", "HistMV", "HistPresenze", "GolSubiti90",
+        "RigoriParati", "TeamContext",
+    ],
+    "D": [
+        "FM2", "FM3", "ALGnum", "FVM", "TagScore", "Starter",
+        "SetPieces", "InjuryP", "Availability", "HistMV", "HistGol90",
+        "HistAss90", "HistRigori", "HistPresenze", "TeamContext",
+    ],
+    "C": [
+        "FM2", "FM3", "ALGnum", "FVM", "TagScore", "Starter",
+        "SetPieces", "InjuryP", "Availability", "MinutesPct", "StartsPct",
+        "xG90", "xA90", "HistMV", "HistGol90", "HistAss90",
+        "HistRigori", "HistPresenze", "TeamContext",
+    ],
+    "A": [
+        "FM2", "FM3", "ALGnum", "FVM", "TagScore", "Starter",
+        "SetPieces", "InjuryP", "Availability", "MinutesPct", "StartsPct",
+        "xG90", "xA90", "HistMV", "HistGol90", "HistAss90",
+        "HistRigori", "HistPresenze", "TeamContext",
+    ],
+}
 
 TAG_SCORES = {
     "Fuoriclasse": 2.0,
@@ -81,16 +111,31 @@ TAG_SCORES = {
 
 def load_ranking_weights():
     if not RANK_WEIGHTS_FILE.exists():
-        return {**DEFAULT_RANK_WEIGHTS, "_method": DEFAULT_METHOD}
+        return {
+            **DEFAULT_RANK_WEIGHTS,
+            "_method": DEFAULT_METHOD,
+            "_version": RANK_WEIGHTS_VERSION,
+        }
     try:
         with open(RANK_WEIGHTS_FILE) as fh:
             saved = json.load(fh)
+        legacy = int(saved.get("_version", 1) or 1) < RANK_WEIGHTS_VERSION
         out = {k: float(saved.get(k, DEFAULT_RANK_WEIGHTS[k]))
                for k in DEFAULT_RANK_WEIGHTS}
+        if legacy:
+            # The old value rewarded confidence as if it were quality.  Do
+            # not carry that meaning into v2: start from the calibrated
+            # uncertainty-shrinkage default instead.
+            out["Confidence"] = DEFAULT_RANK_WEIGHTS["Confidence"]
         out["_method"] = saved.get("_method", DEFAULT_METHOD)
+        out["_version"] = RANK_WEIGHTS_VERSION
         return validate_ranking_weights(out)
     except (OSError, ValueError, KeyError):
-        return {**DEFAULT_RANK_WEIGHTS, "_method": DEFAULT_METHOD}
+        return {
+            **DEFAULT_RANK_WEIGHTS,
+            "_method": DEFAULT_METHOD,
+            "_version": RANK_WEIGHTS_VERSION,
+        }
 
 
 def save_ranking_weights(weights):
@@ -117,6 +162,7 @@ def validate_ranking_weights(weights):
     if method not in {"blend", "model", "manual"}:
         raise ValueError("Metodo ranking non valido.")
     data["_method"] = method
+    data["_version"] = RANK_WEIGHTS_VERSION
     return data
 
 DEFAULT_FAIR = {
@@ -148,6 +194,18 @@ def _rank_norm(s):
     s = pd.to_numeric(s, errors="coerce")
     r = s.rank(pct=True)
     return r.where(s.notna(), 0.0)
+
+
+def _rank_norm_neutral(s, neutral=0.5):
+    """Percentile-rank observed continuous data; keep missing values neutral."""
+    s = pd.to_numeric(s, errors="coerce")
+    observed = s.notna()
+    if not observed.any():
+        return pd.Series(float(neutral), index=s.index, dtype=float)
+    ranked = s[observed].rank(pct=True)
+    out = pd.Series(float(neutral), index=s.index, dtype=float)
+    out.loc[observed] = ranked
+    return out
 
 
 def _tag_score(attr):
@@ -214,6 +272,39 @@ def load_advanced_stats():
             return pd.DataFrame()
         df[col] = df[col].fillna("").astype(str)
     return df
+
+
+def load_guida_data():
+    """Optional, locally imported overlay from the Guida macOS app."""
+    data = imported_data()
+    return data if isinstance(data, dict) else {}
+
+
+def _guida_player_matches(df, guida_players):
+    """Map Guida records conservatively: team, role and a clear name match."""
+    matches = {}
+    for index, row in df.iterrows():
+        team = normalize_name(str(row.get("Squadra", "")))
+        role = str(row.get("Ruolo", ""))
+        candidates = []
+        for candidate in guida_players:
+            if normalize_name(str(candidate.get("team", ""))) != team:
+                continue
+            if str(candidate.get("role", "")) != role:
+                continue
+            score = _short_source_name_score(
+                str(row.get("NomeGaz", row.get("Nome", ""))),
+                str(candidate.get("name", "")),
+            )
+            if score >= 0.90:
+                candidates.append((score, candidate))
+        candidates.sort(key=lambda item: item[0], reverse=True)
+        if not candidates:
+            continue
+        if len(candidates) > 1 and candidates[0][0] - candidates[1][0] < 0.04:
+            continue
+        matches[index] = candidates[0][1]
+    return matches
 
 
 def load_statistiche():
@@ -446,11 +537,11 @@ def _match_score(g_tokens, f_tokens):
     for token in sorted(g_tokens, key=len, reverse=True):
         position = next(
             (i for i, candidate in enumerate(remaining)
-             if token == candidate or (
-                 len(token) >= 2 and (
-                     candidate.startswith(token) or token.startswith(candidate)
-                 )
-             )),
+            if token == candidate or (
+                len(token) >= 2 and len(candidate) >= 2 and (
+                    candidate.startswith(token) or token.startswith(candidate)
+                )
+            )),
             None,
         )
         if position is not None:
@@ -512,6 +603,7 @@ def build_players(progress_cb=None, weights=None):
     gaz = load_quotazioni()
     fcp = load_fcp()
     advanced = load_advanced_stats()
+    guida = load_guida_data()
 
     matched_fcp = {}
     for _, g in gaz.iterrows():
@@ -633,6 +725,34 @@ def build_players(progress_cb=None, weights=None):
         axis=1,
     )
 
+    # Guida is a local editorial source. Its expected XI can confirm a
+    # starter missed by the web source, but never turns a web starter off.
+    # The raw Guida fields stay visible for auditability and future tuning.
+    guida_matches = _guida_player_matches(df, guida.get("players", []))
+    for col in [
+        "GuidaStarter", "GuidaQuotation", "GuidaFVM", "GuidaPresenze",
+        "GuidaMV", "GuidaFM", "GuidaGol", "GuidaAssist",
+        "GuidaRigoriSegnati", "GuidaRigoriParati", "GuidaAttendanceIndex",
+    ]:
+        df[col] = float("nan")
+    field_map = {
+        "GuidaStarter": "starter", "GuidaQuotation": "quotation",
+        "GuidaFVM": "fvm", "GuidaPresenze": "played_games",
+        "GuidaMV": "average_vote", "GuidaFM": "average_fantavote",
+        "GuidaGol": "goals", "GuidaAssist": "assists",
+        "GuidaRigoriSegnati": "scored_penalties",
+        "GuidaRigoriParati": "saved_penalties",
+        "GuidaAttendanceIndex": "attendance_index",
+    }
+    for index, source in guida_matches.items():
+        for column, key in field_map.items():
+            if column == "GuidaStarter":
+                df.at[index, column] = 1.0 if bool(source.get(key)) else 0.0
+            else:
+                df.at[index, column] = _to_float(source.get(key))
+    df["GuidaStarter"] = df["GuidaStarter"].fillna(0.0).clip(0.0, 1.0)
+    df["Starter"] = np.maximum(df["Starter"], df["GuidaStarter"])
+
     sp_types = {}
     sp = load_set_pieces()
     if not sp.empty:
@@ -642,7 +762,30 @@ def build_players(progress_cb=None, weights=None):
                 str(r["Giocatore"]), str(r["Tipo"]), r.get("Ordine", 1),
             ))
 
-    def _sp_score(team, name):
+    # Guida fills only missing team/type lists. Confirmed rows from the web
+    # source retain priority, which prevents a stale offline guide from
+    # silently replacing a newer hierarchy.
+    existing_types = {
+        (team, str(kind))
+        for team, entries in sp_types.items()
+        for _, kind, _ in entries
+    }
+    for entry in guida.get("set_pieces", []):
+        team = normalize_name(str(entry.get("team", "")))
+        kind = str(entry.get("type", ""))
+        if not team or kind not in SP_TYPE_WEIGHTS or (team, kind) in existing_types:
+            continue
+        if str(entry.get("role", "")) == "P":
+            continue
+        sp_types.setdefault(team, []).append((
+            str(entry.get("name", "")), kind, entry.get("order", 1),
+        ))
+
+    def _sp_score(team, name, role):
+        # Set-piece lists describe attacking dead balls.  A fuzzy surname or
+        # initial must never turn a goalkeeper into a penalty taker.
+        if role == "P":
+            return 0.0
         candidates = [
             (_short_source_name_score(name, sp_name), tipo, order)
             for sp_name, tipo, order in sp_types.get(team, [])
@@ -653,7 +796,7 @@ def build_players(progress_cb=None, weights=None):
 
     df["SetPieces"] = df.apply(
         lambda r: _sp_score(
-            normalize_name(str(r["Squadra"])), str(r["NomeGaz"])
+            normalize_name(str(r["Squadra"])), str(r["NomeGaz"]), str(r["Ruolo"])
         ),
         axis=1,
     )
@@ -784,8 +927,8 @@ def build_players(progress_cb=None, weights=None):
         sub = df[df["Ruolo"] == role].copy()
         if sub.empty:
             continue
-        fm_n = _rank_norm(sub["FMEst"])
-        fvm_n = _rank_norm(sub["FVM"])
+        fm_n = _rank_norm_neutral(sub["FMEst"])
+        fvm_n = _rank_norm_neutral(sub["FVM"])
         for col in ["ALGnum", "InjuryP", "TagScore", "Starter", "SetPieces"]:
             sub[col] = sub[col].fillna(0.0)
         fac = ROLE_FACTORS.get(role, {"Starter": 1.0, "SetPieces": 1.0})
@@ -799,13 +942,13 @@ def build_players(progress_cb=None, weights=None):
         sub["C_Tags"] = weights["Tags"] * (sub["TagScore"] + 2.0) / 4.0
         sub["C_Injury"] = weights["Injury"] * sub["InjuryP"]
         sub["C_Availability"] = weights["Availability"] * sub["Availability"]
-        # xGI90 is neutral when missing, like every other historical column:
-        # only observed values are ranked, missing entries contribute zero.
+        # Continuous missing history is genuinely neutral in v2: it receives
+        # the role median and uncertainty is handled separately by confidence.
         xgi = pd.to_numeric(sub.get("xGI90"), errors="coerce")
-        xgi_n = _rank_norm(xgi)
+        xgi_n = _rank_norm_neutral(xgi)
         sub["C_ExpectedOutput"] = weights["ExpectedOutput"] * xgi_n
         sub["C_TeamContext"] = weights.get("TeamContext", 0.0) * sub["TeamContext"]
-        sub["C_Confidence"] = weights.get("Confidence", 0.0) * sub["DataConfidence"]
+        sub["C_Confidence"] = 0.0
         # Storico stagionale (fantacalcio.it): gol subiti per presenza per i portieri,
         # media voto / presenze / produttività / rigori per tutti.
         sub["C_GolSubiti"] = 0.0
@@ -814,13 +957,9 @@ def build_players(progress_cb=None, weights=None):
             ga90 = pd.to_numeric(sub["GolSubiti90"], errors="coerce")
             ga_active = bool(ga90.notna().any())
             if ga_active:
-                ga_inv = 1.0 - _rank_norm(ga90)
-                sub["C_GolSubiti"] = (
-                    weights.get("GolSubiti", 0.0) * ga_inv
-                ).where(ga90.notna(), 0.0)
-        # Missing historical data is neutral, not a synthetic zero that is
-        # then rewarded by a percentile rank.  Rank only observed values;
-        # _rank_norm keeps missing entries at zero contribution.
+                ga_rank = _rank_norm_neutral(ga90)
+                ga_inv = 1.0 - ga_rank
+                sub["C_GolSubiti"] = weights.get("GolSubiti", 0.0) * ga_inv
         hist_mv = pd.to_numeric(sub.get("HistMV"), errors="coerce")
         hist_apps = pd.to_numeric(sub.get("HistPresenze"), errors="coerce")
         hist_penalties = pd.to_numeric(sub.get("HistRigori"), errors="coerce")
@@ -828,12 +967,14 @@ def build_players(progress_cb=None, weights=None):
             pd.to_numeric(sub.get("HistGol90"), errors="coerce")
             + pd.to_numeric(sub.get("HistAss90"), errors="coerce")
         )
-        sub["C_MediaVoto"] = weights.get("MediaVoto", 0.0) * _rank_norm(hist_mv)
-        sub["C_Presenze"] = weights.get("Presenze", 0.0) * _rank_norm(hist_apps)
+        sub["C_MediaVoto"] = weights.get("MediaVoto", 0.0) * _rank_norm_neutral(hist_mv)
+        sub["C_Presenze"] = weights.get("Presenze", 0.0) * _rank_norm_neutral(hist_apps)
         sub["C_Rigori"] = weights.get("Rigori", 0.0) * _rank_norm(
             hist_penalties.where(hist_penalties > 0)
         )
-        sub["C_Produttivita"] = weights.get("Produttivita", 0.0) * _rank_norm(hist_output)
+        sub["C_Produttivita"] = (
+            weights.get("Produttivita", 0.0) * _rank_norm_neutral(hist_output)
+        )
         manual = (
             sub["C_FM"] + sub["C_FVM"] + sub["C_ALG"]
             + sub["C_Starter"] + sub["C_SetPieces"]
@@ -841,7 +982,7 @@ def build_players(progress_cb=None, weights=None):
             + sub["C_ExpectedOutput"] + sub["C_GolSubiti"]
             + sub["C_MediaVoto"] + sub["C_Presenze"]
             + sub["C_Rigori"] + sub["C_Produttivita"]
-            + sub["C_TeamContext"] + sub["C_Confidence"]
+            + sub["C_TeamContext"]
         )
         manual_scale = (
             abs(weights["FM"]) + abs(weights["FVM"]) + abs(weights["ALG"])
@@ -849,8 +990,9 @@ def build_players(progress_cb=None, weights=None):
             + abs(weights["SetPieces"]) * fac["SetPieces"]
             + abs(weights["Tags"]) + abs(weights["Injury"])
             + abs(weights["Availability"])
-            + (abs(weights["ExpectedOutput"])
-               if bool(xgi.notna().any()) else 0.0)
+            # A completely unavailable continuous source is still neutral,
+            # not silently removed from the scale: its role median is 0.5.
+            + abs(weights["ExpectedOutput"])
             + (abs(weights.get("GolSubiti", 0.0)) if ga_active else 0.0)
             + abs(weights.get("MediaVoto", 0.0))
             + abs(weights.get("Presenze", 0.0))
@@ -858,10 +1000,15 @@ def build_players(progress_cb=None, weights=None):
                if bool((hist_penalties > 0).any()) else 0.0)
             + abs(weights.get("Produttivita", 0.0))
             + abs(weights.get("TeamContext", 0.0))
-            + abs(weights.get("Confidence", 0.0))
         )
         manual_n = manual / manual_scale if manual_scale else manual * 0.0
-        model = _role_model(sub)
+        temporal_guard = _temporal_role_validation(sub)
+        model_features = (
+            ROLE_MODEL_FEATURES.get(role, ROLE_MODEL_FEATURES["C"])
+            if temporal_guard["accepted"] is not False
+            else LEGACY_MODEL_FEATURES
+        )
+        model = _role_model(sub, cols=model_features)
         if model is not None:
             sub["PredFM"] = _model_predict(sub, model)
         pred_n = _rank_norm(sub["PredFM"]) if model is not None \
@@ -869,18 +1016,26 @@ def build_players(progress_cb=None, weights=None):
         sub["C_Model"] = pred_n
         method = weights.get("_method", DEFAULT_METHOD)
         if method == "model":
-            sub["Score"] = pred_n if model is not None else manual_n
+            raw_quality = pred_n if model is not None else manual_n
         elif method == "blend":
             model_weight = ROLE_BLEND_MODEL_WEIGHT.get(role, 0.5)
-            sub["Score"] = (
+            raw_quality = (
                 model_weight * pred_n + (1.0 - model_weight) * manual_n
                 if model is not None else manual_n
             )
         else:
-            sub["Score"] = manual_n
-        quality = pred_n if model is not None else fm_n
-        sub["SeasonValue"] = (0.75 * quality + 0.25 * sub["Availability"])
-        sub["QualityScore"] = quality
+            raw_quality = manual_n
+        sub["RawQuality"] = pd.to_numeric(raw_quality, errors="coerce").fillna(0.5).clip(0.0, 1.0)
+        shrink_strength = min(1.0, max(0.0, float(weights.get("Confidence", 0.65))))
+        reliability = 1.0 - shrink_strength * (1.0 - sub["DataConfidence"])
+        sub["RankingQuality"] = (
+            0.5 + (sub["RawQuality"] - 0.5) * reliability
+        ).clip(0.0, 1.0)
+        sub["Score"] = sub["RankingQuality"]
+        sub["SeasonValue"] = (
+            0.80 * sub["RankingQuality"] + 0.20 * sub["Availability"]
+        ).clip(0.0, 1.0)
+        sub["QualityScore"] = sub["RankingQuality"]
         sub["Upside"] = (
             0.35 * sub["ALGnum"] + 0.25 * sub["SetPieces"]
             + 0.20 * ((sub["TagScore"] + 2.0) / 4.0) + 0.20 * xgi_n
@@ -888,8 +1043,10 @@ def build_players(progress_cb=None, weights=None):
         sub["BlendModelWeight"] = (
             ROLE_BLEND_MODEL_WEIGHT.get(role, 0.5) if model is not None else 0.0
         )
+        sub["RankingVersion"] = RANKING_VERSION
+        sub["TemporalModelAccepted"] = temporal_guard["accepted"] is not False
         sub = sub.sort_values(
-            ["Score", "QA", "Nome"],
+            ["SeasonValue", "QA", "Nome"],
             ascending=[False, False, True],
             na_position="last",
         )
@@ -915,9 +1072,14 @@ def _ridge(X, y, alpha=1.0):
     return coef
 
 
-def _role_model(role_df, cols=MODEL_FEATURES):
+def _role_model(role_df, cols=None):
+    if cols is None:
+        roles = role_df["Ruolo"].dropna().astype(str).unique().tolist()
+        role = roles[0] if len(roles) == 1 else ""
+        cols = ROLE_MODEL_FEATURES.get(role, ROLE_MODEL_FEATURES["C"])
     known = role_df[role_df["FM1"].notna()]
-    if len(known) < 30:
+    minimum = 20 if (known["Ruolo"] == "P").all() else 30
+    if len(known) < minimum:
         return None
     # reindex mantiene leggibili anche cache/CSV creati prima dell'aggiunta di
     # una feature: quella informazione diventa semplicemente mancante.
@@ -931,47 +1093,104 @@ def _role_model(role_df, cols=MODEL_FEATURES):
     sd[(sd == 0) | np.isnan(sd)] = 1.0
     Xs = np.nan_to_num((X - mu) / sd, nan=0.0)
     coef = _ridge(Xs, known["FM1"].to_numpy(dtype=float))
-    return mu, sd, coef, float(known["FM1"].min()), float(known["FM1"].max())
+    return (
+        tuple(cols), mu, sd, coef,
+        float(known["FM1"].min()), float(known["FM1"].max()),
+    )
 
 
-def _model_predict(role_df, model, cols=MODEL_FEATURES):
-    mu, sd, coef, lo, hi = model
+def _model_predict(role_df, model):
+    cols, mu, sd, coef, lo, hi = model
     X = role_df.reindex(columns=cols).to_numpy(dtype=float)
     Xs = np.nan_to_num((X - mu) / sd, nan=0.0)
     pred = np.column_stack([np.ones(len(Xs)), Xs]) @ coef
     return np.clip(pred, lo, hi)
 
 
-def backtest_predictor(players=None, folds=5, seed=42):
+def _temporal_role_validation(role_df):
+    """Compare the v2 historical signal with the previous one, forward only."""
+    actual = []
+    candidate = []
+    baseline = []
+    for _, row in role_df.iterrows():
+        fm1 = _to_float(row.get("FM1"))
+        fm2 = _to_float(row.get("FM2"))
+        fm3 = _to_float(row.get("FM3"))
+        if np.isfinite(fm2) and np.isfinite(fm3):
+            actual.append(fm2)
+            candidate.append(fm3)
+            baseline.append(fm3)
+        if np.isfinite(fm1) and (np.isfinite(fm2) or np.isfinite(fm3)):
+            values = []
+            if np.isfinite(fm2):
+                values.append((fm2, 0.70))
+            if np.isfinite(fm3):
+                values.append((fm3, 0.30))
+            actual.append(fm1)
+            candidate.append(
+                sum(value * weight for value, weight in values)
+                / sum(weight for _, weight in values)
+            )
+            baseline.append(fm2 if np.isfinite(fm2) else fm3)
+    n = len(actual)
+    if n < 20:
+        return {
+            "spearman": None,
+            "candidate_spearman": None,
+            "baseline_spearman": None,
+            "mae": None,
+            "n": n,
+            "accepted": None,
+        }
+    actual_s = pd.Series(actual, dtype=float)
+    candidate_s = pd.Series(candidate, dtype=float)
+    baseline_s = pd.Series(baseline, dtype=float)
+    candidate_rho = candidate_s.rank().corr(actual_s.rank())
+    baseline_rho = baseline_s.rank().corr(actual_s.rank())
+    candidate_rho = float(candidate_rho) if pd.notna(candidate_rho) else None
+    baseline_rho = float(baseline_rho) if pd.notna(baseline_rho) else None
+    accepted = (
+        candidate_rho is not None
+        and (baseline_rho is None or candidate_rho >= baseline_rho - 0.02)
+    )
+    chosen = candidate_s if accepted else baseline_s
+    return {
+        "spearman": candidate_rho if accepted else baseline_rho,
+        "candidate_spearman": candidate_rho,
+        "baseline_spearman": baseline_rho,
+        "mae": float((chosen - actual_s).abs().mean()),
+        "n": n,
+        "accepted": accepted,
+    }
+
+
+def ranking_diagnostics(players=None):
+    """Honest time-forward diagnostics from older FM to the next season.
+
+    Current-season FVM, ALG and lineup information are deliberately excluded:
+    they did not exist at the time of the historical target.  Two temporal
+    folds are used where available: FM3 -> FM2 and FM2/FM3 -> FM1.
+    """
     if players is None:
         players = build_players()
     results = {}
     for role in ROLE_ORDER:
-        sub = players[players["Ruolo"] == role].dropna(subset=["FM1"])
-        if len(sub) < 40:
-            results[role] = float("nan")
-            continue
-        idx = np.arange(len(sub))
-        rng = np.random.RandomState(seed)
-        rng.shuffle(idx)
-        fold_idx = np.array_split(idx, folds)
-        pred = np.empty(len(sub))
-        for fold in fold_idx:
-            tr = np.setdiff1d(idx, fold)
-            model = _role_model(sub.iloc[tr])
-            if model is None:
-                pred[fold] = np.nan
-            else:
-                pred[fold] = _model_predict(sub.iloc[fold], model)
-        ok = ~np.isnan(pred)
-        if ok.sum() < 20:
-            results[role] = float("nan")
-            continue
-        actual = sub["FM1"].to_numpy(dtype=float)[ok]
-        results[role] = float(
-            pd.Series(pred[ok]).rank().corr(pd.Series(actual).rank())
-        )
+        sub = players[players["Ruolo"] == role]
+        results[role] = _temporal_role_validation(sub)
     return results
+
+
+def backtest_predictor(players=None, folds=5, seed=42):
+    """Backward-compatible Spearman-only view of temporal diagnostics."""
+    del folds, seed
+    diagnostics = ranking_diagnostics(players)
+    return {
+        role: (
+            float(values["spearman"])
+            if values["spearman"] is not None else float("nan")
+        )
+        for role, values in diagnostics.items()
+    }
 
 
 def players_cache():
@@ -1138,6 +1357,17 @@ def build_lineups(players_df, progress_cb=None):
         ordine = int(r.get("Ordine", 1))
         current = sp_map.setdefault(key, {}).get(tipo, ordine)
         sp_map[key][tipo] = min(current, ordine)
+
+    guida = load_guida_data()
+    guida_doubts = {}
+    for doubt in guida.get("doubts", []):
+        team = normalize_name(str(doubt.get("team", "")))
+        first, second = str(doubt.get("first", "")), str(doubt.get("second", ""))
+        if not team or not first or not second:
+            continue
+        likelihood = doubt.get("first_likelihood")
+        suffix = f" ({likelihood}%)" if likelihood is not None else ""
+        guida_doubts.setdefault(team, []).append(f"{first} / {second}{suffix}")
     gaz_names = players_df["NomeGaz"].dropna().tolist()
     rows = []
     for _, f in form.iterrows():
@@ -1188,7 +1418,9 @@ def build_lineups(players_df, progress_cb=None):
                 "PanchinaFM": float("nan"),
                 "PanchinaRuolo": "",
                 "PanchinaCluster": "",
-                "Ballottaggi": f.get("Ballottaggi", ""),
+                "Ballottaggi": f.get("Ballottaggi", "") or " · ".join(
+                    guida_doubts.get(normalize_name(str(team)), [])
+                ),
                 "Squalificati": f.get("Squalificati", ""),
                 "Diffidati": f.get("Diffidati", ""),
                 "Infortunati": f.get("Infortunati", ""),
@@ -1219,11 +1451,17 @@ def build_lineups(players_df, progress_cb=None):
                     row["PanchinaCluster"] = b["cluster"]
                     break
             flags = {}
-            sp_names = [g for (t, g), _ in sp_map.items() if t == team]
-            if sp_names:
-                hit = _fuzzy_match(name, sp_names)
-                if hit:
-                    flags = sp_map.get((team, hit), {})
+            sp_names = sorted({g for (t, g), _ in sp_map.items() if t == team})
+            if sp_names and row["Ruolo"] != "P":
+                scored = sorted(
+                    [(_short_source_name_score(name, candidate), candidate)
+                     for candidate in sp_names],
+                    reverse=True,
+                )
+                if scored and scored[0][0] >= 0.90:
+                    runner_up = scored[1][0] if len(scored) > 1 else 0.0
+                    if scored[0][0] - runner_up >= 0.04:
+                        flags = sp_map.get((team, scored[0][1]), {})
             for tipo, ordine in flags.items():
                 if tipo in ("Rigorista", "Piazzati", "Punizioni", "Angoli"):
                     row[tipo] = True

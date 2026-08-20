@@ -129,11 +129,32 @@ per i portieri:
 - Le stesse colonne storiche alimentano anche le feature del **modello
   predittivo**, alzando la diagnostica Spearman (ρ) di ogni ruolo.
 
-I giocatori che nelle stagioni scaricate non erano in Serie A restano neutri
-(nessun dato, nessuna penalizzazione). La scheda del giocatore mostra i totali
+I giocatori che nelle stagioni scaricate non erano in Serie A restano neutri:
+i dati continui mancanti ricevono la mediana del ruolo, mentre bonus verificabili
+come rigori e piazzati restano a zero. La confidenza non aggiunge punti al ranking,
+ma riporta le stime incerte verso la media del ruolo. La classifica usa poi
+**80% qualità corretta per confidenza + 20% disponibilità** e mantiene cluster
+fissi da dieci. La diagnostica confronta solo stagioni successive nel tempo e
+mostra Spearman, errore medio e numerosità; non usa più split casuali.
+
+La scheda del giocatore mostra i totali
 storici (media voto, presenze, gol, assist, rigori e, per i portieri, gol
 subiti e rigori parati). Il pulsante **Aggiorna tutto per l'asta** esegue
 questo step (6/6).
+
+### Asta Coach v2
+
+Il prezzo personale distribuisce i crediti liberi sugli slot ancora vuoti in
+base al fair value e alla priorità del reparto, lasciando sempre un credito per
+ogni altro posto da completare. Il consiglio combina qualità, alternativa,
+scarsità, rischio, watchlist, concentrazione per squadra, inflazione del mercato
+live e domanda degli avversari. **Nessun fattore può superare lo STOP fisso del
+cluster.**
+
+Gli acquisti salvano anche il contesto del consiglio. Solo un'asta marcata
+esplicitamente come completata entra nella calibrazione futura; servono almeno
+cinque osservazioni compatibili per ruolo e cluster, e il correttivo storico è
+ristretto verso il valore neutro per evitare reazioni eccessive.
 
 ## Tests
 
@@ -168,3 +189,11 @@ every saved action.
 
 Runtime sessions and ranking preferences are local state. Do not commit
 `data/sessions/` or `data/ranking_weights.json`.
+
+Ogni acquisto viene scritto immediatamente nella sessione locale con un
+salvataggio atomico; prima di sovrascrivere il file viene conservata anche una
+copia `.json.bak`. Poiché `data/sessions/` è esclusa da Git, usa il pulsante
+**Backup prezzi** nella schermata Asta live per scaricare un JSON completo da
+conservare anche fuori dal computer. Il file contiene metadati, partecipanti,
+prezzi, ranking e fattori del consiglio ed è riutilizzabile per la calibrazione
+delle stagioni successive.

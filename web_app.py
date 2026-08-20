@@ -29,11 +29,12 @@ import pandas as pd
 
 import asta_core
 import data_loader
+import guida_importer
 import scraper
 from data_loader import (
     ROLE_ORDER, build_lineups, build_players, fair_values_scaled,
     load_ranking_weights, save_ranking_weights, backtest_predictor,
-    DEFAULT_METHOD,
+    ranking_diagnostics, DEFAULT_METHOD,
 )
 
 PROJECT_DIR = Path(__file__).resolve().parent
@@ -58,7 +59,7 @@ WEIGHT_LABELS = {
     "Rigori": "Rigori segnati (bonus rigoristi)",
     "Produttivita": "Gol + assist per presenza (storico)",
     "TeamContext": "Contesto squadra attuale",
-    "Confidence": "Confidenza dati (premia stime robuste)",
+    "Confidence": "Regressione per incertezza (riporta le stime verso la media)",
 }
 
 METHOD_LABELS = {
@@ -86,7 +87,7 @@ LOGGER = logging.getLogger("asta_coach.web")
 # ---------------------------------------------------------------------------
 
 _LOCK = threading.RLock()
-_CACHE = {"players": None, "lineups": None, "rho": None}
+_CACHE = {"players": None, "lineups": None, "rho": None, "diagnostics": None}
 
 ACTIVE_SESSION = None
 SESSION_LOCK = threading.RLock()
@@ -124,6 +125,7 @@ def invalidate_caches():
         _CACHE["players"] = None
         _CACHE["lineups"] = None
         _CACHE["rho"] = None
+        _CACHE["diagnostics"] = None
 
 
 def get_rho(players):
@@ -131,6 +133,13 @@ def get_rho(players):
         if _CACHE["rho"] is None:
             _CACHE["rho"] = backtest_predictor(players)
         return _CACHE["rho"]
+
+
+def get_diagnostics(players):
+    with _LOCK:
+        if _CACHE["diagnostics"] is None:
+            _CACHE["diagnostics"] = ranking_diagnostics(players)
+        return _CACHE["diagnostics"]
 
 
 def active_session():
@@ -207,6 +216,9 @@ def session_info(session):
         "fair": {role: [int(v) for v in meta["fair"].get(role, [])] for role in ROLE_ORDER},
         "teams": list(meta["teams"]),
         "my_team": meta["my_team"],
+        "scoring_profile": meta.get("scoring_profile", asta_core.SCORING_PROFILE),
+        "completed": bool(meta.get("completed", False)),
+        "advice_version": meta.get("advice_version", asta_core.ADVICE_VERSION),
         "role_priorities": {
             role: float(meta["role_priorities"].get(role, 1.0))
             for role in ROLE_ORDER
@@ -230,6 +242,7 @@ def source_freshness():
         ("Tiratori", scraper.SET_PIECES, 24 * 7),
         ("Panchinari", scraper.PANCHINARI, 24 * 7),
         ("Statistiche stagioni", _latest_statistiche_path(), 24 * 7),
+        ("Guida locale", guida_importer.IMPORT_FILE, 24 * 7),
     ]
     now = datetime.now().timestamp()
     result = []
@@ -444,6 +457,7 @@ def build_state_payload():
         "freshness": source_freshness(),
         "summary": summary,
         "advanced_present": scraper.ADVANCED_STATS.exists(),
+        "guida_import": _clean(guida_importer.imported_data()),
         "sessions": [
             {
                 "name": path.stem,
@@ -453,6 +467,7 @@ def build_state_payload():
             for path in asta_core.list_sessions()
         ],
         "rho": _clean(get_rho(players)),
+        "diagnostics": _clean(get_diagnostics(players)),
         "own": own_summary(session),
         "alerts": roster_alerts(session, players),
         "market": _clean(asta_core.market_snapshot(session)) if session else None,
@@ -820,6 +835,21 @@ class WebHandler(BaseHTTPRequestHandler):
             self._send_json(200, {"ok": True, "session": session_info(session)})
             return
 
+        if path == "/api/session/complete":
+            session = active_session()
+            if not session:
+                raise ValueError("Nessuna configurazione attiva.")
+            completed = asta_core.set_session_completed(
+                session, payload.get("completed", True)
+            )
+            asta_core.save_session(session)
+            self._send_json(200, {
+                "ok": True,
+                "completed": completed,
+                "session": session_info(session),
+            })
+            return
+
         if path == "/api/session/watch_add":
             session = active_session()
             if not session:
@@ -851,7 +881,17 @@ class WebHandler(BaseHTTPRequestHandler):
             player = player_by_name(players, payload.get("name", ""))
             buyer = payload.get("team", "")
             price = int(payload.get("price", 0))
-            purchase = asta_core.record_purchase(session, player, buyer, price)
+            unavailable = load_excluded() | asta_core.purchased_names(session)
+            available = players[~players["Nome"].isin(unavailable)]
+            advice_snapshot = asta_core.auction_advice(
+                session,
+                player,
+                available.to_dict("records"),
+                current_price=price,
+            )
+            purchase = asta_core.record_purchase(
+                session, player, buyer, price, advice_snapshot=advice_snapshot
+            )
             asta_core.save_session(session)
             over_cap = int(purchase["price"]) - int(purchase["cap"])
             self._send_json(200, {
@@ -894,6 +934,7 @@ class WebHandler(BaseHTTPRequestHandler):
                 "ok": True,
                 "weights": _clean(load_ranking_weights()),
                 "rho": _clean(backtest_predictor(players)),
+                "diagnostics": _clean(ranking_diagnostics(players)),
             })
             return
 
@@ -908,6 +949,21 @@ class WebHandler(BaseHTTPRequestHandler):
             with SCRAPE_LOCK:
                 status = dict(SCRAPE_JOB)
             self._send_json(200, {"ok": True, "started": started, "status": status})
+            return
+
+        if path == "/api/guida/import":
+            summary = guida_importer.import_guida()
+            invalidate_caches()
+            players = get_players()
+            self._send_json(200, {
+                "ok": True,
+                "guida": summary,
+                "summary": {
+                    "players": int(len(players)),
+                    "starters": int(players["Starter"].sum()),
+                    "guida_starters": int(players["GuidaStarter"].sum()),
+                },
+            })
             return
 
         if path == "/api/advanced":

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Asta Coach — Assistente asta fantacalcio</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
   <div class="boot-splash" id="boot-splash" aria-hidden="true">
@@ -59,7 +59,11 @@
       <div class="panel" id="auction-top">
         <div class="panel-head">
           <h3>🎯 Il mio tavolo</h3>
-          <span class="panel-note" id="auction-session-name"></span>
+          <div class="chips-row">
+            <span class="panel-note" id="auction-session-name"></span>
+            <button class="btn btn-ghost btn-sm" data-action="export-session">⬇️ Backup prezzi</button>
+            <button class="btn btn-ghost btn-sm" id="session-complete-button" data-action="toggle-session-complete"></button>
+          </div>
         </div>
         <div class="grid cols-4" id="own-metrics"></div>
         <div class="role-progress" id="role-progress"></div>
@@ -176,18 +180,36 @@
 
     <!-- ============================ FORMAZIONI ============================ -->
     <section class="tab-panel" id="tab-lineups" data-panel="lineups">
-      <div class="panel">
-        <div class="panel-head"><h3>🧩 Probabili formazioni</h3><span class="panel-note" id="lineups-updated"></span></div>
-        <div class="legend" id="lineups-legend"></div>
-        <div class="grid cols-4" id="lineups-overview"></div>
-        <div class="form-row form-row-inline">
-          <label>Squadra</label>
-          <select class="select" id="lineups-team"></select>
-          <label>Mostra</label>
-          <select class="select" id="lineups-focus"></select>
-          <input class="input" id="lineups-query" type="text" placeholder="Trova giocatore" autocomplete="off">
+      <div class="panel lineups-panel">
+        <div class="panel-head lineups-heading">
+          <div><h3>🧩 Probabili formazioni</h3><p class="panel-note">Titolari, alternative, bonus e indisponibili in un’unica vista.</p></div>
+          <span class="freshness-pill" id="lineups-updated"></span>
         </div>
-        <p class="note" id="lineups-count-note"></p>
+        <div class="grid cols-4" id="lineups-overview"></div>
+        <div class="lineups-toolbar">
+          <div class="lineups-filter">
+            <label for="lineups-team">Squadra</label>
+            <select class="select" id="lineups-team"></select>
+          </div>
+          <div class="lineups-filter">
+            <label for="lineups-focus">Evidenza</label>
+            <select class="select" id="lineups-focus"></select>
+          </div>
+          <div class="lineups-filter lineups-search">
+            <label for="lineups-query">Cerca titolare</label>
+            <input class="input" id="lineups-query" type="search" placeholder="Es. Lautaro, Dybala…" autocomplete="off">
+          </div>
+          <button class="btn btn-ghost btn-sm" data-action="reset-lineup-filters">Azzera filtri</button>
+        </div>
+        <div class="lineups-team-nav" id="lineups-team-nav" aria-label="Vai alla squadra"></div>
+        <div class="lineups-results-head">
+          <p class="note" id="lineups-count-note"></p>
+          <button class="btn btn-ghost btn-sm" id="lineups-expand-button" data-action="toggle-lineups">Espandi tutte</button>
+        </div>
+        <details class="lineups-legend-box">
+          <summary>Legenda simboli e dati</summary>
+          <div class="legend" id="lineups-legend"></div>
+        </details>
         <div id="lineups-list"></div>
       </div>
     </section>
@@ -199,17 +221,7 @@
           <img src="assets/totti-user.jpeg" alt="Francesco Totti con la maglia della Roma" class="motivation-image">
         </div>
         <div class="motivation-copy">
-          <div>
-            <span class="section-index">La carica prima dell'asta</span>
-            <h2 class="motivation-title">Il Capitano</h2>
-          </div>
-          <blockquote class="totti-quote" id="totti-quote">«Nun te preoccupà, mo je faccio er cucchiaio.»</blockquote>
-          <p class="totti-context" id="totti-context">Caricamento…</p>
-          <div class="motivation-actions">
-            <button class="btn btn-primary" data-action="play-totti-audio">▶️ Ascolta Totti</button>
-            <button class="btn btn-ghost" data-action="next-quote">🎲 Un'altra frase</button>
-          </div>
-          <a class="totti-source" id="totti-source" href="#" target="_blank" rel="noopener">📰 Leggi la fonte</a>
+          <button class="btn btn-primary btn-lg" data-action="play-totti-audio">▶️ Ascolta Totti</button>
           <div id="totti-audio-player" class="totti-audio-player" aria-live="polite"></div>
         </div>
       </div>
@@ -228,6 +240,16 @@
           <div class="scrape-status" id="scrape-status"></div>
         </div>
         <div class="progress-track hidden" id="scrape-progress"><span></span></div>
+
+        <details class="accordion">
+          <summary>📱 Importa dati locali da Guida</summary>
+          <div class="accordion-body">
+            <p class="note" id="guida-import-note">Legge solo il database locale dell'app Guida: statistiche, probabili titolari, ballottaggi e piazzati. Non modifica Guida.</p>
+            <div class="action-row">
+              <button class="btn btn-primary" data-action="import-guida">Importa da Guida</button>
+            </div>
+          </div>
+        </details>
 
         <details class="accordion">
           <summary>📥 Statistiche storiche avanzate (consigliato)</summary>
@@ -289,6 +311,6 @@
 
   <div class="toast-wrap" id="toast-wrap" aria-live="polite"></div>
 
-  <script type="module" src="app.js?v=5"></script>
+  <script type="module" src="app.js?v=12"></script>
 </body>
 </html>

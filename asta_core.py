@@ -1,7 +1,9 @@
 import json
 import math
+import shutil
 from datetime import datetime
 from pathlib import Path
+from statistics import median
 
 from data_loader import ROLE_ORDER, fair_values_scaled
 
@@ -12,7 +14,9 @@ DEFAULT_TEAMS = [
 ]
 LEGACY_DEFAULT_TEAMS = [f"Manager {number}" for number in range(1, 11)]
 DEFAULT_ROLE_PRIORITIES = {"P": 0.8, "D": 1.0, "C": 1.0, "A": 1.2}
-WATCHLIST_ADJUSTMENTS = {"A": 0.04, "B": 0.0, "C": -0.06}
+WATCHLIST_FACTORS = {"A": 1.04, "B": 1.0, "C": 0.94}
+ADVICE_VERSION = "2.0"
+SCORING_PROFILE = "classic"
 
 
 def validate_fair(fair):
@@ -52,6 +56,10 @@ def new_session(budget=500, fair=None, slots=None, created=None, teams=None):
             "fair": fair,
             "teams": teams,
             "my_team": teams[0],
+            "role_priorities": dict(DEFAULT_ROLE_PRIORITIES),
+            "scoring_profile": SCORING_PROFILE,
+            "completed": False,
+            "advice_version": ADVICE_VERSION,
         },
         "purchases": [],
     }
@@ -75,6 +83,9 @@ def ensure_session(session):
     if meta["my_team"] not in teams:
         meta["my_team"] = teams[0]
     meta.setdefault("slots", {"P": 3, "D": 8, "C": 8, "A": 6})
+    meta.setdefault("scoring_profile", SCORING_PROFILE)
+    meta.setdefault("completed", False)
+    meta.setdefault("advice_version", ADVICE_VERSION)
     try:
         meta["fair"] = validate_fair(meta.get("fair"))
     except ValueError:
@@ -97,7 +108,12 @@ def save_session(session):
         created = session["meta"]["created"].replace(":", "-").replace("T", "_")
         path = SESSION_DIR / f"config_{created}.json"
     serializable = {key: value for key, value in session.items() if key != "_path"}
-    path.write_text(json.dumps(serializable, ensure_ascii=False, indent=2))
+    contents = json.dumps(serializable, ensure_ascii=False, indent=2)
+    temporary = path.with_name(f".{path.name}.tmp")
+    if path.exists():
+        shutil.copy2(path, path.with_suffix(f"{path.suffix}.bak"))
+    temporary.write_text(contents)
+    temporary.replace(path)
     session["_path"] = str(path)
     return path
 
@@ -166,6 +182,161 @@ def purchased_names(session):
     return {purchase["name"] for purchase in session["purchases"]}
 
 
+def _clamp(value, low, high):
+    return max(low, min(high, value))
+
+
+def _planned_slot_envelope(session, summary, called_role):
+    """Allocate remaining discretionary credits across the personal plan."""
+    meta = session["meta"]
+    open_slots = []
+    for role in ROLE_ORDER:
+        filled = int(summary["by_role"].get(role, 0))
+        total = int(meta["slots"].get(role, 0))
+        table = meta["fair"][role]
+        priority = _number(meta["role_priorities"].get(role), 1.0)
+        for slot_index in range(filled, total):
+            fair = int(table[min(slot_index, len(table) - 1)])
+            weight = max(0.0, fair - 1.0) * priority
+            open_slots.append({
+                "role": role,
+                "slot_index": slot_index,
+                "fair": fair,
+                "weight": weight,
+            })
+    total_left = len(open_slots)
+    if not total_left:
+        return {
+            "slot_envelope": 0.0,
+            "planned_reserve": 0,
+            "total_left": 0,
+            "discretionary": 0,
+        }
+    discretionary = max(0.0, float(summary["remaining"]) - total_left)
+    total_weight = sum(slot["weight"] for slot in open_slots)
+    for slot in open_slots:
+        share = (
+            slot["weight"] / total_weight
+            if total_weight > 0 else 1.0 / total_left
+        )
+        slot["envelope"] = 1.0 + discretionary * share
+    called_index = int(summary["by_role"].get(called_role, 0))
+    called = next(
+        (slot for slot in open_slots
+         if slot["role"] == called_role and slot["slot_index"] == called_index),
+        None,
+    )
+    envelope = float(called["envelope"]) if called else 0.0
+    hard_reserve = max(0, total_left - 1)
+    planned_reserve = max(hard_reserve, round(float(summary["remaining"]) - envelope))
+    return {
+        "slot_envelope": envelope,
+        "planned_reserve": planned_reserve,
+        "total_left": total_left,
+        "discretionary": discretionary,
+    }
+
+
+def _inflation_for_rows(rows):
+    valid = [
+        purchase for purchase in rows
+        if _number(purchase.get("cap")) > 0 and _number(purchase.get("price")) > 0
+    ]
+    count = len(valid)
+    if not count:
+        return 0.0, 0
+    paid = sum(_number(purchase.get("price")) for purchase in valid)
+    caps = sum(_number(purchase.get("cap")) for purchase in valid)
+    raw = paid / caps - 1.0 if caps else 0.0
+    shrunk = raw * count / (count + 3.0)
+    return _clamp(shrunk, -0.10, 0.10), count
+
+
+def _market_adjustment(session, role, cluster):
+    role_rows = [p for p in session["purchases"] if p.get("role") == role]
+    role_inflation, role_count = _inflation_for_rows(role_rows)
+    nearby = [
+        p for p in role_rows
+        if abs(int(_number(p.get("cluster"), 999)) - int(cluster)) <= 1
+    ]
+    cluster_inflation, cluster_count = _inflation_for_rows(nearby)
+    inflation = (
+        0.70 * role_inflation + 0.30 * cluster_inflation
+        if cluster_count >= 3 else role_inflation
+    )
+    return {
+        "factor": 1.0 + _clamp(inflation, -0.10, 0.10),
+        "inflation": _clamp(inflation, -0.10, 0.10),
+        "role_count": role_count,
+        "cluster_count": cluster_count,
+    }
+
+
+def _opponent_demand(session, role, current_price):
+    meta = session["meta"]
+    opponents = [team for team in meta["teams"] if team != meta["my_team"]]
+    threshold = max(1, int(_number(current_price, 1)) + 1)
+    eligible = 0
+    for team in opponents:
+        summary = team_summary(session, team)
+        has_slot = summary["by_role"].get(role, 0) < int(meta["slots"].get(role, 0))
+        if has_slot and summary["remaining"] >= threshold:
+            eligible += 1
+    pressure = eligible / len(opponents) if opponents else 0.0
+    return {
+        "eligible": eligible,
+        "total": len(opponents),
+        "pressure": pressure,
+        "factor": 1.0 + 0.10 * (pressure - 0.5),
+    }
+
+
+def _completed_sessions(exclude_path=None):
+    sessions = []
+    for path in list_sessions():
+        if exclude_path and Path(exclude_path) == path:
+            continue
+        try:
+            saved = json.loads(path.read_text())
+        except (OSError, ValueError, TypeError):
+            continue
+        sessions.append(ensure_session(saved))
+    return sessions
+
+
+def _historical_calibration(session, role, cluster, completed_sessions=None):
+    """Empirical-Bayes price/cap factor from explicitly completed auctions."""
+    meta = session["meta"]
+    sessions = completed_sessions
+    if sessions is None:
+        sessions = _completed_sessions(session.get("_path"))
+    ratios = []
+    for saved in sessions:
+        saved = ensure_session(saved)
+        saved_meta = saved["meta"]
+        if not saved_meta.get("completed"):
+            continue
+        if saved_meta.get("scoring_profile") != meta.get("scoring_profile"):
+            continue
+        if len(saved_meta.get("teams", [])) != len(meta.get("teams", [])):
+            continue
+        for purchase in saved.get("purchases", []):
+            if purchase.get("role") != role:
+                continue
+            if int(_number(purchase.get("cluster"), 0)) != int(cluster):
+                continue
+            cap = _number(purchase.get("cap"))
+            price = _number(purchase.get("price"))
+            if cap > 0 and price > 0:
+                ratios.append(price / cap)
+    count = len(ratios)
+    if count < 5:
+        return {"factor": 1.0, "count": count}
+    observed = median(ratios)
+    factor = 1.0 + (observed - 1.0) * count / (count + 10.0)
+    return {"factor": _clamp(factor, 0.85, 1.15), "count": count}
+
+
 def auction_advice(session, player, available_players, current_price=None):
     """Calculate a personal bid ceiling without ever exceeding cluster fair value.
 
@@ -179,22 +350,26 @@ def auction_advice(session, player, available_players, current_price=None):
     role = str(player["Ruolo"])
     slots = int(session["meta"]["slots"].get(role, 0))
     role_left = max(0, slots - summary["by_role"].get(role, 0))
-    total_left = sum(
-        max(0, int(session["meta"]["slots"].get(r, 0)) - summary["by_role"].get(r, 0))
-        for r in ROLE_ORDER
-    )
+    plan = _planned_slot_envelope(session, summary, role)
+    total_left = int(plan["total_left"])
     fixed_cap = int(coach(session, player)["cap"])
     reserve = max(0, total_left - 1)
     affordable = max(0, summary["remaining"] - reserve)
     rank = int(_number(player.get("Rank"), 1))
     # Quality belongs to the player; opportunity depends on the live market.
     # Keep a rank fallback for old player exports without SeasonValue.
-    quality = _number(player.get("SeasonValue"), -1.0)
+    quality = _number(
+        player.get(
+            "RankingQuality",
+            player.get("Score", player.get("SeasonValue")),
+        ),
+        -1.0,
+    )
     if quality < 0.0:
         quality = 1.0 - ((rank - 1) % 10) / 9.0
+    quality = _clamp(quality, 0.0, 1.0)
     need = role_left / slots if slots else 0.0
     priority = session["meta"]["role_priorities"].get(role, 1.0)
-    priority_n = (priority - 0.5) / 1.0
     score = _number(player.get("Score"))
     cluster = int(_number(player.get("Cluster"), 1))
     alternatives = 0
@@ -212,7 +387,7 @@ def auction_advice(session, player, available_players, current_price=None):
     scarcity = 1.0 - min(alternatives, 6) / 6.0
     replacement_value = max(replacement_values, default=0.0)
     replacement_gap = max(0.0, quality - replacement_value)
-    confidence = _number(player.get("DataConfidence"), 0.5)
+    confidence = _clamp(_number(player.get("DataConfidence"), 0.5), 0.0, 1.0)
 
     # Warn before a third player from the same Serie A club. The warning is
     # explicit and the recommendation is only gently reduced: it remains the
@@ -229,18 +404,29 @@ def auction_advice(session, player, available_players, current_price=None):
          if item.get("name") == str(player["Nome"])),
         None,
     )
-    watch_adjustment = WATCHLIST_ADJUSTMENTS.get(watch_tier, 0.0)
-    target_ratio = (
-        0.56 + 0.20 * quality + 0.13 * need + 0.05 * priority_n
-        + 0.04 * scarcity + 0.07 * replacement_gap
-        + 0.03 * confidence + watch_adjustment
+    watch_factor = WATCHLIST_FACTORS.get(watch_tier, 1.0)
+    club_factor = 0.95 if club_stack_warning else 1.0
+    player_factor = _clamp(
+        0.80 + 0.15 * quality + 0.10 * replacement_gap + 0.05 * scarcity,
+        0.80,
+        1.05,
     )
-    if club_stack_warning:
-        target_ratio -= 0.05
-    target = max(1, round(fixed_cap * min(1.0, target_ratio)))
-    personal_max = min(fixed_cap, affordable) if role_left else 0
-    recommended = min(target, personal_max) if personal_max else 0
+    risk_factor = 0.90 + 0.10 * confidence
     price = _number(current_price, 0)
+    market = _market_adjustment(session, role, cluster)
+    demand = _opponent_demand(session, role, price)
+    historical = _historical_calibration(session, role, cluster)
+    slot_envelope = float(plan["slot_envelope"])
+    planned_price = min(float(fixed_cap), slot_envelope * player_factor)
+    personal_max = min(fixed_cap, affordable) if role_left else 0
+    adjusted = (
+        planned_price * risk_factor * watch_factor * club_factor
+        * market["factor"] * demand["factor"] * historical["factor"]
+    )
+    recommended = (
+        min(max(1, round(adjusted)), personal_max, fixed_cap)
+        if personal_max else 0
+    )
     price_pressure = price / personal_max if personal_max else 1.0
     opportunity = min(1.0, quality + replacement_gap) * max(0.0, 1.0 - price_pressure)
     if not role_left or not personal_max:
@@ -253,10 +439,19 @@ def auction_advice(session, player, available_players, current_price=None):
         verdict = "PUNTA"
     return {
         "fixed_cap": fixed_cap,
+        "advice_version": ADVICE_VERSION,
         "personal_max": personal_max,
         "recommended": recommended,
+        "base_recommended": min(max(1, round(planned_price)), fixed_cap)
+        if role_left else 0,
         "affordable": affordable,
         "reserve": reserve,
+        "planned_reserve": int(plan["planned_reserve"]),
+        "slot_envelope": slot_envelope,
+        "budget_quota": (
+            slot_envelope / summary["remaining"] if summary["remaining"] else 0.0
+        ),
+        "discretionary_budget": plan["discretionary"],
         "role_left": role_left,
         "total_left": total_left,
         "quality": quality,
@@ -271,7 +466,25 @@ def auction_advice(session, player, available_players, current_price=None):
         "same_club_owned": same_club_owned,
         "club_stack_warning": club_stack_warning,
         "watch_tier": watch_tier,
-        "watch_adjustment": watch_adjustment,
+        "watch_adjustment": watch_factor - 1.0,
+        "watch_factor": watch_factor,
+        "club_factor": club_factor,
+        "player_factor": player_factor,
+        "risk_factor": risk_factor,
+        "market_factor": market["factor"],
+        "market_inflation": market["inflation"],
+        "market_role_samples": market["role_count"],
+        "market_cluster_samples": market["cluster_count"],
+        "demand_factor": demand["factor"],
+        "opponent_pressure": demand["pressure"],
+        "eligible_bidders": demand["eligible"],
+        "historical_factor": historical["factor"],
+        "historical_samples": historical["count"],
+        "zones": {
+            "punta_until": recommended,
+            "priority_until": personal_max,
+            "leave_above": personal_max,
+        },
         "verdict": verdict,
     }
 
@@ -317,7 +530,7 @@ def remove_watchlist_item(session, name):
     ]
 
 
-def record_purchase(session, player, team, price):
+def record_purchase(session, player, team, price, advice_snapshot=None):
     """Register a completed auction bid after checking budget and roster slots."""
     ensure_session(session)
     try:
@@ -343,7 +556,9 @@ def record_purchase(session, player, team, price):
     if summary["by_role"][role] >= max_slots:
         raise ValueError(f"{team} ha già completato gli slot {role} ({max_slots}).")
     cap = coach(session, player)["cap"]
-    session["purchases"].append({
+    advice_snapshot = advice_snapshot or {}
+    session["meta"]["completed"] = False
+    purchase = {
         "name": name,
         "club": str(player.get("Squadra", "")),
         "role": role,
@@ -353,13 +568,40 @@ def record_purchase(session, player, team, price):
         "cluster": int(player.get("Cluster", 0)),
         "cap": int(cap),
         "created": datetime.now().isoformat(timespec="seconds"),
-    })
-    return session["purchases"][-1]
+        "advice_version": str(advice_snapshot.get("advice_version", ADVICE_VERSION)),
+        "recommended_at_sale": int(_number(advice_snapshot.get("recommended"), 0)),
+        "personal_max_at_sale": int(_number(advice_snapshot.get("personal_max"), 0)),
+        "market_factor_at_sale": _number(advice_snapshot.get("market_factor"), 1.0),
+        "market_inflation_at_sale": _number(advice_snapshot.get("market_inflation"), 0.0),
+        "demand_factor_at_sale": _number(advice_snapshot.get("demand_factor"), 1.0),
+        "opponent_pressure_at_sale": _number(advice_snapshot.get("opponent_pressure"), 0.5),
+        "risk_factor_at_sale": _number(advice_snapshot.get("risk_factor"), 1.0),
+        "player_factor_at_sale": _number(advice_snapshot.get("player_factor"), 1.0),
+        "historical_factor_at_sale": _number(advice_snapshot.get("historical_factor"), 1.0),
+        "watch_tier_at_sale": advice_snapshot.get("watch_tier"),
+        "watch_factor_at_sale": _number(advice_snapshot.get("watch_factor"), 1.0),
+        "club_factor_at_sale": _number(advice_snapshot.get("club_factor"), 1.0),
+        "slot_envelope_at_sale": _number(advice_snapshot.get("slot_envelope"), 0.0),
+        "planned_reserve_at_sale": int(_number(advice_snapshot.get("planned_reserve"), 0)),
+        "role_priority_at_sale": _number(advice_snapshot.get("priority"), 1.0),
+        "quality_at_sale": _number(advice_snapshot.get("quality"), 0.5),
+        "confidence_at_sale": _number(advice_snapshot.get("confidence"), 0.5),
+    }
+    session["purchases"].append(purchase)
+    return purchase
 
 
 def undo_purchase(session, name):
     ensure_session(session)
     for index in range(len(session["purchases"]) - 1, -1, -1):
         if session["purchases"][index]["name"] == name:
+            session["meta"]["completed"] = False
             return session["purchases"].pop(index)
     raise ValueError("Acquisto non trovato.")
+
+
+def set_session_completed(session, completed=True):
+    """Opt a session in or out of future price calibration."""
+    ensure_session(session)
+    session["meta"]["completed"] = bool(completed)
+    return session["meta"]["completed"]
