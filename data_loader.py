@@ -8,7 +8,7 @@ import pandas as pd
 
 from scraper import (
     ADVANCED_STATS, DATA_DIR, FORMAZIONI, PANCHINARI, PLAYERS_FCP, QUOTAZIONI,
-    SET_PIECES, STAT_TEAM_CODES, normalize_name,
+    SET_PIECES, STAT_TEAM_CODES, ROSTER_OVERRIDES, normalize_name,
 )
 from guida_importer import imported_data
 
@@ -257,7 +257,24 @@ def load_fcp():
 def load_quotazioni():
     if not QUOTAZIONI.exists():
         return pd.DataFrame()
-    return pd.read_csv(QUOTAZIONI)
+    df = pd.read_csv(QUOTAZIONI)
+    if not ROSTER_OVERRIDES.exists() or "NomeGaz" not in df.columns:
+        return df
+    try:
+        overrides = pd.read_csv(ROSTER_OVERRIDES)
+    except (OSError, ValueError):
+        return df
+    if overrides.empty or not {"NomeGaz", "AttivoSerieA"}.issubset(overrides.columns):
+        return df
+    excluded = overrides[
+        overrides.get("AttivoSerieA", True).astype(str).str.lower().isin(
+            {"0", "false", "no", "fuori_serie_a", "escluso"}
+        )
+    ]
+    if excluded.empty:
+        return df
+    blocked = {normalize_name(name) for name in excluded["NomeGaz"].dropna()}
+    return df[~df["NomeGaz"].astype(str).map(normalize_name).isin(blocked)].copy()
 
 
 def load_advanced_stats():

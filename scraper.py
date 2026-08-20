@@ -16,6 +16,10 @@ FORMAZIONI = DATA_DIR / "formazioni.csv"
 SET_PIECES = DATA_DIR / "set_pieces.csv"
 ADVANCED_STATS = DATA_DIR / "advanced_stats.csv"
 PANCHINARI = DATA_DIR / "panchinari.csv"
+# Manual, auditable corrections for transfers announced after a source's
+# seasonal quotation cache was published. Rows are kept separate from scraped
+# data so a later refresh cannot silently reintroduce an ineligible player.
+ROSTER_OVERRIDES = DATA_DIR / "roster_overrides.csv"
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "

@@ -1005,10 +1005,6 @@ function renderSetup() {
   $("#setup-advanced-note").textContent = data.advanced_present
     ? "Le statistiche avanzate CSV presenti verranno mantenute e non sovrascritte dall'aggiornamento."
     : "Statistiche avanzate non presenti: verranno lasciate vuote dall'aggiornamento.";
-  const guida = data.guida_import;
-  $("#guida-import-note").textContent = guida?.imported_at
-    ? `Importato da Guida il ${new Date(guida.imported_at).toLocaleString("it-IT")}: ${int(guida.players?.length)} giocatori, ${int(guida.set_pieces?.length)} gerarchie e ${int(guida.doubts?.length)} ballottaggi. Le gerarchie web già presenti restano prioritarie.`
-    : "Legge solo il database locale dell'app Guida: statistiche, probabili titolari, ballottaggi e piazzati. Non modifica Guida.";
 
   setHTML("#setup-summary", `
     <div class="metric-card"><div class="metric-label">Giocatori</div><div class="metric-value">${int(data.summary.players)}</div></div>
@@ -1121,17 +1117,6 @@ async function runScrape() {
   }
 }
 
-async function importGuida() {
-  try {
-    const data = await postJSON("/api/guida/import", {});
-    toast(`Guida importata: ${int(data.guida.players)} giocatori e ${int(data.guida.set_pieces)} gerarchie.`, "ok");
-    await Promise.all([loadPlayers(), loadLineups()]);
-    await refreshState();
-  } catch (err) {
-    toast(err.message, "err");
-  }
-}
-
 async function pollScrape() {
   try {
     const status = await getJSON("/api/scrape/status");
@@ -1144,7 +1129,12 @@ async function pollScrape() {
       if (status.error) {
         toast(status.error, "err");
       } else {
-        toast("Aggiornamento completato. Ranking e cluster ricalcolati.", "ok");
+        toast(
+          status.warning
+            ? `Aggiornamento completato. ${status.warning}`
+            : "Aggiornamento completato: ranking, formazioni e dati Guida ricalcolati.",
+          status.warning ? "warn" : "ok",
+        );
         await Promise.all([loadPlayers(), loadLineups()]);
         await refreshState();
       }
@@ -1475,7 +1465,6 @@ function bindEvents() {
       case "pick-player": await pickPlayer(name); break;
       case "pick": await pickPlayer(name); break;
       case "run-scrape": await runScrape(); break;
-      case "import-guida": await importGuida(); break;
       case "import-advanced": await importAdvanced(); break;
       case "save-config": await saveConfig(); break;
       case "save-weights": await saveWeights(); break;

@@ -98,6 +98,7 @@ SCRAPE_JOB = {
     "progress": 0.0,
     "done": False,
     "error": None,
+    "warning": None,
     "started_at": None,
     "finished_at": None,
 }
@@ -325,18 +326,20 @@ def closest_role_plan(value):
 
 def _run_scrape_job():
     jobs = [
-        ("1/6 Scaricando quotazioni Gazzetta...",
+        ("1/7 Scaricando quotazioni Gazzetta...",
          lambda: scraper.scrape_quotazioni(progress_cb=None)),
-        ("2/6 Scaricando lista giocatori FCP (può richiedere alcuni minuti)...",
+        ("2/7 Scaricando lista giocatori FCP (può richiedere alcuni minuti)...",
          lambda: scraper.scrape_fantacalciopedia(progress_cb=None)),
-        ("3/6 Aggiornando formazioni, ballottaggi e indisponibili...",
+        ("3/7 Aggiornando formazioni, ballottaggi e indisponibili...",
          lambda: scraper.scrape_lineups(progress_cb=None)),
-        ("4/6 Aggiornando rigoristi e tiratori...",
+        ("4/7 Aggiornando rigoristi e tiratori...",
          lambda: scraper.scrape_set_pieces(progress_cb=None)),
-        ("5/6 Aggiornando probabili panchinari (sosfanta)...",
+        ("5/7 Aggiornando probabili panchinari (sosfanta)...",
          lambda: scraper.scrape_panchinari(progress_cb=None)),
-        ("6/6 Aggiornando statistiche stagionali (gol subiti portieri)...",
+        ("6/7 Aggiornando statistiche stagionali (gol subiti portieri)...",
          lambda: scraper.scrape_statistiche(progress_cb=None)),
+        ("7/7 Importando dati locali da Guida...",
+         lambda: guida_importer.import_guida()),
     ]
     total = float(len(jobs))
     try:
@@ -345,7 +348,17 @@ def _run_scrape_job():
                 SCRAPE_JOB["label"] = label
                 SCRAPE_JOB["progress"] = index / total
                 SCRAPE_JOB["error"] = None
-            job()
+            try:
+                job()
+            except ValueError as exc:
+                # Guida is optional: an unavailable local app must not throw
+                # away a successful web refresh. The UI makes the omission
+                # explicit and keeps any previously imported local overlay.
+                if index == len(jobs) - 1:
+                    with SCRAPE_LOCK:
+                        SCRAPE_JOB["warning"] = f"Guida non aggiornata: {exc}"
+                else:
+                    raise
             with SCRAPE_LOCK:
                 SCRAPE_JOB["progress"] = (index + 1) / total
         with SCRAPE_LOCK:
@@ -378,6 +391,7 @@ def start_scrape():
             "progress": 0.0,
             "done": False,
             "error": None,
+            "warning": None,
             "started_at": datetime.now().isoformat(),
             "finished_at": None,
         })
