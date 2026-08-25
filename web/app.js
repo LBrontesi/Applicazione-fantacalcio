@@ -698,7 +698,7 @@ function renderPlayers() {
       <tr>
         <td><input type="checkbox" class="exclude-check" data-name="${esc(p.Nome)}" ${state.playersTab.checked.has(p.Nome) ? "checked" : ""}></td>
         <td><button class="link-inline" data-action="pick-player" data-name="${esc(p.Nome)}">${esc(p.Nome)}</button></td>
-        <td>${esc(p.Squadra)}</td><td>${rolePill(p.Ruolo)}</td>
+        <td>${esc(p.Squadra)} ${p.RosterStatus === "non_confermato" ? '<span class="chip chip-amber" title="Presente nelle quotazioni ma non confermato dal roster FCP">verifica</span>' : ""}</td><td>${rolePill(p.Ruolo)}</td>
         <td class="num">${num(p.FM)}</td><td class="num">${int(p.QA)}</td>
         <td class="num">${int(p.Cluster)}</td><td class="num">${num(p.Score, 3)}</td>
         <td>${pct(p.SeasonValue)}</td><td>${pct(p.DataConfidence)}</td>
@@ -1012,12 +1012,14 @@ function renderSetup() {
     <div class="metric-card"><div class="metric-label">Con fantamedia</div><div class="metric-value">${int(data.summary.with_fm)}</div></div>
     <div class="metric-card"><div class="metric-label">Titolari probabili</div><div class="metric-value">${int(data.summary.starters)}</div></div>
     <div class="metric-card"><div class="metric-label">Con minuti storici</div><div class="metric-value">${int(data.summary.with_minutes)}</div></div>
+    <div class="metric-card"><div class="metric-label">Roster verificato</div><div class="metric-value">${int(data.summary.roster_confirmed)} <small>/ ${int(data.summary.players)}</small></div></div>
   `);
 
   setHTML("#setup-preview", `
-    <thead><tr><th>Nome</th><th>Squadra</th><th>Ruolo</th><th class="num">FM</th><th class="num">QA</th><th class="num">QI</th><th class="num">Cluster</th><th>Attributi</th><th>ResInf</th></tr></thead>
+    <thead><tr><th>Nome</th><th>Squadra</th><th>Ruolo</th><th>Rosa</th><th class="num">FM</th><th class="num">QA</th><th class="num">QI</th><th class="num">Cluster</th><th>Attributi</th><th>ResInf</th></tr></thead>
     <tbody>${state.players.slice(0, 50).map((p) => `
       <tr><td>${esc(p.Nome)}</td><td>${esc(p.Squadra)}</td><td>${esc(p.Ruolo)}</td>
+      <td>${p.RosterStatus === "non_confermato" ? '<span class="chip chip-amber">da verificare</span>' : '<span class="chip chip-green">ok</span>'}</td>
       <td class="num">${num(p.FM)}</td><td class="num">${int(p.QA)}</td><td class="num">${int(p.QI)}</td>
       <td class="num">${int(p.Cluster)}</td><td>${esc(p.Attributi)}</td><td>${esc(p.ResInf)}</td></tr>`).join("")}
     </tbody>`);

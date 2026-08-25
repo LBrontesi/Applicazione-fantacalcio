@@ -616,6 +616,48 @@ def _advanced_for_player(name, team, stats):
     return best if best_score >= 0.85 else None
 
 
+def _resolve_fcp_player(gaz_row, fcp):
+    """Resolve a quote row against the current FCP roster.
+
+    Same-club matches remain the safest choice. If the quote source still
+    carries an old club, accept a unique, very strong match in another Serie A
+    club and let that current roster win. Ambiguous or weak matches are left
+    untouched and marked for review by the caller.
+    """
+    role = str(gaz_row.get("Ruolo", ""))
+    name_tokens = _tokens(gaz_row.get("NomeGaz", ""))
+    team = normalize_name(gaz_row.get("SquadraNome", ""))
+    role_rows = fcp[fcp["Ruolo"] == role]
+
+    def ranked(frame):
+        values = [
+            {
+                "score": _match_score(name_tokens, _tokens(row["NomeFCP"])),
+                "name": str(row["NomeFCP"]),
+                "team": str(row["SquadraFCP"]),
+            }
+            for _, row in frame.iterrows()
+        ]
+        return sorted(values, key=lambda item: item["score"], reverse=True)
+
+    same_team = ranked(
+        role_rows[role_rows["SquadraFCP"].fillna("").map(normalize_name) == team]
+    )
+    if same_team and same_team[0]["score"] >= 0.90:
+        if len(same_team) == 1 or same_team[0]["score"] - same_team[1]["score"] >= 0.04:
+            return {**same_team[0], "status": "confermato_fcp"}
+
+    # A transfer is accepted only with a stronger threshold and a clear
+    # winner. This avoids moving homonyms or short surnames by guesswork.
+    global_matches = ranked(role_rows)
+    if global_matches and global_matches[0]["score"] >= 0.95:
+        winner = global_matches[0]
+        runner_up = global_matches[1]["score"] if len(global_matches) > 1 else 0.0
+        if winner["score"] - runner_up >= 0.04:
+            return {**winner, "status": "club_corretto_fcp"}
+    return None
+
+
 def build_players(progress_cb=None, weights=None):
     gaz = load_quotazioni()
     fcp = load_fcp()
@@ -624,34 +666,26 @@ def build_players(progress_cb=None, weights=None):
 
     matched_fcp = {}
     for _, g in gaz.iterrows():
-        team = normalize_name(g.get("SquadraNome", ""))
-        candidates = fcp[
-            (fcp["SquadraFCP"].fillna("").map(normalize_name) == team)
-            & (fcp["Ruolo"] == g["Ruolo"])
-        ]
-        scored = sorted(
-            [
-                (_match_score(_tokens(g["NomeGaz"]), _tokens(f["NomeFCP"])), f["NomeFCP"])
-                for _, f in candidates.iterrows()
-            ],
-            reverse=True,
-        )
-        if not scored or scored[0][0] < 0.90:
-            continue
-        # Non indoviniamo fra omonimi: serve un vincitore netto.
-        if len(scored) > 1 and scored[0][0] - scored[1][0] < 0.04:
-            continue
-        matched_fcp[g["NomeGaz"]] = scored[0][1]
+        resolved = _resolve_fcp_player(g, fcp)
+        if resolved:
+            matched_fcp[g["NomeGaz"]] = resolved
 
     matched_rows = []
     for _, g in gaz.iterrows():
-        fcp_name = matched_fcp.get(g["NomeGaz"])
+        fcp_match = matched_fcp.get(g["NomeGaz"])
+        fcp_name = fcp_match["name"] if fcp_match else None
         f = fcp[fcp["NomeFCP"] == fcp_name].iloc[0] if fcp_name else None
+        roster_status = fcp_match["status"] if fcp_match else "non_confermato"
         row = {
             "Nome": f["NomeFCP"] if f is not None and f["NomeFCP"] else g["NomeGaz"],
             "NomeGaz": g["NomeGaz"],
-            "Squadra": g["SquadraNome"] or g["SquadraGaz"],
+            "Squadra": (
+                f["SquadraFCP"]
+                if f is not None and fcp_match["status"] == "club_corretto_fcp"
+                else g["SquadraNome"] or g["SquadraGaz"]
+            ),
             "Ruolo": g["Ruolo"],
+            "RosterStatus": roster_status,
             "QI": g["QI"],
             "QA": g["QA"],
             "FVM": g["FVM"],

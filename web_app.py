@@ -444,6 +444,9 @@ def parse_multipart(content_type, body):
 
 def build_state_payload():
     players = get_players()
+    roster_status = players["RosterStatus"] if "RosterStatus" in players else pd.Series(
+        "non_confermato", index=players.index
+    )
     session = active_session()
     weights = load_ranking_weights()
     method = weights.get("_method", DEFAULT_METHOD)
@@ -455,6 +458,8 @@ def build_state_payload():
         "with_fm": int(players["FM"].notna().sum()),
         "starters": int(players["Starter"].sum()),
         "with_minutes": int(players["Minuti"].notna().sum()),
+        "roster_confirmed": int((roster_status != "non_confermato").sum()),
+        "roster_review": int((roster_status == "non_confermato").sum()),
     }
     return {
         "session": session_info(session) if session else None,
